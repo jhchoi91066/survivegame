@@ -1,5 +1,7 @@
 import { SurvivorRole } from './store';
 
+export type { SurvivorRole };
+
 export interface AbilityConfig {
   name: string;
   description: string;

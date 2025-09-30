@@ -8,6 +8,9 @@ import {
   canRemoveObstacle,
   canBuildBridge,
 } from './obstacles';
+import { GameStatus, GAME_DURATION } from './timer';
+import { WeatherEvent, WeatherType, generateWeatherEvent, WEATHER_DURATION, getWeatherEnergyBonus, canMoveInWeather } from './weather';
+import { LevelConfig } from '../data/levelData';
 
 // Survivor role types
 export type SurvivorRole = 'engineer' | 'doctor' | 'chef' | 'child';
@@ -44,8 +47,8 @@ const isAdjacent = (x1: number, y1: number, x2: number, y2: number): boolean => 
   return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
 };
 
-const isValidPosition = (x: number, y: number): boolean => {
-  return x >= 0 && x < 5 && y >= 0 && y < 5;
+const isValidPosition = (x: number, y: number, gridWidth: number, gridHeight: number): boolean => {
+  return x >= 0 && x < gridWidth && y >= 0 && y < gridHeight;
 };
 
 const isPositionOccupied = (x: number, y: number, survivors: SurvivorState[]): boolean => {
@@ -53,6 +56,9 @@ const isPositionOccupied = (x: number, y: number, survivors: SurvivorState[]): b
 };
 
 interface GameState {
+  currentLevelId: number | null;
+  gridWidth: number;
+  gridHeight: number;
   survivors: SurvivorState[];
   selectedSurvivorId: string | null;
   turn: number;
@@ -60,6 +66,11 @@ interface GameState {
   resources: ResourceInventory;
   grid: GridCell[][];
   obstacles: ObstacleState[];
+  timeRemaining: number;
+  gameStatus: GameStatus;
+  weather: WeatherEvent | null;
+  rescuePoint: { x: number; y: number };
+  initializeLevel: (levelConfig: LevelConfig) => void;
   selectSurvivor: (id: string | null) => void;
   moveSurvivor: (id: string, x: number, y: number) => void;
   nextTurn: () => void;
@@ -72,9 +83,18 @@ interface GameState {
   removeObstacle: (x: number, y: number, survivorId: string) => boolean;
   startBridgeBuild: (x: number, y: number, survivorId: string) => boolean;
   getObstacleAt: (x: number, y: number) => ObstacleState | null;
+  startGame: () => void;
+  pauseGame: () => void;
+  resumeGame: () => void;
+  tickTimer: () => void;
+  checkVictoryCondition: () => boolean;
+  checkDefeatCondition: () => boolean;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
+  currentLevelId: null,
+  gridWidth: 5,
+  gridHeight: 5,
   survivors: [
     {
       id: 'survivor-1',
@@ -132,6 +152,61 @@ export const useGameStore = create<GameState>((set, get) => ({
       isRemovable: true,
     },
   ],
+  timeRemaining: GAME_DURATION,
+  gameStatus: 'idle',
+  weather: null,
+  rescuePoint: { x: 4, y: 4 },
+  initializeLevel: (levelConfig: LevelConfig) =>
+    set(() => {
+      // Create survivors from level config
+      const survivors: SurvivorState[] = levelConfig.survivors.map((s, index) => ({
+        id: `survivor-${index + 1}`,
+        x: s.position.x,
+        y: s.position.y,
+        role: s.role,
+        health: 100,
+        energy: 100,
+        maxHealth: 100,
+        maxEnergy: 100,
+      }));
+
+      // Create grid
+      const grid: GridCell[][] = Array.from({ length: levelConfig.gridSize.height }, (_, y) =>
+        Array.from({ length: levelConfig.gridSize.width }, (_, x) => ({
+          terrain: 'grass' as TileType,
+          obstacle: null,
+        }))
+      );
+
+      // Add obstacles with proper typing
+      const obstacles: ObstacleState[] = levelConfig.obstacles.map((obs) => ({
+        ...obs,
+        isPassable: obs.type === 'swamp' || obs.type === 'narrow_passage',
+        isRemovable: obs.type !== 'deep_water',
+      }));
+
+      return {
+        currentLevelId: levelConfig.id,
+        gridWidth: levelConfig.gridSize.width,
+        gridHeight: levelConfig.gridSize.height,
+        survivors,
+        grid,
+        obstacles,
+        rescuePoint: levelConfig.rescuePoint,
+        timeRemaining: levelConfig.timeLimit,
+        gameStatus: 'idle' as GameStatus,
+        turn: 1,
+        movedSurvivorIds: [],
+        selectedSurvivorId: null,
+        weather: null,
+        resources: {
+          food: 10,
+          water: 10,
+          tools: 5,
+          medicalSupplies: 5,
+        },
+      };
+    }),
   selectSurvivor: (id) =>
     set((state) => {
       if (id && state.movedSurvivorIds.includes(id)) {
@@ -144,8 +219,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       const survivor = state.survivors.find(s => s.id === id);
       if (!survivor) return state;
 
+      // Check if weather allows movement
+      if (state.weather && !canMoveInWeather(state.weather.type, state.weather.turnsRemaining)) {
+        return state; // Cannot move during storm
+      }
+
       // Check if move is valid
-      if (!isValidPosition(x, y)) return state;
+      if (!isValidPosition(x, y, state.gridWidth, state.gridHeight)) return state;
       if (!isAdjacent(survivor.x, survivor.y, x, y)) return state;
       if (isPositionOccupied(x, y, state.survivors)) return state;
 
@@ -173,13 +253,22 @@ export const useGameStore = create<GameState>((set, get) => ({
   nextTurn: () =>
     set((state) => {
       // Apply role passive effects at turn end
-      const updatedSurvivors = state.survivors.map((s) => {
+      let updatedSurvivors = state.survivors.map((s) => {
         let newHealth = s.health;
+        let newEnergy = s.energy;
+
         // Doctor passive: heal 5 HP per turn
         if (s.role === 'doctor') {
           newHealth = Math.min(s.maxHealth, s.health + 5);
         }
-        return { ...s, health: newHealth };
+
+        // Weather energy bonus
+        const energyBonus = getWeatherEnergyBonus(state.weather?.type || null);
+        if (energyBonus > 0) {
+          newEnergy = Math.min(s.maxEnergy, s.energy + energyBonus);
+        }
+
+        return { ...s, health: newHealth, energy: newEnergy };
       });
 
       // Update bridge construction progress
@@ -195,12 +284,45 @@ export const useGameStore = create<GameState>((set, get) => ({
         return obs;
       });
 
+      // Update weather
+      let updatedWeather = state.weather;
+      if (updatedWeather) {
+        if (updatedWeather.turnsRemaining > 0) {
+          updatedWeather = {
+            ...updatedWeather,
+            turnsRemaining: updatedWeather.turnsRemaining - 1,
+          };
+        } else if (updatedWeather.turnsUntilNext > 0) {
+          updatedWeather = {
+            ...updatedWeather,
+            turnsUntilNext: updatedWeather.turnsUntilNext - 1,
+          };
+        } else {
+          // Generate new weather event
+          const newWeatherType = generateWeatherEvent();
+          updatedWeather = {
+            type: newWeatherType,
+            turnsRemaining: WEATHER_DURATION[newWeatherType],
+            turnsUntilNext: Math.floor(Math.random() * 3) + 2, // 2-4 turns until next event
+          };
+        }
+      } else {
+        // Start first weather event
+        const weatherType = generateWeatherEvent();
+        updatedWeather = {
+          type: weatherType,
+          turnsRemaining: WEATHER_DURATION[weatherType],
+          turnsUntilNext: Math.floor(Math.random() * 3) + 2,
+        };
+      }
+
       return {
         turn: state.turn + 1,
         movedSurvivorIds: [],
         selectedSurvivorId: null,
         survivors: updatedSurvivors,
         obstacles: updatedObstacles,
+        weather: updatedWeather,
       };
     }),
   getValidMoves: (survivorId) => {
@@ -220,7 +342,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       const newX = survivor.x + dir.x;
       const newY = survivor.y + dir.y;
 
-      if (isValidPosition(newX, newY) && !isPositionOccupied(newX, newY, state.survivors)) {
+      if (isValidPosition(newX, newY, state.gridWidth, state.gridHeight) && !isPositionOccupied(newX, newY, state.survivors)) {
         // Check if obstacle blocks movement
         const obstacle = state.obstacles.find((obs) => obs.x === newX && obs.y === newY);
         if (!obstacle || canSurvivorPassObstacle(obstacle, survivor.role)) {
@@ -327,5 +449,67 @@ export const useGameStore = create<GameState>((set, get) => ({
       ),
     });
     return true;
+  },
+  startGame: () =>
+    set((state) => ({
+      gameStatus: 'playing',
+      timeRemaining: state.timeRemaining, // Use level's timeLimit
+      turn: 1,
+      movedSurvivorIds: [],
+      selectedSurvivorId: null,
+    })),
+  pauseGame: () =>
+    set({
+      gameStatus: 'paused',
+    }),
+  resumeGame: () =>
+    set({
+      gameStatus: 'playing',
+    }),
+  tickTimer: () =>
+    set((state) => {
+      if (state.gameStatus !== 'playing') return state;
+      if (state.timeRemaining <= 0) return state;
+
+      const newTimeRemaining = state.timeRemaining - 1;
+
+      // Check defeat condition (time's up)
+      if (newTimeRemaining <= 0) {
+        return {
+          timeRemaining: 0,
+          gameStatus: 'defeat' as GameStatus,
+        };
+      }
+
+      return {
+        timeRemaining: newTimeRemaining,
+      };
+    }),
+  checkVictoryCondition: () => {
+    const state = get();
+    const allAtRescue = state.survivors.every(
+      (s) => s.x === state.rescuePoint.x && s.y === state.rescuePoint.y
+    );
+
+    if (allAtRescue) {
+      set({ gameStatus: 'victory' });
+      return true;
+    }
+    return false;
+  },
+  checkDefeatCondition: () => {
+    const state = get();
+
+    // Check if any survivor has 0 health
+    const anyDead = state.survivors.some((s) => s.health <= 0);
+
+    // Check if time ran out
+    const timeUp = state.timeRemaining <= 0;
+
+    if (anyDead || timeUp) {
+      set({ gameStatus: 'defeat' });
+      return true;
+    }
+    return false;
   },
 }));

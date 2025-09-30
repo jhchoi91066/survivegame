@@ -4,15 +4,17 @@ import Tile from './Tile';
 import Survivor from './Survivor';
 import { useGameStore } from './store';
 
-const GRID_SIZE = 5;
-
 const GameBoard: React.FC = () => {
-  const survivors = useGameStore((state) => state.survivors);
+  const { survivors, gridWidth, gridHeight } = useGameStore((state) => ({
+    survivors: state.survivors,
+    gridWidth: state.gridWidth,
+    gridHeight: state.gridHeight,
+  }));
 
   const renderTiles = () => {
     const tiles = [];
-    for (let y = 0; y < GRID_SIZE; y++) {
-      for (let x = 0; x < GRID_SIZE; x++) {
+    for (let y = 0; y < gridHeight; y++) {
+      for (let x = 0; x < gridWidth; x++) {
         tiles.push(<Tile key={`${x}-${y}`} x={x} y={y} />);
       }
     }
