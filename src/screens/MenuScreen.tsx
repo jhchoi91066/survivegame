@@ -37,6 +37,15 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
 
           <Pressable
             style={[styles.button, styles.secondaryButton]}
+            onPress={() => navigation.navigate('Stats')}
+          >
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+              📊 통계
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.button, styles.secondaryButton]}
             onPress={() => navigation.navigate('Settings')}
           >
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>

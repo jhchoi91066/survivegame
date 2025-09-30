@@ -77,14 +77,14 @@ const LevelSelectScreen: React.FC<LevelSelectScreenProps> = ({ navigation }) => 
                 <Text style={[styles.levelNumber, !isUnlocked && styles.levelNumberLocked]}>
                   {isUnlocked ? level.id : '🔒'}
                 </Text>
+                <Text style={styles.levelName} numberOfLines={1}>
+                  {level.name}
+                </Text>
                 <View style={styles.stars}>
                   <Text style={styles.starText}>
                     {isUnlocked ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '☆☆☆'}
                   </Text>
                 </View>
-                <Text style={styles.levelStatus}>
-                  {!isUnlocked ? '잠금' : completed ? '완료' : '미완료'}
-                </Text>
                 <Text style={styles.levelDifficulty}>
                   {level.difficulty === 'easy' ? '쉬움' : level.difficulty === 'medium' ? '보통' : '어려움'}
                 </Text>
@@ -150,10 +150,17 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   levelNumber: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#3b82f6',
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  levelName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 6,
   },
   stars: {
     marginBottom: 4,
@@ -161,11 +168,6 @@ const styles = StyleSheet.create({
   starText: {
     fontSize: 14,
     color: '#d1d5db',
-  },
-  levelStatus: {
-    fontSize: 10,
-    color: '#9ca3af',
-    marginTop: 4,
   },
   levelDifficulty: {
     fontSize: 9,

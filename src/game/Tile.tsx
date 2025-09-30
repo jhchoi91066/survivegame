@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, StyleSheet, Dimensions, Pressable, Text } from 'react-native';
 
 import { useGameStore } from './store';
@@ -12,31 +12,58 @@ interface TileProps {
   y: number;
 }
 
-const Tile: React.FC<TileProps> = ({ x, y }) => {
-  const { selectedSurvivorId, moveSurvivor, getValidMoves, getObstacleAt } = useGameStore(state => ({
+const Tile: React.FC<TileProps> = React.memo(({ x, y }) => {
+  const { selectedSurvivorId, moveSurvivor, getValidMoves, getObstacleAt, rescuePoint, survivors } = useGameStore(state => ({
     selectedSurvivorId: state.selectedSurvivorId,
     moveSurvivor: state.moveSurvivor,
     getValidMoves: state.getValidMoves,
     getObstacleAt: state.getObstacleAt,
+    rescuePoint: state.rescuePoint,
+    survivors: state.survivors,
   }));
 
-  const isValidMove = selectedSurvivorId
-    ? getValidMoves(selectedSurvivorId).some(move => move.x === x && move.y === y)
-    : false;
+  const isValidMove = useMemo(() => {
+    return selectedSurvivorId
+      ? getValidMoves(selectedSurvivorId).some(move => move.x === x && move.y === y)
+      : false;
+  }, [selectedSurvivorId, getValidMoves, x, y]);
 
-  const obstacle = getObstacleAt(x, y);
+  const isRescuePoint = useMemo(() => {
+    return rescuePoint.x === x && rescuePoint.y === y;
+  }, [rescuePoint, x, y]);
 
-  const handlePress = () => {
+  const obstacle = useMemo(() => {
+    return getObstacleAt(x, y);
+  }, [getObstacleAt, x, y]);
+
+  // Check if this tile is blocked (has obstacle that can't be passed or has another survivor)
+  const isOccupied = useMemo(() => {
+    return survivors.some(s => s.x === x && s.y === y);
+  }, [survivors, x, y]);
+
+  const isBlocked = useMemo(() => {
+    return selectedSurvivorId && !isValidMove && !isOccupied && obstacle;
+  }, [selectedSurvivorId, isValidMove, isOccupied, obstacle]);
+
+  const handlePress = useCallback(() => {
     if (selectedSurvivorId) {
       moveSurvivor(selectedSurvivorId, x, y);
     }
-  };
+  }, [selectedSurvivorId, moveSurvivor, x, y]);
 
   return (
     <Pressable
-      style={[styles.tile, isValidMove && styles.validMove]}
+      style={[
+        styles.tile,
+        isValidMove && styles.validMove,
+        isRescuePoint && styles.rescuePoint,
+        isBlocked && styles.blockedTile
+      ]}
       onPress={handlePress}
     >
+      {isRescuePoint && !obstacle && (
+        <Text style={styles.rescueEmoji}>🚁</Text>
+      )}
       {obstacle && (
         <View style={[
           styles.obstacleContainer,
@@ -52,7 +79,7 @@ const Tile: React.FC<TileProps> = ({ x, y }) => {
       )}
     </Pressable>
   );
-};
+});
 
 const styles = StyleSheet.create({
   tile: {
@@ -68,6 +95,18 @@ const styles = StyleSheet.create({
     opacity: 0.3,
     borderColor: '#059669', // green-600
     borderWidth: 2,
+  },
+  rescuePoint: {
+    backgroundColor: '#fef3c7', // amber-100
+    borderColor: '#f59e0b', // amber-500
+    borderWidth: 2,
+  },
+  rescueEmoji: {
+    fontSize: TILE_SIZE * 0.6,
+  },
+  blockedTile: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)', // red-500 with low opacity
+    borderColor: '#ef4444',
   },
   obstacleContainer: {
     width: '80%',

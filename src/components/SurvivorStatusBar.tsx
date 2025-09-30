@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { SurvivorState } from '../game/store';
 import AbilityPanel from './AbilityPanel';
@@ -7,12 +7,18 @@ interface SurvivorStatusBarProps {
   survivor: SurvivorState;
 }
 
-const SurvivorStatusBar: React.FC<SurvivorStatusBarProps> = ({ survivor }) => {
+const SurvivorStatusBar: React.FC<SurvivorStatusBarProps> = React.memo(({ survivor }) => {
   const [showAbilities, setShowAbilities] = useState(false);
-  const healthPercent = (survivor.health / survivor.maxHealth) * 100;
-  const energyPercent = (survivor.energy / survivor.maxEnergy) * 100;
 
-  const getRoleEmoji = (role: string) => {
+  const healthPercent = useMemo(() => {
+    return (survivor.health / survivor.maxHealth) * 100;
+  }, [survivor.health, survivor.maxHealth]);
+
+  const energyPercent = useMemo(() => {
+    return (survivor.energy / survivor.maxEnergy) * 100;
+  }, [survivor.energy, survivor.maxEnergy]);
+
+  const getRoleEmoji = useCallback((role: string) => {
     switch (role) {
       case 'engineer':
         return '🔧';
@@ -25,9 +31,9 @@ const SurvivorStatusBar: React.FC<SurvivorStatusBarProps> = ({ survivor }) => {
       default:
         return '👤';
     }
-  };
+  }, []);
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = useCallback((role: string) => {
     switch (role) {
       case 'engineer':
         return '#f59e0b'; // amber-500
@@ -40,11 +46,15 @@ const SurvivorStatusBar: React.FC<SurvivorStatusBarProps> = ({ survivor }) => {
       default:
         return '#6b7280'; // gray-500
     }
-  };
+  }, []);
+
+  const toggleAbilities = useCallback(() => {
+    setShowAbilities(prev => !prev);
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Pressable onPress={() => setShowAbilities(!showAbilities)}>
+      <Pressable onPress={toggleAbilities}>
         <View style={styles.header}>
           <Text style={styles.roleEmoji}>{getRoleEmoji(survivor.role)}</Text>
           <Text style={styles.survivorId}>{survivor.id}</Text>
@@ -94,7 +104,7 @@ const SurvivorStatusBar: React.FC<SurvivorStatusBarProps> = ({ survivor }) => {
       {showAbilities && <AbilityPanel survivor={survivor} />}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

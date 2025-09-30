@@ -24,6 +24,7 @@ export interface SurvivorState {
   energy: number; // 0-100
   maxHealth: number;
   maxEnergy: number;
+  damageTrigger?: number; // Timestamp to trigger shake animation
 }
 
 // Resource inventory
@@ -77,6 +78,7 @@ interface GameState {
   getValidMoves: (survivorId: string) => {x: number; y: number}[];
   consumeEnergy: (id: string, amount: number) => void;
   consumeHealth: (id: string, amount: number) => void;
+  takeDamage: (id: string, amount: number) => void;
   restoreHealth: (id: string, amount: number) => void;
   restoreEnergy: (id: string, amount: number) => void;
   updateResources: (resource: keyof ResourceInventory, amount: number) => void;
@@ -368,6 +370,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     set((state) => ({
       survivors: state.survivors.map((s) =>
         s.id === id ? { ...s, health: Math.max(0, s.health - amount) } : s
+      ),
+    })),
+  takeDamage: (id, amount) =>
+    set((state) => ({
+      survivors: state.survivors.map((s) =>
+        s.id === id
+          ? { ...s, health: Math.max(0, s.health - amount), damageTrigger: Date.now() }
+          : s
       ),
     })),
   restoreHealth: (id, amount) =>

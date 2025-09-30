@@ -5,12 +5,14 @@ import MenuScreen from './src/screens/MenuScreen';
 import GameScreen from './src/screens/GameScreen';
 import LevelSelectScreen from './src/screens/LevelSelectScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import StatsScreen from './src/screens/StatsScreen';
 
 export type RootStackParamList = {
   Menu: undefined;
   Game: { level?: number };
   LevelSelect: undefined;
   Settings: undefined;
+  Stats: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -28,6 +30,7 @@ export default function App() {
         <Stack.Screen name="Game" component={GameScreen} />
         <Stack.Screen name="LevelSelect" component={LevelSelectScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Stats" component={StatsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

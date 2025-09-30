@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { Text, StyleSheet, Pressable } from 'react-native';
 import { TILE_SIZE } from './Tile';
 import { useGameStore } from './store';
@@ -6,6 +6,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withSequence,
+  withTiming,
 } from 'react-native-reanimated';
 
 interface SurvivorProps {
@@ -14,7 +16,7 @@ interface SurvivorProps {
   y: number;
 }
 
-const Survivor: React.FC<SurvivorProps> = ({ id, x, y }) => {
+const Survivor: React.FC<SurvivorProps> = React.memo(({ id, x, y }) => {
   const { selectedSurvivorId, movedSurvivorIds, selectSurvivor, survivors } = useGameStore(
     (state) => ({
       selectedSurvivorId: state.selectedSurvivorId,
@@ -24,16 +26,25 @@ const Survivor: React.FC<SurvivorProps> = ({ id, x, y }) => {
     }),
   );
 
-  const survivor = survivors.find(s => s.id === id);
+  const survivor = useMemo(() => {
+    return survivors.find(s => s.id === id);
+  }, [survivors, id]);
+
   const role = survivor?.role || 'engineer';
 
-  const isSelected = id === selectedSurvivorId;
-  const hasMoved = movedSurvivorIds.includes(id);
+  const isSelected = useMemo(() => {
+    return id === selectedSurvivorId;
+  }, [id, selectedSurvivorId]);
+
+  const hasMoved = useMemo(() => {
+    return movedSurvivorIds.includes(id);
+  }, [movedSurvivorIds, id]);
 
   const offsetX = useSharedValue(x * TILE_SIZE);
   const offsetY = useSharedValue(y * TILE_SIZE);
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
+  const shakeX = useSharedValue(0);
 
   useEffect(() => {
     offsetX.value = withSpring(x * TILE_SIZE, {
@@ -45,6 +56,19 @@ const Survivor: React.FC<SurvivorProps> = ({ id, x, y }) => {
       stiffness: 150,
     });
   }, [x, y, offsetX, offsetY]);
+
+  // Shake animation when taking damage
+  useEffect(() => {
+    if (survivor?.damageTrigger) {
+      shakeX.value = withSequence(
+        withTiming(5, { duration: 50 }),
+        withTiming(-5, { duration: 50 }),
+        withTiming(5, { duration: 50 }),
+        withTiming(-5, { duration: 50 }),
+        withTiming(0, { duration: 50 })
+      );
+    }
+  }, [survivor?.damageTrigger, shakeX]);
 
   useEffect(() => {
     scale.value = withSpring(isSelected ? 1.1 : 1, {
@@ -66,7 +90,7 @@ const Survivor: React.FC<SurvivorProps> = ({ id, x, y }) => {
       left: 0,
       top: 0,
       transform: [
-        { translateX: offsetX.value },
+        { translateX: offsetX.value + shakeX.value },
         { translateY: offsetY.value },
         { scale: scale.value },
       ],
@@ -74,22 +98,27 @@ const Survivor: React.FC<SurvivorProps> = ({ id, x, y }) => {
     };
   });
 
-  const roleColor = getRoleColor(role);
+  const roleColor = useMemo(() => getRoleColor(role), [role]);
+  const roleEmoji = useMemo(() => getRoleEmoji(role), [role]);
+
+  const handlePress = useCallback(() => {
+    selectSurvivor(id);
+  }, [selectSurvivor, id]);
 
   return (
     <Animated.View style={animatedStyle}>
-      <Pressable onPress={() => selectSurvivor(id)} disabled={hasMoved}>
+      <Pressable onPress={handlePress} disabled={hasMoved}>
         <Animated.View style={[
           styles.survivor,
           { backgroundColor: roleColor },
           isSelected && styles.selected
         ]}>
-          <Text style={styles.text}>S</Text>
+          <Text style={styles.text}>{roleEmoji}</Text>
         </Animated.View>
       </Pressable>
     </Animated.View>
   );
-};
+});
 
 // Get role-based color
 const getRoleColor = (role: string): string => {
@@ -104,6 +133,22 @@ const getRoleColor = (role: string): string => {
       return '#06b6d4'; // cyan-500
     default:
       return '#6b7280'; // gray-500
+  }
+};
+
+// Get role-based emoji
+const getRoleEmoji = (role: string): string => {
+  switch (role) {
+    case 'engineer':
+      return '👷';
+    case 'doctor':
+      return '👨‍⚕️';
+    case 'chef':
+      return '👨‍🍳';
+    case 'child':
+      return '👶';
+    default:
+      return '🧑';
   }
 };
 

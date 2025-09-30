@@ -1,5 +1,12 @@
-import React from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useGameStore, SurvivorState } from '../game/store';
 import { ABILITIES } from '../game/abilities';
 
@@ -7,7 +14,8 @@ interface AbilityPanelProps {
   survivor: SurvivorState;
 }
 
-const AbilityPanel: React.FC<AbilityPanelProps> = ({ survivor }) => {
+const AbilityPanel: React.FC<AbilityPanelProps> = React.memo(({ survivor }) => {
+  const [activeAbilityIndex, setActiveAbilityIndex] = useState<number | null>(null);
   const { removeObstacle, startBridgeBuild, restoreHealth, restoreEnergy, updateResources } =
     useGameStore((state) => ({
       removeObstacle: state.removeObstacle,
@@ -17,10 +25,16 @@ const AbilityPanel: React.FC<AbilityPanelProps> = ({ survivor }) => {
       updateResources: state.updateResources,
     }));
 
-  const abilities = ABILITIES[survivor.role];
+  const abilities = useMemo(() => {
+    return ABILITIES[survivor.role];
+  }, [survivor.role]);
 
-  const handleAbilityUse = (abilityIndex: number) => {
+  const handleAbilityUse = useCallback((abilityIndex: number) => {
     const ability = abilities[abilityIndex];
+
+    // Trigger animation
+    setActiveAbilityIndex(abilityIndex);
+    setTimeout(() => setActiveAbilityIndex(null), 500);
 
     switch (survivor.role) {
       case 'engineer':
@@ -72,7 +86,7 @@ const AbilityPanel: React.FC<AbilityPanelProps> = ({ survivor }) => {
         }
         break;
     }
-  };
+  }, [survivor.role, survivor.energy, survivor.id, updateResources, restoreEnergy]);
 
   return (
     <View style={styles.container}>
@@ -80,29 +94,77 @@ const AbilityPanel: React.FC<AbilityPanelProps> = ({ survivor }) => {
       <View style={styles.abilitiesContainer}>
         {abilities.map((ability, index) => {
           const canUse = survivor.energy >= ability.energyCost;
+          const isActive = activeAbilityIndex === index;
           return (
-            <Pressable
+            <AbilityButton
               key={index}
-              style={[styles.abilityButton, !canUse && styles.abilityButtonDisabled]}
-              onPress={() => canUse && handleAbilityUse(index)}
-              disabled={!canUse}
-            >
-              <Text style={[styles.abilityName, !canUse && styles.abilityTextDisabled]}>
-                {ability.name}
-              </Text>
-              <Text style={[styles.abilityDescription, !canUse && styles.abilityTextDisabled]}>
-                {ability.description}
-              </Text>
-              <Text style={[styles.abilityCost, !canUse && styles.abilityTextDisabled]}>
-                에너지: {ability.energyCost}
-              </Text>
-            </Pressable>
+              ability={ability}
+              canUse={canUse}
+              isActive={isActive}
+              onPress={() => handleAbilityUse(index)}
+            />
           );
         })}
       </View>
     </View>
   );
-};
+});
+
+// Animated ability button component
+interface AbilityButtonProps {
+  ability: { name: string; description: string; energyCost: number };
+  canUse: boolean;
+  isActive: boolean;
+  onPress: () => void;
+}
+
+const AbilityButton: React.FC<AbilityButtonProps> = React.memo(({ ability, canUse, isActive, onPress }) => {
+  const scale = useSharedValue(1);
+  const glowOpacity = useSharedValue(0);
+
+  React.useEffect(() => {
+    if (isActive) {
+      scale.value = withSequence(
+        withTiming(1.1, { duration: 100 }),
+        withSpring(1, { damping: 10 })
+      );
+      glowOpacity.value = withSequence(
+        withTiming(1, { duration: 100 }),
+        withTiming(0, { duration: 400 })
+      );
+    }
+  }, [isActive]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Pressable
+        style={[
+          styles.abilityButton,
+          !canUse && styles.abilityButtonDisabled,
+        ]}
+        onPress={onPress}
+        disabled={!canUse}
+      >
+        {isActive && (
+          <Animated.View style={[styles.glowEffect, glowStyle]} />
+        )}
+        <Text style={styles.abilityName}>{ability.name}</Text>
+        <Text style={styles.abilityDescription}>{ability.description}</Text>
+        <Text style={[styles.energyCost, !canUse && styles.energyCostDisabled]}>
+          ⚡ {ability.energyCost}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -128,10 +190,21 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#d1d5db',
+    position: 'relative',
+    overflow: 'hidden',
   },
   abilityButtonDisabled: {
     backgroundColor: '#f9fafb',
     opacity: 0.5,
+  },
+  glowEffect: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#60a5fa',
+    borderRadius: 6,
   },
   abilityName: {
     fontSize: 13,
@@ -150,6 +223,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   abilityTextDisabled: {
+    color: '#9ca3af',
+  },
+  energyCost: {
+    fontSize: 10,
+    color: '#3b82f6',
+    fontWeight: '500',
+  },
+  energyCostDisabled: {
     color: '#9ca3af',
   },
 });

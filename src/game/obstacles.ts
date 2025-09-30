@@ -31,7 +31,7 @@ export const OBSTACLE_CONFIG = {
   },
   swamp: {
     name: '늪지',
-    emoji: '🟫',
+    emoji: '💩',
     isPassable: true,
     energyMultiplier: 2, // Double energy cost to move through
     isRemovable: true, // Engineer can restore

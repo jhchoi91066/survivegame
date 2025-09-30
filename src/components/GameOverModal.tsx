@@ -1,13 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+  withTiming,
+  withRepeat,
+} from 'react-native-reanimated';
 import { useGameStore } from '../game/store';
 
 interface GameOverModalProps {
   visible: boolean;
   onRestart: () => void;
+  onNextLevel?: () => void;
+  onMainMenu?: () => void;
 }
 
-const GameOverModal: React.FC<GameOverModalProps> = ({ visible, onRestart }) => {
+const GameOverModal: React.FC<GameOverModalProps> = ({ visible, onRestart, onNextLevel, onMainMenu }) => {
   const { gameStatus, timeRemaining, turn, survivors } = useGameStore((state) => ({
     gameStatus: state.gameStatus,
     timeRemaining: state.timeRemaining,
@@ -20,6 +30,54 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ visible, onRestart }) => 
   }
 
   const isVictory = gameStatus === 'victory';
+
+  // Animation values
+  const scale = useSharedValue(0);
+  const starScale = useSharedValue(0);
+  const starRotation = useSharedValue(0);
+
+  // Trigger animations when modal becomes visible
+  useEffect(() => {
+    if (visible) {
+      scale.value = withSpring(1, {
+        damping: 15,
+        stiffness: 150,
+      });
+
+      if (isVictory) {
+        // Stagger star animations
+        starScale.value = withSequence(
+          withTiming(0, { duration: 0 }),
+          withTiming(1.3, { duration: 300 }),
+          withSpring(1, { damping: 10 })
+        );
+        starRotation.value = withRepeat(
+          withSequence(
+            withTiming(10, { duration: 200 }),
+            withTiming(-10, { duration: 200 }),
+            withTiming(0, { duration: 200 })
+          ),
+          3,
+          false
+        );
+      }
+    } else {
+      scale.value = 0;
+      starScale.value = 0;
+      starRotation.value = 0;
+    }
+  }, [visible, isVictory]);
+
+  const modalAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const starAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: starScale.value },
+      { rotate: `${starRotation.value}deg` }
+    ],
+  }));
 
   // Calculate statistics
   const totalHealth = survivors.reduce((sum, s) => sum + s.health, 0);
@@ -42,17 +100,17 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ visible, onRestart }) => 
       onRequestClose={onRestart}
     >
       <View style={styles.overlay}>
-        <View style={styles.modal}>
+        <Animated.View style={[styles.modal, modalAnimatedStyle]}>
           <Text style={[styles.title, isVictory ? styles.victoryTitle : styles.defeatTitle]}>
             {isVictory ? '🎉 구조 성공!' : '💀 실패...'}
           </Text>
 
           {isVictory && (
-            <View style={styles.stars}>
+            <Animated.View style={[styles.stars, starAnimatedStyle]}>
               <Text style={styles.starText}>
                 {'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}
               </Text>
-            </View>
+            </Animated.View>
           )}
 
           <View style={styles.stats}>
@@ -76,10 +134,22 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ visible, onRestart }) => 
             </View>
           </View>
 
-          <Pressable style={styles.button} onPress={onRestart}>
-            <Text style={styles.buttonText}>다시 시작</Text>
-          </Pressable>
-        </View>
+          <View style={styles.buttonContainer}>
+            {isVictory && onNextLevel && (
+              <Pressable style={[styles.button, styles.nextButton]} onPress={onNextLevel}>
+                <Text style={styles.buttonText}>다음 레벨 ➡️</Text>
+              </Pressable>
+            )}
+            <Pressable style={[styles.button, styles.restartButton]} onPress={onRestart}>
+              <Text style={styles.buttonText}>다시 시작</Text>
+            </Pressable>
+            {onMainMenu && (
+              <Pressable style={[styles.button, styles.menuButton]} onPress={onMainMenu}>
+                <Text style={styles.buttonText}>메인 메뉴</Text>
+              </Pressable>
+            )}
+          </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -143,11 +213,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
   },
+  buttonContainer: {
+    gap: 10,
+  },
   button: {
-    backgroundColor: '#3b82f6',
     borderRadius: 8,
     padding: 14,
     alignItems: 'center',
+  },
+  nextButton: {
+    backgroundColor: '#10b981', // green-500
+  },
+  restartButton: {
+    backgroundColor: '#3b82f6', // blue-500
+  },
+  menuButton: {
+    backgroundColor: '#6b7280', // gray-500
   },
   buttonText: {
     color: '#fff',

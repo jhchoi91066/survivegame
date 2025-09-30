@@ -4,11 +4,9 @@ import { useGameStore } from '../game/store';
 import { formatTime, getUrgencyLevel, getTimerColor } from '../game/timer';
 
 const GameTimer: React.FC = () => {
-  const { timeRemaining, gameStatus, tickTimer } = useGameStore((state) => ({
-    timeRemaining: state.timeRemaining,
-    gameStatus: state.gameStatus,
-    tickTimer: state.tickTimer,
-  }));
+  const timeRemaining = useGameStore((state) => state.timeRemaining);
+  const gameStatus = useGameStore((state) => state.gameStatus);
+  const tickTimer = useGameStore((state) => state.tickTimer);
 
   useEffect(() => {
     if (gameStatus !== 'playing') return;
