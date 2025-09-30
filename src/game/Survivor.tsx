@@ -15,13 +15,17 @@ interface SurvivorProps {
 }
 
 const Survivor: React.FC<SurvivorProps> = ({ id, x, y }) => {
-  const { selectedSurvivorId, movedSurvivorIds, selectSurvivor } = useGameStore(
+  const { selectedSurvivorId, movedSurvivorIds, selectSurvivor, survivors } = useGameStore(
     (state) => ({
       selectedSurvivorId: state.selectedSurvivorId,
       movedSurvivorIds: state.movedSurvivorIds,
       selectSurvivor: state.selectSurvivor,
+      survivors: state.survivors,
     }),
   );
+
+  const survivor = survivors.find(s => s.id === id);
+  const role = survivor?.role || 'engineer';
 
   const isSelected = id === selectedSurvivorId;
   const hasMoved = movedSurvivorIds.includes(id);
@@ -70,15 +74,37 @@ const Survivor: React.FC<SurvivorProps> = ({ id, x, y }) => {
     };
   });
 
+  const roleColor = getRoleColor(role);
+
   return (
     <Animated.View style={animatedStyle}>
       <Pressable onPress={() => selectSurvivor(id)} disabled={hasMoved}>
-        <Animated.View style={[styles.survivor, isSelected && styles.selected]}>
+        <Animated.View style={[
+          styles.survivor,
+          { backgroundColor: roleColor },
+          isSelected && styles.selected
+        ]}>
           <Text style={styles.text}>S</Text>
         </Animated.View>
       </Pressable>
     </Animated.View>
   );
+};
+
+// Get role-based color
+const getRoleColor = (role: string): string => {
+  switch (role) {
+    case 'engineer':
+      return '#f59e0b'; // amber-500
+    case 'doctor':
+      return '#ef4444'; // red-500
+    case 'chef':
+      return '#8b5cf6'; // violet-500
+    case 'child':
+      return '#06b6d4'; // cyan-500
+    default:
+      return '#6b7280'; // gray-500
+  }
 };
 
 const styles = StyleSheet.create({
