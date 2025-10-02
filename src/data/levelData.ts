@@ -1,0 +1,1087 @@
+import { ObstacleType, ChainReactionType } from '../game/obstacles';
+import { SurvivorRole } from '../game/abilities';
+
+// 퍼즐 게임용 확장된 장애물 데이터
+export interface PuzzleLevelObstacle {
+  id: string;
+  type: ObstacleType;
+  x: number;
+  y: number;
+
+  // 의존성 그래프
+  blockedBy?: string[]; // 먼저 제거해야 할 장애물 ID들
+  blocksIds?: string[]; // 이 장애물 제거 시 잠금 해제되는 ID들
+
+  // 연쇄 반응
+  chainReaction?: ChainReactionType;
+
+  // 실시간 효과
+  spreadTimer?: number;
+  naturalDecayTime?: number;
+
+  // 안개
+  isRevealed?: boolean;
+  hiddenObstacles?: PuzzleLevelObstacle[];
+}
+
+// 기존 레벨 장애물 (하위 호환성)
+export interface LevelObstacle {
+  id: string;
+  type: ObstacleType;
+  x: number;
+  y: number;
+}
+
+export interface LevelConfig {
+  id: number;
+  name: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  gridSize: { width: number; height: number };
+  timeLimit: number; // seconds
+  planningTime?: number; // 계획 단계 시간 (기본 60초)
+  survivors: Array<{
+    role: SurvivorRole;
+    position: { x: number; y: number };
+  }>;
+  rescuePoint: { x: number; y: number };
+  obstacles: LevelObstacle[] | PuzzleLevelObstacle[]; // 두 타입 모두 지원
+  starThresholds: {
+    threeStar: number; // seconds remaining
+    twoStar: number; // seconds remaining
+  };
+
+  // 퍼즐 게임 전용
+  isPuzzle?: boolean; // true면 퍼즐 모드
+  hint?: string; // 레벨 힌트
+  expectedSolution?: string[]; // 예상 해법 (히든 달성용)
+}
+
+// 퍼즐 레벨 임포트
+import { PUZZLE_TUTORIAL_LEVELS } from './puzzleLevels';
+
+// 레벨 데이터 로드 (기존 레벨 + 퍼즐 레벨)
+export const getLevelData = (levelId: number): LevelConfig | null => {
+  // 먼저 퍼즐 레벨 확인 (101~105)
+  if (levelId >= 101 && levelId <= 105) {
+    const puzzleLevel = PUZZLE_TUTORIAL_LEVELS.find(l => l.id === levelId);
+    if (puzzleLevel) return puzzleLevel;
+  }
+
+  // 기존 레벨 확인
+  const level = LEVEL_DATA.find(l => l.id === levelId);
+  return level || null;
+};
+
+// 전체 레벨 목록
+export const getAllLevels = (): LevelConfig[] => {
+  return LEVEL_DATA;
+};
+
+// 난이도별 레벨 목록
+export const getLevelsByDifficulty = (difficulty: 'easy' | 'medium' | 'hard'): LevelConfig[] => {
+  return LEVEL_DATA.filter(l => l.difficulty === difficulty);
+};
+
+// 레벨 데이터 (50개)
+export const LEVEL_DATA: LevelConfig[] = [
+  // Easy Levels (1-15)
+  {
+    id: 1,
+    name: '첫 탈출',
+    difficulty: 'easy',
+    gridSize: { width: 5, height: 5 },
+    timeLimit: 120,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 0 } },
+      { role: 'doctor', position: { x: 0, y: 1 } },
+    ],
+    rescuePoint: { x: 4, y: 4 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 2, y: 2 },
+    ],
+    starThresholds: { threeStar: 90, twoStar: 60 },
+  },
+  {
+    id: 2,
+    name: '늪지대',
+    difficulty: 'easy',
+    gridSize: { width: 6, height: 5 },
+    timeLimit: 120,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 0 } },
+      { role: 'chef', position: { x: 0, y: 1 } },
+    ],
+    rescuePoint: { x: 5, y: 4 },
+    obstacles: [
+      { id: 'obs1', type: 'swamp', x: 2, y: 1 },
+      { id: 'obs2', type: 'swamp', x: 3, y: 2 },
+    ],
+    starThresholds: { threeStar: 85, twoStar: 55 },
+  },
+  {
+    id: 3,
+    name: '좁은 통로',
+    difficulty: 'easy',
+    gridSize: { width: 7, height: 5 },
+    timeLimit: 130,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 2 } },
+      { role: 'doctor', position: { x: 0, y: 3 } },
+    ],
+    rescuePoint: { x: 6, y: 2 },
+    obstacles: [
+      { id: 'obs1', type: 'narrow_passage', x: 3, y: 2 },
+      { id: 'obs2', type: 'rock', x: 3, y: 1 },
+      { id: 'obs3', type: 'rock', x: 3, y: 3 },
+    ],
+    starThresholds: { threeStar: 95, twoStar: 65 },
+  },
+  {
+    id: 4,
+    name: '깊은 물',
+    difficulty: 'easy',
+    gridSize: { width: 6, height: 6 },
+    timeLimit: 140,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 0 } },
+      { role: 'chef', position: { x: 0, y: 1 } },
+      { role: 'doctor', position: { x: 0, y: 2 } },
+    ],
+    rescuePoint: { x: 5, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 2, y: 2 },
+      { id: 'obs2', type: 'deep_water', x: 3, y: 3 },
+    ],
+    starThresholds: { threeStar: 100, twoStar: 70 },
+  },
+  {
+    id: 5,
+    name: '다리 건설',
+    difficulty: 'easy',
+    gridSize: { width: 7, height: 5 },
+    timeLimit: 150,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 2 } },
+      { role: 'doctor', position: { x: 0, y: 3 } },
+    ],
+    rescuePoint: { x: 6, y: 2 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 3, y: 2 },
+    ],
+    starThresholds: { threeStar: 110, twoStar: 80 },
+  },
+  {
+    id: 6,
+    name: '혼합 장애물',
+    difficulty: 'easy',
+    gridSize: { width: 7, height: 6 },
+    timeLimit: 150,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 0 } },
+      { role: 'child', position: { x: 0, y: 1 } },
+      { role: 'chef', position: { x: 0, y: 2 } },
+    ],
+    rescuePoint: { x: 6, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 2, y: 1 },
+      { id: 'obs2', type: 'swamp', x: 3, y: 2 },
+      { id: 'obs3', type: 'narrow_passage', x: 4, y: 3 },
+    ],
+    starThresholds: { threeStar: 110, twoStar: 75 },
+  },
+  {
+    id: 7,
+    name: '에너지 관리',
+    difficulty: 'easy',
+    gridSize: { width: 8, height: 5 },
+    timeLimit: 140,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 2 } },
+      { role: 'doctor', position: { x: 0, y: 3 } },
+    ],
+    rescuePoint: { x: 7, y: 2 },
+    obstacles: [
+      { id: 'obs1', type: 'swamp', x: 2, y: 2 },
+      { id: 'obs2', type: 'swamp', x: 4, y: 2 },
+      { id: 'obs3', type: 'swamp', x: 6, y: 2 },
+    ],
+    starThresholds: { threeStar: 100, twoStar: 70 },
+  },
+  {
+    id: 8,
+    name: '팀워크',
+    difficulty: 'easy',
+    gridSize: { width: 7, height: 7 },
+    timeLimit: 160,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 0 } },
+      { role: 'child', position: { x: 0, y: 1 } },
+      { role: 'chef', position: { x: 0, y: 2 } },
+      { role: 'doctor', position: { x: 0, y: 3 } },
+    ],
+    rescuePoint: { x: 6, y: 6 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 1 },
+      { id: 'obs2', type: 'narrow_passage', x: 3, y: 3 },
+      { id: 'obs3', type: 'swamp', x: 4, y: 4 },
+    ],
+    starThresholds: { threeStar: 120, twoStar: 85 },
+  },
+  {
+    id: 9,
+    name: '지그재그',
+    difficulty: 'easy',
+    gridSize: { width: 8, height: 6 },
+    timeLimit: 150,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 0 } },
+      { role: 'doctor', position: { x: 0, y: 1 } },
+    ],
+    rescuePoint: { x: 7, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 2, y: 1 },
+      { id: 'obs2', type: 'rock', x: 4, y: 2 },
+      { id: 'obs3', type: 'rock', x: 5, y: 4 },
+    ],
+    starThresholds: { threeStar: 110, twoStar: 75 },
+  },
+  {
+    id: 10,
+    name: '미로 입구',
+    difficulty: 'easy',
+    gridSize: { width: 8, height: 7 },
+    timeLimit: 160,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 3 } },
+      { role: 'chef', position: { x: 0, y: 4 } },
+    ],
+    rescuePoint: { x: 7, y: 3 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 2, y: 2 },
+      { id: 'obs2', type: 'rock', x: 2, y: 4 },
+      { id: 'obs3', type: 'narrow_passage', x: 4, y: 3 },
+      { id: 'obs4', type: 'rock', x: 5, y: 2 },
+      { id: 'obs5', type: 'rock', x: 5, y: 4 },
+    ],
+    starThresholds: { threeStar: 120, twoStar: 80 },
+  },
+  {
+    id: 11,
+    name: '물길',
+    difficulty: 'easy',
+    gridSize: { width: 9, height: 6 },
+    timeLimit: 170,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 2 } },
+      { role: 'doctor', position: { x: 0, y: 3 } },
+    ],
+    rescuePoint: { x: 8, y: 2 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 3, y: 2 },
+      { id: 'obs2', type: 'deep_water', x: 6, y: 2 },
+    ],
+    starThresholds: { threeStar: 130, twoStar: 90 },
+  },
+  {
+    id: 12,
+    name: '장애물 천국',
+    difficulty: 'easy',
+    gridSize: { width: 8, height: 8 },
+    timeLimit: 180,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 0 } },
+      { role: 'child', position: { x: 0, y: 1 } },
+      { role: 'chef', position: { x: 0, y: 2 } },
+    ],
+    rescuePoint: { x: 7, y: 7 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 2, y: 2 },
+      { id: 'obs2', type: 'swamp', x: 3, y: 3 },
+      { id: 'obs3', type: 'narrow_passage', x: 4, y: 4 },
+      { id: 'obs4', type: 'deep_water', x: 5, y: 5 },
+    ],
+    starThresholds: { threeStar: 140, twoStar: 100 },
+  },
+  {
+    id: 13,
+    name: '좁은 길',
+    difficulty: 'easy',
+    gridSize: { width: 10, height: 5 },
+    timeLimit: 160,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 2 } },
+      { role: 'doctor', position: { x: 0, y: 3 } },
+    ],
+    rescuePoint: { x: 9, y: 2 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 1 },
+      { id: 'obs2', type: 'rock', x: 3, y: 3 },
+      { id: 'obs3', type: 'narrow_passage', x: 5, y: 2 },
+      { id: 'obs4', type: 'rock', x: 7, y: 1 },
+      { id: 'obs5', type: 'rock', x: 7, y: 3 },
+    ],
+    starThresholds: { threeStar: 120, twoStar: 85 },
+  },
+  {
+    id: 14,
+    name: '협동 작전',
+    difficulty: 'easy',
+    gridSize: { width: 9, height: 7 },
+    timeLimit: 190,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 1 } },
+      { role: 'child', position: { x: 0, y: 2 } },
+      { role: 'chef', position: { x: 0, y: 3 } },
+      { role: 'doctor', position: { x: 0, y: 4 } },
+    ],
+    rescuePoint: { x: 8, y: 3 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 4, y: 2 },
+      { id: 'obs2', type: 'narrow_passage', x: 6, y: 3 },
+      { id: 'obs3', type: 'swamp', x: 7, y: 4 },
+    ],
+    starThresholds: { threeStar: 150, twoStar: 110 },
+  },
+  {
+    id: 15,
+    name: '마지막 쉼터',
+    difficulty: 'easy',
+    gridSize: { width: 10, height: 8 },
+    timeLimit: 200,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 0 } },
+      { role: 'doctor', position: { x: 0, y: 1 } },
+      { role: 'chef', position: { x: 0, y: 2 } },
+    ],
+    rescuePoint: { x: 9, y: 7 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 2 },
+      { id: 'obs2', type: 'swamp', x: 5, y: 3 },
+      { id: 'obs3', type: 'deep_water', x: 6, y: 5 },
+      { id: 'obs4', type: 'rock', x: 7, y: 6 },
+    ],
+    starThresholds: { threeStar: 160, twoStar: 120 },
+  },
+
+  // Medium Levels (16-35)
+  {
+    id: 16,
+    name: '중급 시작',
+    difficulty: 'medium',
+    gridSize: { width: 9, height: 8 },
+    timeLimit: 180,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 0 } },
+      { role: 'child', position: { x: 0, y: 1 } },
+      { role: 'doctor', position: { x: 0, y: 2 } },
+    ],
+    rescuePoint: { x: 8, y: 7 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 2, y: 2 },
+      { id: 'obs2', type: 'swamp', x: 3, y: 3 },
+      { id: 'obs3', type: 'deep_water', x: 5, y: 4 },
+      { id: 'obs4', type: 'narrow_passage', x: 6, y: 5 },
+      { id: 'obs5', type: 'rock', x: 7, y: 6 },
+    ],
+    starThresholds: { threeStar: 130, twoStar: 90 },
+  },
+  {
+    id: 17,
+    name: '복잡한 미로',
+    difficulty: 'medium',
+    gridSize: { width: 10, height: 8 },
+    timeLimit: 190,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 3 } },
+      { role: 'chef', position: { x: 0, y: 4 } },
+    ],
+    rescuePoint: { x: 9, y: 4 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 2, y: 2 },
+      { id: 'obs2', type: 'rock', x: 2, y: 5 },
+      { id: 'obs3', type: 'narrow_passage', x: 4, y: 3 },
+      { id: 'obs4', type: 'rock', x: 6, y: 2 },
+      { id: 'obs5', type: 'rock', x: 6, y: 5 },
+      { id: 'obs6', type: 'swamp', x: 7, y: 3 },
+    ],
+    starThresholds: { threeStar: 140, twoStar: 95 },
+  },
+  {
+    id: 18,
+    name: '늪지 지대',
+    difficulty: 'medium',
+    gridSize: { width: 9, height: 9 },
+    timeLimit: 200,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 0 } },
+      { role: 'doctor', position: { x: 0, y: 1 } },
+      { role: 'chef', position: { x: 0, y: 2 } },
+    ],
+    rescuePoint: { x: 8, y: 8 },
+    obstacles: [
+      { id: 'obs1', type: 'swamp', x: 2, y: 2 },
+      { id: 'obs2', type: 'swamp', x: 3, y: 3 },
+      { id: 'obs3', type: 'swamp', x: 4, y: 4 },
+      { id: 'obs4', type: 'swamp', x: 5, y: 5 },
+      { id: 'obs5', type: 'swamp', x: 6, y: 6 },
+    ],
+    starThresholds: { threeStar: 150, twoStar: 105 },
+  },
+  {
+    id: 19,
+    name: '강 건너기',
+    difficulty: 'medium',
+    gridSize: { width: 11, height: 7 },
+    timeLimit: 210,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 3 } },
+      { role: 'child', position: { x: 0, y: 4 } },
+    ],
+    rescuePoint: { x: 10, y: 3 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 3, y: 3 },
+      { id: 'obs2', type: 'deep_water', x: 7, y: 3 },
+      { id: 'obs3', type: 'rock', x: 5, y: 2 },
+      { id: 'obs4', type: 'rock', x: 5, y: 4 },
+    ],
+    starThresholds: { threeStar: 160, twoStar: 115 },
+  },
+  {
+    id: 20,
+    name: '다리 두 개',
+    difficulty: 'medium',
+    gridSize: { width: 10, height: 9 },
+    timeLimit: 220,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 2 } },
+      { role: 'doctor', position: { x: 0, y: 3 } },
+      { role: 'chef', position: { x: 0, y: 4 } },
+    ],
+    rescuePoint: { x: 9, y: 4 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 3, y: 3 },
+      { id: 'obs2', type: 'deep_water', x: 6, y: 4 },
+      { id: 'obs3', type: 'swamp', x: 7, y: 5 },
+    ],
+    starThresholds: { threeStar: 170, twoStar: 125 },
+  },
+  {
+    id: 21,
+    name: '에너지 위기',
+    difficulty: 'medium',
+    gridSize: { width: 11, height: 8 },
+    timeLimit: 200,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 3 } },
+      { role: 'doctor', position: { x: 0, y: 4 } },
+    ],
+    rescuePoint: { x: 10, y: 4 },
+    obstacles: [
+      { id: 'obs1', type: 'swamp', x: 2, y: 3 },
+      { id: 'obs2', type: 'swamp', x: 4, y: 4 },
+      { id: 'obs3', type: 'swamp', x: 6, y: 3 },
+      { id: 'obs4', type: 'swamp', x: 8, y: 4 },
+      { id: 'obs5', type: 'narrow_passage', x: 5, y: 3 },
+    ],
+    starThresholds: { threeStar: 150, twoStar: 105 },
+  },
+  {
+    id: 22,
+    name: '좁은 통로들',
+    difficulty: 'medium',
+    gridSize: { width: 10, height: 10 },
+    timeLimit: 210,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 4 } },
+      { role: 'child', position: { x: 0, y: 5 } },
+    ],
+    rescuePoint: { x: 9, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'narrow_passage', x: 3, y: 4 },
+      { id: 'obs2', type: 'narrow_passage', x: 6, y: 5 },
+      { id: 'obs3', type: 'rock', x: 4, y: 3 },
+      { id: 'obs4', type: 'rock', x: 4, y: 6 },
+      { id: 'obs5', type: 'rock', x: 7, y: 4 },
+      { id: 'obs6', type: 'rock', x: 7, y: 6 },
+    ],
+    starThresholds: { threeStar: 160, twoStar: 115 },
+  },
+  {
+    id: 23,
+    name: '시간 압박',
+    difficulty: 'medium',
+    gridSize: { width: 12, height: 8 },
+    timeLimit: 180,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 3 } },
+      { role: 'chef', position: { x: 0, y: 4 } },
+    ],
+    rescuePoint: { x: 11, y: 4 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 3 },
+      { id: 'obs2', type: 'swamp', x: 5, y: 4 },
+      { id: 'obs3', type: 'deep_water', x: 7, y: 3 },
+      { id: 'obs4', type: 'rock', x: 9, y: 4 },
+    ],
+    starThresholds: { threeStar: 130, twoStar: 85 },
+  },
+  {
+    id: 24,
+    name: '모든 역할',
+    difficulty: 'medium',
+    gridSize: { width: 10, height: 9 },
+    timeLimit: 230,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 2 } },
+      { role: 'child', position: { x: 0, y: 3 } },
+      { role: 'chef', position: { x: 0, y: 4 } },
+      { role: 'doctor', position: { x: 0, y: 5 } },
+    ],
+    rescuePoint: { x: 9, y: 4 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 3, y: 3 },
+      { id: 'obs2', type: 'narrow_passage', x: 5, y: 4 },
+      { id: 'obs3', type: 'swamp', x: 7, y: 5 },
+      { id: 'obs4', type: 'rock', x: 8, y: 3 },
+    ],
+    starThresholds: { threeStar: 180, twoStar: 135 },
+  },
+  {
+    id: 25,
+    name: '복합 장애물',
+    difficulty: 'medium',
+    gridSize: { width: 11, height: 10 },
+    timeLimit: 220,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 4 } },
+      { role: 'doctor', position: { x: 0, y: 5 } },
+    ],
+    rescuePoint: { x: 10, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 2, y: 4 },
+      { id: 'obs2', type: 'swamp', x: 4, y: 5 },
+      { id: 'obs3', type: 'deep_water', x: 6, y: 4 },
+      { id: 'obs4', type: 'narrow_passage', x: 8, y: 5 },
+      { id: 'obs5', type: 'rock', x: 9, y: 6 },
+    ],
+    starThresholds: { threeStar: 170, twoStar: 125 },
+  },
+  {
+    id: 26,
+    name: '지그재그 고급',
+    difficulty: 'medium',
+    gridSize: { width: 12, height: 9 },
+    timeLimit: 210,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 4 } },
+      { role: 'chef', position: { x: 0, y: 5 } },
+    ],
+    rescuePoint: { x: 11, y: 4 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 2, y: 3 },
+      { id: 'obs2', type: 'rock', x: 4, y: 5 },
+      { id: 'obs3', type: 'rock', x: 6, y: 3 },
+      { id: 'obs4', type: 'rock', x: 8, y: 5 },
+      { id: 'obs5', type: 'narrow_passage', x: 10, y: 4 },
+    ],
+    starThresholds: { threeStar: 160, twoStar: 115 },
+  },
+  {
+    id: 27,
+    name: '물의 시련',
+    difficulty: 'medium',
+    gridSize: { width: 11, height: 10 },
+    timeLimit: 240,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 4 } },
+      { role: 'doctor', position: { x: 0, y: 5 } },
+      { role: 'chef', position: { x: 0, y: 6 } },
+    ],
+    rescuePoint: { x: 10, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 3, y: 5 },
+      { id: 'obs2', type: 'deep_water', x: 7, y: 5 },
+      { id: 'obs3', type: 'swamp', x: 5, y: 4 },
+      { id: 'obs4', type: 'swamp', x: 5, y: 6 },
+    ],
+    starThresholds: { threeStar: 190, twoStar: 145 },
+  },
+  {
+    id: 28,
+    name: '미로의 중심',
+    difficulty: 'medium',
+    gridSize: { width: 11, height: 11 },
+    timeLimit: 230,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 5 } },
+      { role: 'doctor', position: { x: 0, y: 6 } },
+    ],
+    rescuePoint: { x: 10, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 4 },
+      { id: 'obs2', type: 'rock', x: 3, y: 6 },
+      { id: 'obs3', type: 'narrow_passage', x: 5, y: 5 },
+      { id: 'obs4', type: 'rock', x: 7, y: 4 },
+      { id: 'obs5', type: 'rock', x: 7, y: 6 },
+      { id: 'obs6', type: 'swamp', x: 9, y: 5 },
+    ],
+    starThresholds: { threeStar: 180, twoStar: 135 },
+  },
+  {
+    id: 29,
+    name: '긴 여정',
+    difficulty: 'medium',
+    gridSize: { width: 14, height: 8 },
+    timeLimit: 220,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 3 } },
+      { role: 'child', position: { x: 0, y: 4 } },
+    ],
+    rescuePoint: { x: 13, y: 4 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 3 },
+      { id: 'obs2', type: 'swamp', x: 6, y: 4 },
+      { id: 'obs3', type: 'deep_water', x: 9, y: 3 },
+      { id: 'obs4', type: 'narrow_passage', x: 11, y: 4 },
+    ],
+    starThresholds: { threeStar: 170, twoStar: 125 },
+  },
+  {
+    id: 30,
+    name: '시간과의 싸움',
+    difficulty: 'medium',
+    gridSize: { width: 12, height: 10 },
+    timeLimit: 200,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 4 } },
+      { role: 'chef', position: { x: 0, y: 5 } },
+    ],
+    rescuePoint: { x: 11, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'swamp', x: 3, y: 5 },
+      { id: 'obs2', type: 'deep_water', x: 6, y: 4 },
+      { id: 'obs3', type: 'rock', x: 8, y: 5 },
+      { id: 'obs4', type: 'swamp', x: 10, y: 6 },
+    ],
+    starThresholds: { threeStar: 150, twoStar: 105 },
+  },
+  {
+    id: 31,
+    name: '협력의 힘',
+    difficulty: 'medium',
+    gridSize: { width: 11, height: 11 },
+    timeLimit: 250,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 4 } },
+      { role: 'child', position: { x: 0, y: 5 } },
+      { role: 'chef', position: { x: 0, y: 6 } },
+      { role: 'doctor', position: { x: 0, y: 7 } },
+    ],
+    rescuePoint: { x: 10, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 4, y: 5 },
+      { id: 'obs2', type: 'narrow_passage', x: 6, y: 6 },
+      { id: 'obs3', type: 'swamp', x: 8, y: 5 },
+    ],
+    starThresholds: { threeStar: 200, twoStar: 155 },
+  },
+  {
+    id: 32,
+    name: '다중 경로',
+    difficulty: 'medium',
+    gridSize: { width: 12, height: 11 },
+    timeLimit: 230,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 5 } },
+      { role: 'doctor', position: { x: 0, y: 6 } },
+    ],
+    rescuePoint: { x: 11, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 4, y: 4 },
+      { id: 'obs2', type: 'rock', x: 4, y: 6 },
+      { id: 'obs3', type: 'swamp', x: 6, y: 3 },
+      { id: 'obs4', type: 'swamp', x: 6, y: 7 },
+      { id: 'obs5', type: 'deep_water', x: 8, y: 5 },
+    ],
+    starThresholds: { threeStar: 180, twoStar: 135 },
+  },
+  {
+    id: 33,
+    name: '좁은 세계',
+    difficulty: 'medium',
+    gridSize: { width: 13, height: 9 },
+    timeLimit: 220,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 4 } },
+      { role: 'child', position: { x: 0, y: 5 } },
+    ],
+    rescuePoint: { x: 12, y: 4 },
+    obstacles: [
+      { id: 'obs1', type: 'narrow_passage', x: 3, y: 4 },
+      { id: 'obs2', type: 'narrow_passage', x: 7, y: 5 },
+      { id: 'obs3', type: 'narrow_passage', x: 10, y: 4 },
+      { id: 'obs4', type: 'rock', x: 5, y: 3 },
+      { id: 'obs5', type: 'rock', x: 5, y: 6 },
+    ],
+    starThresholds: { threeStar: 170, twoStar: 125 },
+  },
+  {
+    id: 34,
+    name: '큰 지도',
+    difficulty: 'medium',
+    gridSize: { width: 13, height: 12 },
+    timeLimit: 250,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 5 } },
+      { role: 'chef', position: { x: 0, y: 6 } },
+      { role: 'doctor', position: { x: 0, y: 7 } },
+    ],
+    rescuePoint: { x: 12, y: 6 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 5 },
+      { id: 'obs2', type: 'swamp', x: 5, y: 6 },
+      { id: 'obs3', type: 'deep_water', x: 7, y: 7 },
+      { id: 'obs4', type: 'rock', x: 9, y: 6 },
+      { id: 'obs5', type: 'swamp', x: 11, y: 5 },
+    ],
+    starThresholds: { threeStar: 200, twoStar: 155 },
+  },
+  {
+    id: 35,
+    name: '중급의 끝',
+    difficulty: 'medium',
+    gridSize: { width: 14, height: 11 },
+    timeLimit: 240,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 5 } },
+      { role: 'child', position: { x: 0, y: 6 } },
+    ],
+    rescuePoint: { x: 13, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 4, y: 5 },
+      { id: 'obs2', type: 'narrow_passage', x: 7, y: 6 },
+      { id: 'obs3', type: 'deep_water', x: 10, y: 5 },
+      { id: 'obs4', type: 'rock', x: 12, y: 4 },
+    ],
+    starThresholds: { threeStar: 190, twoStar: 145 },
+  },
+
+  // Hard Levels (36-50)
+  {
+    id: 36,
+    name: '고급 입문',
+    difficulty: 'hard',
+    gridSize: { width: 12, height: 12 },
+    timeLimit: 240,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 5 } },
+      { role: 'child', position: { x: 0, y: 6 } },
+      { role: 'doctor', position: { x: 0, y: 7 } },
+    ],
+    rescuePoint: { x: 11, y: 6 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 5 },
+      { id: 'obs2', type: 'swamp', x: 4, y: 6 },
+      { id: 'obs3', type: 'deep_water', x: 6, y: 7 },
+      { id: 'obs4', type: 'narrow_passage', x: 8, y: 6 },
+      { id: 'obs5', type: 'rock', x: 9, y: 5 },
+      { id: 'obs6', type: 'swamp', x: 10, y: 7 },
+    ],
+    starThresholds: { threeStar: 180, twoStar: 130 },
+  },
+  {
+    id: 37,
+    name: '복잡한 강',
+    difficulty: 'hard',
+    gridSize: { width: 13, height: 11 },
+    timeLimit: 260,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 5 } },
+      { role: 'chef', position: { x: 0, y: 6 } },
+    ],
+    rescuePoint: { x: 12, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 3, y: 5 },
+      { id: 'obs2', type: 'deep_water', x: 6, y: 6 },
+      { id: 'obs3', type: 'deep_water', x: 9, y: 5 },
+      { id: 'obs4', type: 'swamp', x: 5, y: 4 },
+      { id: 'obs5', type: 'swamp', x: 7, y: 7 },
+    ],
+    starThresholds: { threeStar: 200, twoStar: 150 },
+  },
+  {
+    id: 38,
+    name: '미로 지옥',
+    difficulty: 'hard',
+    gridSize: { width: 13, height: 13 },
+    timeLimit: 250,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 6 } },
+      { role: 'doctor', position: { x: 0, y: 7 } },
+    ],
+    rescuePoint: { x: 12, y: 6 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 2, y: 5 },
+      { id: 'obs2', type: 'rock', x: 2, y: 7 },
+      { id: 'obs3', type: 'narrow_passage', x: 4, y: 6 },
+      { id: 'obs4', type: 'rock', x: 6, y: 5 },
+      { id: 'obs5', type: 'rock', x: 6, y: 7 },
+      { id: 'obs6', type: 'narrow_passage', x: 8, y: 6 },
+      { id: 'obs7', type: 'rock', x: 10, y: 5 },
+      { id: 'obs8', type: 'rock', x: 10, y: 7 },
+    ],
+    starThresholds: { threeStar: 190, twoStar: 140 },
+  },
+  {
+    id: 39,
+    name: '시간 부족',
+    difficulty: 'hard',
+    gridSize: { width: 14, height: 12 },
+    timeLimit: 220,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 5 } },
+      { role: 'child', position: { x: 0, y: 6 } },
+    ],
+    rescuePoint: { x: 13, y: 6 },
+    obstacles: [
+      { id: 'obs1', type: 'swamp', x: 3, y: 6 },
+      { id: 'obs2', type: 'deep_water', x: 6, y: 5 },
+      { id: 'obs3', type: 'narrow_passage', x: 9, y: 6 },
+      { id: 'obs4', type: 'rock', x: 11, y: 7 },
+    ],
+    starThresholds: { threeStar: 160, twoStar: 110 },
+  },
+  {
+    id: 40,
+    name: '모두 함께',
+    difficulty: 'hard',
+    gridSize: { width: 13, height: 13 },
+    timeLimit: 280,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 5 } },
+      { role: 'child', position: { x: 0, y: 6 } },
+      { role: 'chef', position: { x: 0, y: 7 } },
+      { role: 'doctor', position: { x: 0, y: 8 } },
+    ],
+    rescuePoint: { x: 12, y: 6 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 4, y: 6 },
+      { id: 'obs2', type: 'narrow_passage', x: 6, y: 7 },
+      { id: 'obs3', type: 'swamp', x: 8, y: 8 },
+      { id: 'obs4', type: 'rock', x: 10, y: 6 },
+    ],
+    starThresholds: { threeStar: 220, twoStar: 170 },
+  },
+  {
+    id: 41,
+    name: '극한의 에너지',
+    difficulty: 'hard',
+    gridSize: { width: 15, height: 11 },
+    timeLimit: 240,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 5 } },
+      { role: 'doctor', position: { x: 0, y: 6 } },
+    ],
+    rescuePoint: { x: 14, y: 5 },
+    obstacles: [
+      { id: 'obs1', type: 'swamp', x: 2, y: 5 },
+      { id: 'obs2', type: 'swamp', x: 5, y: 6 },
+      { id: 'obs3', type: 'swamp', x: 8, y: 5 },
+      { id: 'obs4', type: 'swamp', x: 11, y: 6 },
+      { id: 'obs5', type: 'narrow_passage', x: 7, y: 5 },
+    ],
+    starThresholds: { threeStar: 180, twoStar: 130 },
+  },
+  {
+    id: 42,
+    name: '삼중 다리',
+    difficulty: 'hard',
+    gridSize: { width: 14, height: 13 },
+    timeLimit: 300,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 6 } },
+      { role: 'chef', position: { x: 0, y: 7 } },
+    ],
+    rescuePoint: { x: 13, y: 6 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 3, y: 6 },
+      { id: 'obs2', type: 'deep_water', x: 7, y: 7 },
+      { id: 'obs3', type: 'deep_water', x: 10, y: 6 },
+    ],
+    starThresholds: { threeStar: 240, twoStar: 190 },
+  },
+  {
+    id: 43,
+    name: '복합 지형',
+    difficulty: 'hard',
+    gridSize: { width: 14, height: 14 },
+    timeLimit: 270,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 6 } },
+      { role: 'child', position: { x: 0, y: 7 } },
+      { role: 'doctor', position: { x: 0, y: 8 } },
+    ],
+    rescuePoint: { x: 13, y: 7 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 6 },
+      { id: 'obs2', type: 'swamp', x: 5, y: 7 },
+      { id: 'obs3', type: 'deep_water', x: 7, y: 8 },
+      { id: 'obs4', type: 'narrow_passage', x: 9, y: 7 },
+      { id: 'obs5', type: 'rock', x: 11, y: 6 },
+      { id: 'obs6', type: 'swamp', x: 12, y: 8 },
+    ],
+    starThresholds: { threeStar: 210, twoStar: 160 },
+  },
+  {
+    id: 44,
+    name: '긴 미로',
+    difficulty: 'hard',
+    gridSize: { width: 16, height: 12 },
+    timeLimit: 260,
+    survivors: [
+      { role: 'child', position: { x: 0, y: 6 } },
+      { role: 'chef', position: { x: 0, y: 7 } },
+    ],
+    rescuePoint: { x: 15, y: 6 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 5 },
+      { id: 'obs2', type: 'rock', x: 3, y: 7 },
+      { id: 'obs3', type: 'narrow_passage', x: 6, y: 6 },
+      { id: 'obs4', type: 'rock', x: 9, y: 5 },
+      { id: 'obs5', type: 'rock', x: 9, y: 7 },
+      { id: 'obs6', type: 'narrow_passage', x: 12, y: 6 },
+    ],
+    starThresholds: { threeStar: 200, twoStar: 150 },
+  },
+  {
+    id: 45,
+    name: '엄청난 도전',
+    difficulty: 'hard',
+    gridSize: { width: 15, height: 14 },
+    timeLimit: 280,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 6 } },
+      { role: 'doctor', position: { x: 0, y: 7 } },
+      { role: 'chef', position: { x: 0, y: 8 } },
+    ],
+    rescuePoint: { x: 14, y: 7 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 4, y: 7 },
+      { id: 'obs2', type: 'swamp', x: 6, y: 6 },
+      { id: 'obs3', type: 'rock', x: 8, y: 8 },
+      { id: 'obs4', type: 'deep_water', x: 10, y: 7 },
+      { id: 'obs5', type: 'narrow_passage', x: 12, y: 6 },
+    ],
+    starThresholds: { threeStar: 220, twoStar: 170 },
+  },
+  {
+    id: 46,
+    name: '최고의 팀워크',
+    difficulty: 'hard',
+    gridSize: { width: 15, height: 15 },
+    timeLimit: 300,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 6 } },
+      { role: 'child', position: { x: 0, y: 7 } },
+      { role: 'chef', position: { x: 0, y: 8 } },
+      { role: 'doctor', position: { x: 0, y: 9 } },
+    ],
+    rescuePoint: { x: 14, y: 7 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 5, y: 7 },
+      { id: 'obs2', type: 'narrow_passage', x: 7, y: 8 },
+      { id: 'obs3', type: 'swamp', x: 9, y: 9 },
+      { id: 'obs4', type: 'deep_water', x: 11, y: 7 },
+    ],
+    starThresholds: { threeStar: 240, twoStar: 190 },
+  },
+  {
+    id: 47,
+    name: '거대한 세계',
+    difficulty: 'hard',
+    gridSize: { width: 16, height: 15 },
+    timeLimit: 290,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 7 } },
+      { role: 'child', position: { x: 0, y: 8 } },
+    ],
+    rescuePoint: { x: 15, y: 7 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 7 },
+      { id: 'obs2', type: 'swamp', x: 6, y: 8 },
+      { id: 'obs3', type: 'deep_water', x: 9, y: 7 },
+      { id: 'obs4', type: 'narrow_passage', x: 12, y: 8 },
+      { id: 'obs5', type: 'rock', x: 14, y: 6 },
+    ],
+    starThresholds: { threeStar: 230, twoStar: 180 },
+  },
+  {
+    id: 48,
+    name: '거의 끝',
+    difficulty: 'hard',
+    gridSize: { width: 16, height: 16 },
+    timeLimit: 300,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 7 } },
+      { role: 'doctor', position: { x: 0, y: 8 } },
+      { role: 'chef', position: { x: 0, y: 9 } },
+    ],
+    rescuePoint: { x: 15, y: 8 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 4, y: 8 },
+      { id: 'obs2', type: 'swamp', x: 6, y: 7 },
+      { id: 'obs3', type: 'rock', x: 8, y: 9 },
+      { id: 'obs4', type: 'deep_water', x: 10, y: 8 },
+      { id: 'obs5', type: 'narrow_passage', x: 12, y: 7 },
+      { id: 'obs6', type: 'swamp', x: 14, y: 9 },
+    ],
+    starThresholds: { threeStar: 240, twoStar: 190 },
+  },
+  {
+    id: 49,
+    name: '최후의 시련',
+    difficulty: 'hard',
+    gridSize: { width: 17, height: 16 },
+    timeLimit: 310,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 7 } },
+      { role: 'child', position: { x: 0, y: 8 } },
+      { role: 'chef', position: { x: 0, y: 9 } },
+    ],
+    rescuePoint: { x: 16, y: 8 },
+    obstacles: [
+      { id: 'obs1', type: 'rock', x: 3, y: 7 },
+      { id: 'obs2', type: 'swamp', x: 5, y: 8 },
+      { id: 'obs3', type: 'deep_water', x: 7, y: 9 },
+      { id: 'obs4', type: 'narrow_passage', x: 9, y: 8 },
+      { id: 'obs5', type: 'rock', x: 11, y: 7 },
+      { id: 'obs6', type: 'deep_water', x: 13, y: 9 },
+      { id: 'obs7', type: 'swamp', x: 15, y: 8 },
+    ],
+    starThresholds: { threeStar: 250, twoStar: 200 },
+  },
+  {
+    id: 50,
+    name: '전설의 탈출',
+    difficulty: 'hard',
+    gridSize: { width: 18, height: 17 },
+    timeLimit: 320,
+    survivors: [
+      { role: 'engineer', position: { x: 0, y: 7 } },
+      { role: 'child', position: { x: 0, y: 8 } },
+      { role: 'chef', position: { x: 0, y: 9 } },
+      { role: 'doctor', position: { x: 0, y: 10 } },
+    ],
+    rescuePoint: { x: 17, y: 8 },
+    obstacles: [
+      { id: 'obs1', type: 'deep_water', x: 4, y: 8 },
+      { id: 'obs2', type: 'narrow_passage', x: 6, y: 9 },
+      { id: 'obs3', type: 'swamp', x: 8, y: 7 },
+      { id: 'obs4', type: 'rock', x: 10, y: 10 },
+      { id: 'obs5', type: 'deep_water', x: 12, y: 8 },
+      { id: 'obs6', type: 'narrow_passage', x: 14, y: 9 },
+      { id: 'obs7', type: 'swamp', x: 16, y: 7 },
+    ],
+    starThresholds: { threeStar: 260, twoStar: 210 },
+  },
+];
