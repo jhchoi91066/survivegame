@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, SafeAreaView, Text, Button, ScrollView, Pressable } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Text, ScrollView, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,7 +8,6 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withTiming,
-  withSequence,
   Easing,
 } from 'react-native-reanimated';
 import GameBoard from '../game/GameBoard';
@@ -19,10 +18,19 @@ import GameTimer from '../components/GameTimer';
 import WeatherDisplay from '../components/WeatherDisplay';
 import GameOverModal from '../components/GameOverModal';
 import TutorialOverlay from '../components/TutorialOverlay';
+import ObstacleRemovalModal from '../components/ObstacleRemovalModal';
+import PlanningTimer from '../components/PlanningTimer';
+import Toast, { ToastType } from '../components/Toast';
+import AchievementUnlockedModal from '../components/AchievementUnlockedModal';
 import { TUTORIAL_STEPS } from '../data/tutorialSteps';
 import { getLevelData } from '../data/levelData';
 import { recordLevelCompletion, isLevelUnlocked } from '../utils/progressManager';
+import { updateStatsOnLevelComplete, updateStatsOnSynergyDiscovered } from '../utils/achievementManager';
+import { Achievement } from '../data/achievements';
+import { hapticPatterns } from '../utils/haptics';
 import { RootStackParamList } from '../../App';
+import { ObstacleState } from '../game/obstacles';
+import { RemovalMethod } from '../game/obstacles';
 
 const TUTORIAL_KEY = '@tutorial_completed';
 
@@ -34,40 +42,32 @@ const GameScreen: React.FC = () => {
   const navigation = useNavigation<GameScreenNavigationProp>();
   const levelId = route.params?.level || 1;
 
-  const {
-    turn,
-    nextTurn,
-    survivors,
-    resources,
-    gameStatus,
-    startGame,
-    checkVictoryCondition,
-    checkDefeatCondition,
-    initializeLevel,
-    timeRemaining,
-    currentLevelId,
-  } = useGameStore((state) => ({
-    turn: state.turn,
-    nextTurn: state.nextTurn,
-    survivors: state.survivors,
-    resources: state.resources,
-    gameStatus: state.gameStatus,
-    startGame: state.startGame,
-    checkVictoryCondition: state.checkVictoryCondition,
-    checkDefeatCondition: state.checkDefeatCondition,
-    initializeLevel: state.initializeLevel,
-    timeRemaining: state.timeRemaining,
-    currentLevelId: state.currentLevelId,
-  }));
+  const survivors = useGameStore((state) => state.survivors);
+  const resources = useGameStore((state) => state.resources);
+  const gameStatus = useGameStore((state) => state.gameStatus);
+  const startGame = useGameStore((state) => state.startGame);
+  const checkVictoryCondition = useGameStore((state) => state.checkVictoryCondition);
+  const checkDefeatCondition = useGameStore((state) => state.checkDefeatCondition);
+  const initializeLevel = useGameStore((state) => state.initializeLevel);
+  const timeRemaining = useGameStore((state) => state.timeRemaining);
+  const currentLevelId = useGameStore((state) => state.currentLevelId);
+  const gamePhase = useGameStore((state) => state.gamePhase);
+  const updateRealTimeEffects = useGameStore((state) => state.updateRealTimeEffects);
 
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [levelConfig, setLevelConfig] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Animation for turn transition
-  const turnFadeOpacity = useSharedValue(1);
+  const [selectedObstacle, setSelectedObstacle] = useState<ObstacleState | null>(null);
+  const [showObstacleModal, setShowObstacleModal] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<ToastType>('info');
+  const [showGuide, setShowGuide] = useState(true);
+  const [selectedSurvivor, setSelectedSurvivor] = useState<any>(null);
+  const [unlockedAchievement, setUnlockedAchievement] = useState<Achievement | null>(null);
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
 
   // Initialize level data
   useEffect(() => {
@@ -116,36 +116,77 @@ const GameScreen: React.FC = () => {
     if (gameStatus === 'idle' && !showTutorial && levelConfig) {
       startGame();
     }
-  }, [gameStatus, startGame, showTutorial, levelConfig]);
+  }, [gameStatus, showTutorial, levelConfig]);
 
   // Handle victory and save progress
   useEffect(() => {
     const handleVictory = async () => {
       if (gameStatus === 'victory' && currentLevelId && levelConfig) {
-        await recordLevelCompletion(
+        // 진행도 저장
+        const stars = await recordLevelCompletion(
           currentLevelId,
           timeRemaining,
           levelConfig.starThresholds
         );
+
+        // 업적 체크
+        const timeUsed = levelConfig.timeLimit - timeRemaining;
+        const chainReactionCount = useGameStore.getState().chainReactionEvents.length;
+        const initialRes = useGameStore.getState().initialResources;
+        const currentRes = useGameStore.getState().resources;
+        const resourcesUsed =
+          (initialRes.tool - currentRes.tool) +
+          (initialRes.water - currentRes.water) +
+          (initialRes.explosive - currentRes.explosive);
+
+        const survivorsUsed = survivors
+          .filter(s => s.used)
+          .map(s => s.role);
+
+        const newAchievements = await updateStatsOnLevelComplete(
+          currentLevelId,
+          stars,
+          timeUsed,
+          resourcesUsed,
+          survivorsUsed,
+          chainReactionCount
+        );
+
+        // 새로 달성한 업적이 있으면 표시
+        if (newAchievements.length > 0) {
+          setTimeout(() => {
+            hapticPatterns.achievementUnlocked();
+            setUnlockedAchievement(newAchievements[0]);
+            setShowAchievementModal(true);
+          }, 1000);
+        }
+
+        // 레벨 클리어 햅틱
+        hapticPatterns.levelComplete();
       }
     };
 
     handleVictory();
-  }, [gameStatus, currentLevelId, timeRemaining, levelConfig]);
+  }, [gameStatus, currentLevelId, timeRemaining, levelConfig, survivors]);
 
-  const handleNextTurn = () => {
-    // Fade effect
-    turnFadeOpacity.value = withSequence(
-      withTiming(0.7, { duration: 150 }),
-      withTiming(1, { duration: 150 })
-    );
-
-    nextTurn();
-    // Check win/lose conditions after turn
-    if (!checkVictoryCondition()) {
-      checkDefeatCondition();
+  // Handle defeat
+  useEffect(() => {
+    if (gameStatus === 'defeat') {
+      hapticPatterns.gameOver();
     }
-  };
+  }, [gameStatus]);
+
+  // 실시간 효과 업데이트 (실행 단계에서만)
+  useEffect(() => {
+    if (gamePhase === 'planning' || gameStatus !== 'playing') return;
+
+    const interval = setInterval(() => {
+      updateRealTimeEffects();
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [gamePhase, gameStatus, updateRealTimeEffects]);
+
 
   const handleRestart = () => {
     if (levelConfig) {
@@ -153,10 +194,6 @@ const GameScreen: React.FC = () => {
       startGame();
     }
   };
-
-  const turnFadeStyle = useAnimatedStyle(() => ({
-    opacity: turnFadeOpacity.value,
-  }));
 
   const handleTutorialNext = () => {
     setTutorialStep((prev) => prev + 1);
@@ -188,6 +225,92 @@ const GameScreen: React.FC = () => {
 
   const handleMainMenu = () => {
     navigation.navigate('Menu');
+  };
+
+  const handleObstacleClick = (obstacle: ObstacleState) => {
+    // 가이드가 표시 중이면 장애물 클릭 무시
+    if (showGuide) return;
+
+    hapticPatterns.obstacleSelect();
+    setSelectedObstacle(obstacle);
+    setShowObstacleModal(true);
+  };
+
+  const handleCloseObstacleModal = () => {
+    setShowObstacleModal(false);
+    setSelectedObstacle(null);
+  };
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
+
+  const handleSynergyDiscovered = async (synergyId: string, synergyName: string, synergyDescription: string) => {
+    const addDiscoveredSynergy = useGameStore.getState().addDiscoveredSynergy;
+    const discoveredSynergies = useGameStore.getState().discoveredSynergies;
+
+    // 이미 발견한 시너지인지 확인
+    if (!discoveredSynergies.includes(synergyId)) {
+      addDiscoveredSynergy(synergyId);
+      hapticPatterns.synergyDiscovered();
+      showToast(`🎉 ${synergyName} 시너지 발견!\n${synergyDescription}`, 'success');
+
+      // 업적 업데이트
+      const newAchievements = await updateStatsOnSynergyDiscovered();
+      if (newAchievements.length > 0) {
+        setTimeout(() => {
+          setUnlockedAchievement(newAchievements[0]);
+          setShowAchievementModal(true);
+        }, 2000);
+      }
+    } else {
+      showToast(`${synergyName}\n${synergyDescription}`, 'info');
+    }
+  };
+
+  const handleSelectMethod = (method: RemovalMethod, survivorIds?: string[]) => {
+    if (selectedObstacle) {
+      // 안개 정찰인 경우
+      if (selectedObstacle.type === 'fog' && method.type === 'survivor_child') {
+        const scoutFog = useGameStore.getState().scoutFog;
+        const childSurvivorId = survivorIds && survivorIds.length > 0 ? survivorIds[0] : null;
+
+        if (childSurvivorId) {
+          const success = scoutFog(selectedObstacle.id, childSurvivorId);
+          if (success) {
+            hapticPatterns.obstacleRemove();
+            handleCloseObstacleModal();
+            showToast('안개를 정찰했습니다!', 'success');
+          } else {
+            hapticPatterns.errorAction();
+            showToast('정찰에 실패했습니다', 'error');
+          }
+        }
+      } else {
+        // 일반 장애물 제거
+        const removeObstacleWithMethod = useGameStore.getState().removeObstacleWithMethod;
+        const success = removeObstacleWithMethod(selectedObstacle.id, method, survivorIds);
+
+        if (success) {
+          hapticPatterns.obstacleRemove();
+          if (method.chainReaction) {
+            setTimeout(() => hapticPatterns.chainReaction(), 300);
+          }
+          handleCloseObstacleModal();
+          if (method.warning) {
+            hapticPatterns.warningAction();
+            showToast('장애물을 제거했습니다 (위험)', 'warning');
+          } else {
+            showToast('장애물을 제거했습니다', 'success');
+          }
+        } else {
+          hapticPatterns.errorAction();
+          showToast('장애물 제거에 실패했습니다', 'error');
+        }
+      }
+    }
   };
 
   // Error retry handler
@@ -228,14 +351,12 @@ const GameScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Animated.View style={[{ flex: 1 }, turnFadeStyle]}>
+      <View style={{ flex: 1 }}>
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
+            <PlanningTimer />
             <View style={styles.headerRow}>
-              <View style={styles.headerLeft}>
-                <Text style={styles.turnText}>Turn: {turn}</Text>
-              </View>
               <GameTimer />
             </View>
             <View style={styles.headerRow}>
@@ -246,7 +367,7 @@ const GameScreen: React.FC = () => {
 
           {/* Game Board */}
           <View style={styles.boardWrapper}>
-            <GameBoard />
+            <GameBoard onObstacleClick={handleObstacleClick} onSurvivorClick={setSelectedSurvivor} />
           </View>
 
           {/* Survivor Status Panel */}
@@ -255,11 +376,6 @@ const GameScreen: React.FC = () => {
             {survivors.map((survivor) => (
               <SurvivorStatusBar key={survivor.id} survivor={survivor} />
             ))}
-          </View>
-
-          {/* Controls */}
-          <View style={styles.buttonContainer}>
-            <Button title="턴 종료" onPress={handleNextTurn} />
           </View>
         </ScrollView>
 
@@ -278,7 +394,96 @@ const GameScreen: React.FC = () => {
           onSkip={handleTutorialSkip}
           onComplete={handleTutorialComplete}
         />
-      </Animated.View>
+
+        <ObstacleRemovalModal
+          visible={showObstacleModal}
+          obstacle={selectedObstacle}
+          availableSurvivors={survivors.map(s => ({
+            id: s.id,
+            role: s.role,
+            used: false
+          }))}
+          availableResources={resources as unknown as { [key: string]: number }}
+          onClose={handleCloseObstacleModal}
+          onSelectMethod={handleSelectMethod}
+          onSynergyDiscovered={handleSynergyDiscovered}
+        />
+
+        <Toast
+          visible={toastVisible}
+          message={toastMessage}
+          type={toastType}
+          onHide={() => setToastVisible(false)}
+        />
+
+        <AchievementUnlockedModal
+          visible={showAchievementModal}
+          achievement={unlockedAchievement}
+          onClose={() => {
+            setShowAchievementModal(false);
+            setUnlockedAchievement(null);
+          }}
+        />
+
+        {/* 게임 가이드 */}
+        {showGuide && (
+          <View style={styles.guideOverlay}>
+            <View style={styles.guideModal}>
+              <Text style={styles.guideTitle}>🎮 게임 방법</Text>
+              <Text style={styles.guideText}>
+                1. 🪨 장애물을 클릭하세요{'\n'}
+                2. 📋 제거 방법 선택 모달에서 생존자를 선택하세요{'\n'}
+                3. 💰 필요한 자원이 자동으로 소모됩니다{'\n'}
+                4. 🎯 모든 장애물을 제거하면 승리!{'\n'}
+                5. ⚠️ 각 생존자는 한 번만 사용 가능합니다{'\n'}
+                6. 👤 생존자 클릭 = 정보 보기 (제거 X)
+              </Text>
+              <Pressable
+                style={styles.guideButton}
+                onPress={() => setShowGuide(false)}
+              >
+                <Text style={styles.guideButtonText}>시작하기</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {/* 생존자 정보 모달 */}
+        {selectedSurvivor && (
+          <View style={styles.guideOverlay}>
+            <Pressable style={styles.overlayBackground} onPress={() => setSelectedSurvivor(null)} />
+            <View style={styles.survivorInfoModal}>
+              <Text style={styles.survivorInfoTitle}>👤 생존자 정보</Text>
+              <View style={styles.survivorInfoContent}>
+                <Text style={styles.survivorInfoLabel}>이름:</Text>
+                <Text style={styles.survivorInfoValue}>{selectedSurvivor.name}</Text>
+              </View>
+              <View style={styles.survivorInfoContent}>
+                <Text style={styles.survivorInfoLabel}>역할:</Text>
+                <Text style={styles.survivorInfoValue}>{selectedSurvivor.role}</Text>
+              </View>
+              <View style={styles.survivorInfoContent}>
+                <Text style={styles.survivorInfoLabel}>체력:</Text>
+                <Text style={styles.survivorInfoValue}>{selectedSurvivor.health} / 100</Text>
+              </View>
+              <View style={styles.survivorInfoContent}>
+                <Text style={styles.survivorInfoLabel}>배고픔:</Text>
+                <Text style={styles.survivorInfoValue}>{selectedSurvivor.hunger} / 100</Text>
+              </View>
+              <View style={styles.survivorInfoContent}>
+                <Text style={styles.survivorInfoLabel}>사기:</Text>
+                <Text style={styles.survivorInfoValue}>{selectedSurvivor.morale} / 100</Text>
+              </View>
+              <Pressable
+                style={styles.guideButton}
+                onPress={() => setSelectedSurvivor(null)}
+              >
+                <Text style={styles.guideButtonText}>닫기</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      </View>
     </SafeAreaView>
   );
 };
@@ -407,14 +612,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  headerLeft: {
-    flex: 1,
-  },
-  turnText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
   boardWrapper: {
     alignItems: 'center',
     marginBottom: 16,
@@ -436,8 +633,87 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 12,
   },
-  buttonContainer: {
-    marginBottom: 20,
+  guideOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  guideModal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    margin: 20,
+    maxWidth: 400,
+    width: '90%',
+  },
+  guideTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  guideText: {
+    fontSize: 16,
+    color: '#4b5563',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  guideButton: {
+    backgroundColor: '#3b82f6',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  guideButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  overlayBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  survivorInfoModal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    margin: 20,
+    maxWidth: 400,
+    width: '90%',
+  },
+  survivorInfoTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  survivorInfoContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  survivorInfoLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+  survivorInfoValue: {
+    fontSize: 16,
+    color: '#1f2937',
   },
 });
 

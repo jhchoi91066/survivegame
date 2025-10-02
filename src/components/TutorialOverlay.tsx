@@ -1,5 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, Dimensions } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  withDelay,
+} from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 
@@ -12,6 +20,12 @@ interface TutorialStep {
     width: number;
     height: number;
   };
+  pointerPosition?: {
+    x: number;
+    y: number;
+  };
+  actionRequired?: boolean; // 특정 액션을 해야만 다음으로 진행
+  actionType?: 'tap' | 'swipe' | 'long_press';
 }
 
 interface TutorialOverlayProps {
@@ -31,6 +45,52 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   onSkip,
   onComplete,
 }) => {
+  // 포인터 애니메이션
+  const pointerScale = useSharedValue(1);
+  const pointerOpacity = useSharedValue(1);
+  const pointerTranslateY = useSharedValue(0);
+
+  useEffect(() => {
+    if (visible) {
+      // 탭 애니메이션
+      pointerScale.value = withRepeat(
+        withSequence(
+          withTiming(1.2, { duration: 500 }),
+          withTiming(1, { duration: 500 })
+        ),
+        -1,
+        false
+      );
+
+      pointerOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.5, { duration: 500 }),
+          withTiming(1, { duration: 500 })
+        ),
+        -1,
+        false
+      );
+
+      // 위아래 움직임
+      pointerTranslateY.value = withRepeat(
+        withSequence(
+          withTiming(-10, { duration: 600 }),
+          withTiming(0, { duration: 600 })
+        ),
+        -1,
+        true
+      );
+    }
+  }, [visible, currentStep]);
+
+  const pointerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: pointerScale.value },
+      { translateY: pointerTranslateY.value }
+    ],
+    opacity: pointerOpacity.value,
+  }));
+
   if (!visible || currentStep >= steps.length) return null;
 
   const step = steps[currentStep];
@@ -55,6 +115,22 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
               },
             ]}
           />
+        )}
+
+        {/* Pointer animation */}
+        {step.pointerPosition && (
+          <Animated.View
+            style={[
+              styles.pointer,
+              {
+                left: step.pointerPosition.x - 20,
+                top: step.pointerPosition.y - 40,
+              },
+              pointerAnimatedStyle,
+            ]}
+          >
+            <Text style={styles.pointerEmoji}>👆</Text>
+          </Animated.View>
         )}
 
         {/* Tutorial content */}
@@ -102,6 +178,20 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#fbbf24',
     backgroundColor: 'transparent',
+  },
+  pointer: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  pointerEmoji: {
+    fontSize: 32,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   content: {
     flex: 1,

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Text, StyleSheet, Pressable } from 'react-native';
 import { TILE_SIZE } from './Tile';
 import { useGameStore } from './store';
@@ -14,36 +14,21 @@ interface SurvivorProps {
   id: string;
   x: number;
   y: number;
+  onPress?: (survivor: any) => void;
 }
 
-const Survivor: React.FC<SurvivorProps> = React.memo(({ id, x, y }) => {
-  const { selectedSurvivorId, movedSurvivorIds, selectSurvivor, survivors } = useGameStore(
-    (state) => ({
-      selectedSurvivorId: state.selectedSurvivorId,
-      movedSurvivorIds: state.movedSurvivorIds,
-      selectSurvivor: state.selectSurvivor,
-      survivors: state.survivors,
-    }),
-  );
+const Survivor: React.FC<SurvivorProps> = React.memo(({ id, x, y, onPress }) => {
+  const survivors = useGameStore(state => state.survivors);
 
   const survivor = useMemo(() => {
     return survivors.find(s => s.id === id);
   }, [survivors, id]);
 
   const role = survivor?.role || 'engineer';
-
-  const isSelected = useMemo(() => {
-    return id === selectedSurvivorId;
-  }, [id, selectedSurvivorId]);
-
-  const hasMoved = useMemo(() => {
-    return movedSurvivorIds.includes(id);
-  }, [movedSurvivorIds, id]);
+  const isUsed = survivor?.used || false;
 
   const offsetX = useSharedValue(x * TILE_SIZE);
   const offsetY = useSharedValue(y * TILE_SIZE);
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(1);
   const shakeX = useSharedValue(0);
 
   useEffect(() => {
@@ -70,20 +55,6 @@ const Survivor: React.FC<SurvivorProps> = React.memo(({ id, x, y }) => {
     }
   }, [survivor?.damageTrigger, shakeX]);
 
-  useEffect(() => {
-    scale.value = withSpring(isSelected ? 1.1 : 1, {
-      damping: 12,
-      stiffness: 200,
-    });
-  }, [isSelected, scale]);
-
-  useEffect(() => {
-    opacity.value = withSpring(hasMoved ? 0.5 : 1, {
-      damping: 10,
-      stiffness: 100,
-    });
-  }, [hasMoved, opacity]);
-
   const animatedStyle = useAnimatedStyle(() => {
     return {
       position: 'absolute',
@@ -92,28 +63,25 @@ const Survivor: React.FC<SurvivorProps> = React.memo(({ id, x, y }) => {
       transform: [
         { translateX: offsetX.value + shakeX.value },
         { translateY: offsetY.value },
-        { scale: scale.value },
       ],
-      opacity: opacity.value,
     };
   });
 
   const roleColor = useMemo(() => getRoleColor(role), [role]);
   const roleEmoji = useMemo(() => getRoleEmoji(role), [role]);
 
-  const handlePress = useCallback(() => {
-    selectSurvivor(id);
-  }, [selectSurvivor, id]);
-
   return (
     <Animated.View style={animatedStyle}>
-      <Pressable onPress={handlePress} disabled={hasMoved}>
+      <Pressable onPress={() => onPress && onPress(survivor)}>
         <Animated.View style={[
           styles.survivor,
           { backgroundColor: roleColor },
-          isSelected && styles.selected
+          isUsed && styles.usedSurvivor,
         ]}>
-          <Text style={styles.text}>{roleEmoji}</Text>
+          <Text style={[styles.text, isUsed && styles.usedText]}>{roleEmoji}</Text>
+          {isUsed && (
+            <Text style={styles.usedBadge}>✓</Text>
+          )}
         </Animated.View>
       </Pressable>
     </Animated.View>
@@ -161,15 +129,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     margin: TILE_SIZE * 0.15, // Center the survivor within the tile area
+    position: 'relative',
   },
-  selected: {
-    borderColor: '#facc15', // yellow-400
-    borderWidth: 3,
+  usedSurvivor: {
+    opacity: 0.4,
+    backgroundColor: '#9ca3af', // gray-400
   },
   text: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: TILE_SIZE * 0.4,
+  },
+  usedText: {
+    opacity: 0.6,
+  },
+  usedBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    fontSize: 14,
+    backgroundColor: '#10b981', // green-500
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

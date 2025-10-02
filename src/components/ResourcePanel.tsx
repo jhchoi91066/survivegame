@@ -8,10 +8,11 @@ interface ResourcePanelProps {
 
 const ResourcePanel: React.FC<ResourcePanelProps> = ({ resources }) => {
   const resourceItems = [
-    { key: 'food', label: '음식', emoji: '🍖', color: '#f59e0b' },
+    { key: 'tool', label: '도구', emoji: '🔧', color: '#6b7280' },
     { key: 'water', label: '물', emoji: '💧', color: '#3b82f6' },
-    { key: 'tools', label: '도구', emoji: '🔧', color: '#6b7280' },
-    { key: 'medicalSupplies', label: '의약품', emoji: '💊', color: '#ef4444' },
+    { key: 'explosive', label: '폭탄', emoji: '💣', color: '#ef4444' },
+    { key: 'medical', label: '의약품', emoji: '💊', color: '#10b981' },
+    { key: 'food', label: '음식', emoji: '🍖', color: '#f59e0b' },
   ];
 
   return (

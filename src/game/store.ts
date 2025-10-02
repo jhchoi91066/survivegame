@@ -7,6 +7,8 @@ import {
   getMovementEnergyCostWithObstacle,
   canRemoveObstacle,
   canBuildBridge,
+  getChainReactionTargets,
+  isObstacleLocked,
 } from './obstacles';
 import { GameStatus, GAME_DURATION } from './timer';
 import { WeatherEvent, WeatherType, generateWeatherEvent, WEATHER_DURATION, getWeatherEnergyBonus, canMoveInWeather } from './weather';
@@ -25,14 +27,16 @@ export interface SurvivorState {
   maxHealth: number;
   maxEnergy: number;
   damageTrigger?: number; // Timestamp to trigger shake animation
+  used?: boolean; // 퍼즐 게임에서 이미 사용되었는지 여부
 }
 
-// Resource inventory
+// Resource inventory - 확장된 자원 시스템
 export interface ResourceInventory {
   food: number;
   water: number;
-  tools: number;
-  medicalSupplies: number;
+  tool: number;  // 도구 (이전 tools에서 변경)
+  medical: number; // 의료용품 (이전 medicalSupplies에서 변경)
+  explosive: number; // 폭탄
 }
 
 // Grid cell data
@@ -56,14 +60,14 @@ const isPositionOccupied = (x: number, y: number, survivors: SurvivorState[]): b
   return survivors.some(survivor => survivor.x === x && survivor.y === y);
 };
 
+// 게임 단계
+export type GamePhase = 'planning' | 'executing' | 'result';
+
 interface GameState {
   currentLevelId: number | null;
   gridWidth: number;
   gridHeight: number;
   survivors: SurvivorState[];
-  selectedSurvivorId: string | null;
-  turn: number;
-  movedSurvivorIds: string[];
   resources: ResourceInventory;
   grid: GridCell[][];
   obstacles: ObstacleState[];
@@ -71,11 +75,35 @@ interface GameState {
   gameStatus: GameStatus;
   weather: WeatherEvent | null;
   rescuePoint: { x: number; y: number };
+
+  // 퍼즐 게임 플로우
+  gamePhase: GamePhase; // planning, executing, result
+  planningTimeRemaining: number; // 60초 계획 시간
+  actionsPlanned: number; // 계획된 행동 수
+
+  // 별점 및 달성 시스템
+  initialResources: ResourceInventory; // 초기 자원 (효율 계산용)
+  hiddenAchievement: string | null; // 히든 달성
+
+  // 연쇄 반응 애니메이션 이벤트
+  chainReactionEvents: Array<{
+    id: string;
+    type: 'flood' | 'explosion' | 'fire_spread' | 'extinguish' | 'melt';
+    x: number;
+    y: number;
+    timestamp: number;
+  }>;
+  addChainReactionEvent: (type: string, x: number, y: number) => void;
+  clearChainReactionEvent: (id: string) => void;
+
+  // 시너지 발견 시스템
+  discoveredSynergies: string[]; // 발견한 시너지 ID들
+  addDiscoveredSynergy: (synergyId: string) => void;
+
   initializeLevel: (levelConfig: LevelConfig) => void;
-  selectSurvivor: (id: string | null) => void;
-  moveSurvivor: (id: string, x: number, y: number) => void;
-  nextTurn: () => void;
-  getValidMoves: (survivorId: string) => {x: number; y: number}[];
+
+  // 턴제 시스템 제거 - 생존자 이동 불필요
+  // selectSurvivor, moveSurvivor, nextTurn, getValidMoves 제거
   consumeEnergy: (id: string, amount: number) => void;
   consumeHealth: (id: string, amount: number) => void;
   takeDamage: (id: string, amount: number) => void;
@@ -85,10 +113,31 @@ interface GameState {
   removeObstacle: (x: number, y: number, survivorId: string) => boolean;
   startBridgeBuild: (x: number, y: number, survivorId: string) => boolean;
   getObstacleAt: (x: number, y: number) => ObstacleState | null;
+
+  // 새로운 퍼즐 게임 메서드
+  removeObstacleWithMethod: (
+    obstacleId: string,
+    method: { type: string; resourceType?: string; resourceCost?: number },
+    survivorIds?: string[]
+  ) => boolean;
+  triggerChainReaction: (obstacleId: string) => void;
+  unlockBlockedObstacles: (removedObstacleId: string) => void;
+  scoutFog: (obstacleId: string, survivorId: string) => boolean; // 안개 정찰
+
   startGame: () => void;
   pauseGame: () => void;
   resumeGame: () => void;
   tickTimer: () => void;
+  tickPlanningTimer: () => void; // 계획 단계 타이머 틱
+
+  // 퍼즐 게임 플로우 메서드
+  startPlanningPhase: () => void; // 계획 단계 시작
+  executeActions: () => void; // 계획된 행동 실행 (계획 → 실행 단계)
+  showResult: () => void; // 결과 표시 (실행 → 결과 단계)
+
+  updateRealTimeEffects: () => void; // 실시간 효과 업데이트 (불 확산, 얼음 녹음)
+  calculateStars: () => number; // 별점 계산
+  checkHiddenAchievement: () => string | null; // 히든 달성 확인
   checkVictoryCondition: () => boolean;
   checkDefeatCondition: () => boolean;
 }
@@ -107,6 +156,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       energy: 100,
       maxHealth: 100,
       maxEnergy: 100,
+      used: false,
     },
     {
       id: 'survivor-2',
@@ -117,16 +167,15 @@ export const useGameStore = create<GameState>((set, get) => ({
       energy: 100,
       maxHealth: 100,
       maxEnergy: 100,
+      used: false,
     },
   ],
-  selectedSurvivorId: null,
-  turn: 1,
-  movedSurvivorIds: [],
   resources: {
     food: 10,
     water: 10,
-    tools: 5,
-    medicalSupplies: 5,
+    tool: 5,  // 도구
+    medical: 5,  // 의료용품
+    explosive: 3,  // 폭탄
   },
   // Initialize 5x5 grid with grass terrain
   grid: Array.from({ length: 5 }, (_, y) =>
@@ -158,6 +207,45 @@ export const useGameStore = create<GameState>((set, get) => ({
   gameStatus: 'idle',
   weather: null,
   rescuePoint: { x: 4, y: 4 },
+  gamePhase: 'planning' as GamePhase,
+  planningTimeRemaining: 60, // 60초 계획 시간
+  actionsPlanned: 0,
+  initialResources: {
+    food: 10,
+    water: 10,
+    tool: 5,
+    medical: 5,
+    explosive: 3,
+  },
+  hiddenAchievement: null,
+  chainReactionEvents: [],
+  addChainReactionEvent: (type: string, x: number, y: number) =>
+    set((state) => ({
+      chainReactionEvents: [
+        ...state.chainReactionEvents,
+        {
+          id: `chain-${Date.now()}-${Math.random()}`,
+          type: type as any,
+          x,
+          y,
+          timestamp: Date.now(),
+        },
+      ],
+    })),
+  clearChainReactionEvent: (id: string) =>
+    set((state) => ({
+      chainReactionEvents: state.chainReactionEvents.filter((e) => e.id !== id),
+    })),
+  discoveredSynergies: [],
+  addDiscoveredSynergy: (synergyId: string) =>
+    set((state) => {
+      if (!state.discoveredSynergies.includes(synergyId)) {
+        return {
+          discoveredSynergies: [...state.discoveredSynergies, synergyId],
+        };
+      }
+      return state;
+    }),
   initializeLevel: (levelConfig: LevelConfig) =>
     set(() => {
       // Create survivors from level config
@@ -170,6 +258,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         energy: 100,
         maxHealth: 100,
         maxEnergy: 100,
+        used: false, // 초기에는 모두 사용 가능
       }));
 
       // Create grid
@@ -183,8 +272,16 @@ export const useGameStore = create<GameState>((set, get) => ({
       // Add obstacles with proper typing
       const obstacles: ObstacleState[] = levelConfig.obstacles.map((obs) => ({
         ...obs,
-        isPassable: obs.type === 'swamp' || obs.type === 'narrow_passage',
+        isPassable: obs.type === 'swamp' || obs.type === 'narrow_passage' || obs.type === 'fog',
         isRemovable: obs.type !== 'deep_water',
+        // Convert PuzzleLevelObstacle hiddenObstacles to ObstacleState if present
+        hiddenObstacles: ('hiddenObstacles' in obs && obs.hiddenObstacles)
+          ? obs.hiddenObstacles.map((hidden: any) => ({
+              ...hidden,
+              isPassable: hidden.type === 'swamp' || hidden.type === 'narrow_passage' || hidden.type === 'fog',
+              isRemovable: hidden.type !== 'deep_water',
+            }))
+          : undefined,
       }));
 
       return {
@@ -197,169 +294,31 @@ export const useGameStore = create<GameState>((set, get) => ({
         rescuePoint: levelConfig.rescuePoint,
         timeRemaining: levelConfig.timeLimit,
         gameStatus: 'idle' as GameStatus,
-        turn: 1,
-        movedSurvivorIds: [],
-        selectedSurvivorId: null,
         weather: null,
         resources: {
           food: 10,
           water: 10,
-          tools: 5,
-          medicalSupplies: 5,
+          tool: 5,
+          medical: 5,
+          explosive: 3,
         },
+        initialResources: {
+          food: 10,
+          water: 10,
+          tool: 5,
+          medical: 5,
+          explosive: 3,
+        },
+        gamePhase: 'planning' as GamePhase,
+        planningTimeRemaining: levelConfig.planningTime || 60,
+        actionsPlanned: 0,
+        hiddenAchievement: null,
       };
     }),
-  selectSurvivor: (id) =>
-    set((state) => {
-      if (id && state.movedSurvivorIds.includes(id)) {
-        return {}; // Do not select if already moved
-      }
-      return { selectedSurvivorId: id };
-    }),
-  moveSurvivor: (id, x, y) =>
-    set((state) => {
-      const survivor = state.survivors.find(s => s.id === id);
-      if (!survivor) return state;
 
-      // Check if weather allows movement
-      if (state.weather && !canMoveInWeather(state.weather.type, state.weather.turnsRemaining)) {
-        return state; // Cannot move during storm
-      }
+  // 턴제 이동 시스템 제거됨 - selectSurvivor, moveSurvivor, nextTurn 삭제됨
+  // 퍼즐 게임에서는 장애물 제거만 진행
 
-      // Check if move is valid
-      if (!isValidPosition(x, y, state.gridWidth, state.gridHeight)) return state;
-      if (!isAdjacent(survivor.x, survivor.y, x, y)) return state;
-      if (isPositionOccupied(x, y, state.survivors)) return state;
-
-      // Check obstacle at target position
-      const obstacle = state.obstacles.find(obs => obs.x === x && obs.y === y);
-      if (obstacle && !canSurvivorPassObstacle(obstacle, survivor.role)) {
-        return state; // Cannot pass this obstacle
-      }
-
-      // Calculate energy cost (role-based + obstacle modifier)
-      const baseEnergyCost = getMovementEnergyCost(survivor.role);
-      const energyCost = getMovementEnergyCostWithObstacle(obstacle, baseEnergyCost);
-
-      // Check if survivor has enough energy
-      if (survivor.energy < energyCost) return state;
-
-      return {
-        survivors: state.survivors.map((s) =>
-          s.id === id ? { ...s, x, y, energy: s.energy - energyCost } : s
-        ),
-        selectedSurvivorId: null, // Deselect after moving
-        movedSurvivorIds: [...state.movedSurvivorIds, id],
-      };
-    }),
-  nextTurn: () =>
-    set((state) => {
-      // Apply role passive effects at turn end
-      let updatedSurvivors = state.survivors.map((s) => {
-        let newHealth = s.health;
-        let newEnergy = s.energy;
-
-        // Doctor passive: heal 5 HP per turn
-        if (s.role === 'doctor') {
-          newHealth = Math.min(s.maxHealth, s.health + 5);
-        }
-
-        // Weather energy bonus
-        const energyBonus = getWeatherEnergyBonus(state.weather?.type || null);
-        if (energyBonus > 0) {
-          newEnergy = Math.min(s.maxEnergy, s.energy + energyBonus);
-        }
-
-        return { ...s, health: newHealth, energy: newEnergy };
-      });
-
-      // Update bridge construction progress
-      const updatedObstacles = state.obstacles.map((obs) => {
-        if (obs.type === 'bridge' && obs.turnsBuildRemaining !== undefined && obs.turnsBuildRemaining > 0) {
-          const newTurns = obs.turnsBuildRemaining - 1;
-          return {
-            ...obs,
-            turnsBuildRemaining: newTurns,
-            isPassable: newTurns === 0, // Bridge becomes passable when construction completes
-          };
-        }
-        return obs;
-      });
-
-      // Update weather
-      let updatedWeather = state.weather;
-      if (updatedWeather) {
-        if (updatedWeather.turnsRemaining > 0) {
-          updatedWeather = {
-            ...updatedWeather,
-            turnsRemaining: updatedWeather.turnsRemaining - 1,
-          };
-        } else if (updatedWeather.turnsUntilNext > 0) {
-          updatedWeather = {
-            ...updatedWeather,
-            turnsUntilNext: updatedWeather.turnsUntilNext - 1,
-          };
-        } else {
-          // Generate new weather event
-          const newWeatherType = generateWeatherEvent();
-          updatedWeather = {
-            type: newWeatherType,
-            turnsRemaining: WEATHER_DURATION[newWeatherType],
-            turnsUntilNext: Math.floor(Math.random() * 3) + 2, // 2-4 turns until next event
-          };
-        }
-      } else {
-        // Start first weather event
-        const weatherType = generateWeatherEvent();
-        updatedWeather = {
-          type: weatherType,
-          turnsRemaining: WEATHER_DURATION[weatherType],
-          turnsUntilNext: Math.floor(Math.random() * 3) + 2,
-        };
-      }
-
-      return {
-        turn: state.turn + 1,
-        movedSurvivorIds: [],
-        selectedSurvivorId: null,
-        survivors: updatedSurvivors,
-        obstacles: updatedObstacles,
-        weather: updatedWeather,
-      };
-    }),
-  getValidMoves: (survivorId) => {
-    const state = get();
-    const survivor = state.survivors.find((s) => s.id === survivorId);
-    if (!survivor) return [];
-
-    const validMoves: {x: number; y: number}[] = [];
-    const directions = [
-      { x: 0, y: -1 }, // up
-      { x: 0, y: 1 },  // down
-      { x: -1, y: 0 }, // left
-      { x: 1, y: 0 },  // right
-    ];
-
-    for (const dir of directions) {
-      const newX = survivor.x + dir.x;
-      const newY = survivor.y + dir.y;
-
-      if (isValidPosition(newX, newY, state.gridWidth, state.gridHeight) && !isPositionOccupied(newX, newY, state.survivors)) {
-        // Check if obstacle blocks movement
-        const obstacle = state.obstacles.find((obs) => obs.x === newX && obs.y === newY);
-        if (!obstacle || canSurvivorPassObstacle(obstacle, survivor.role)) {
-          // Check if survivor has enough energy
-          const baseEnergyCost = getMovementEnergyCost(survivor.role);
-          const energyCost = getMovementEnergyCostWithObstacle(obstacle, baseEnergyCost);
-          if (survivor.energy >= energyCost) {
-            validMoves.push({ x: newX, y: newY });
-          }
-        }
-      }
-    }
-
-    return validMoves;
-  },
   consumeEnergy: (id, amount) =>
     set((state) => ({
       survivors: state.survivors.map((s) =>
@@ -464,9 +423,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     set((state) => ({
       gameStatus: 'playing',
       timeRemaining: state.timeRemaining, // Use level's timeLimit
-      turn: 1,
-      movedSurvivorIds: [],
-      selectedSurvivorId: null,
+      gamePhase: 'planning',
     })),
   pauseGame: () =>
     set({
@@ -521,5 +478,299 @@ export const useGameStore = create<GameState>((set, get) => ({
       return true;
     }
     return false;
+  },
+
+  // 새로운 퍼즐 게임 메서드 구현
+  removeObstacleWithMethod: (obstacleId, method, survivorIds) => {
+    const state = get();
+    const obstacle = state.obstacles.find(obs => obs.id === obstacleId);
+
+    if (!obstacle) return false;
+
+    // 잠긴 장애물인지 확인
+    if (isObstacleLocked(obstacle, state.obstacles)) {
+      return false;
+    }
+
+    // 자원 확인 및 소비
+    if (method.resourceType && method.resourceCost) {
+      const available = state.resources[method.resourceType as keyof ResourceInventory] || 0;
+      if (available < method.resourceCost) {
+        return false;
+      }
+
+      // 자원 소비
+      set((state) => ({
+        resources: {
+          ...state.resources,
+          [method.resourceType!]: state.resources[method.resourceType as keyof ResourceInventory] - method.resourceCost!,
+        },
+      }));
+    }
+
+    // 생존자 사용 처리 - 1회 사용 제한
+    if (survivorIds && survivorIds.length > 0) {
+      // 이미 사용된 생존자가 있는지 확인
+      const hasUsedSurvivor = survivorIds.some(id => {
+        const survivor = state.survivors.find(s => s.id === id);
+        return survivor?.used === true;
+      });
+
+      if (hasUsedSurvivor) {
+        return false; // 이미 사용된 생존자는 다시 사용 불가
+      }
+
+      // 생존자를 '사용됨' 상태로 표시
+      set((state) => ({
+        survivors: state.survivors.map(s =>
+          survivorIds.includes(s.id) ? { ...s, used: true } : s
+        ),
+      }));
+    }
+
+    // 연쇄 반응 트리거
+    if (obstacle.chainReaction) {
+      get().triggerChainReaction(obstacleId);
+    }
+
+    // 장애물 제거
+    set((state) => ({
+      obstacles: state.obstacles.filter(obs => obs.id !== obstacleId),
+    }));
+
+    // 다른 장애물 잠금 해제
+    get().unlockBlockedObstacles(obstacleId);
+
+    return true;
+  },
+
+  triggerChainReaction: (obstacleId) => {
+    const state = get();
+    const obstacle = state.obstacles.find(obs => obs.id === obstacleId);
+
+    if (!obstacle || !obstacle.chainReaction) return;
+
+    const targets = getChainReactionTargets(
+      obstacle,
+      state.obstacles,
+      state.gridWidth,
+      state.gridHeight
+    );
+
+    // 연쇄 반응 애니메이션 이벤트 생성
+    const reactionType = obstacle.chainReaction.type;
+    let animationType: string = 'explosion';
+
+    switch (reactionType) {
+      case 'flood':
+        animationType = 'flood';
+        break;
+      case 'explosion':
+        animationType = 'explosion';
+        break;
+      case 'spread_fire':
+        animationType = 'fire_spread';
+        break;
+      case 'extinguish_fire':
+        animationType = 'extinguish';
+        break;
+      case 'melt_ice':
+        animationType = 'melt';
+        break;
+    }
+
+    // 장애물 위치에 애니메이션 이벤트 추가
+    get().addChainReactionEvent(animationType, obstacle.x, obstacle.y);
+
+    // 영향받는 타겟들에도 애니메이션 추가
+    targets.forEach(target => {
+      get().addChainReactionEvent(animationType, target.x, target.y);
+    });
+
+    // 연쇄 반응으로 영향받은 장애물 처리
+    set((state) => ({
+      obstacles: state.obstacles.filter(obs =>
+        !targets.some(target => target.id === obs.id)
+      ),
+    }));
+  },
+
+  unlockBlockedObstacles: (removedObstacleId) => {
+    set((state) => ({
+      obstacles: state.obstacles.map(obs => {
+        if (obs.blockedBy && obs.blockedBy.includes(removedObstacleId)) {
+          // 이 장애물에서 제거된 장애물 ID 삭제
+          const newBlockedBy = obs.blockedBy.filter(id => id !== removedObstacleId);
+          return {
+            ...obs,
+            blockedBy: newBlockedBy,
+            isLocked: newBlockedBy.length > 0, // 아직 다른 장애물이 막고 있으면 잠김 유지
+          };
+        }
+        return obs;
+      }),
+    }));
+  },
+
+  // 계획 단계 타이머 틱 (매초 호출)
+  tickPlanningTimer: () => {
+    const state = get();
+    if (state.gamePhase !== 'planning' || state.gameStatus !== 'playing') return;
+
+    const newTime = state.planningTimeRemaining - 1;
+
+    if (newTime <= 0) {
+      // 계획 시간 종료 - 자동으로 실행 단계로 전환
+      get().executeActions();
+    } else {
+      set({ planningTimeRemaining: newTime });
+    }
+  },
+
+  // 계획 단계 시작
+  startPlanningPhase: () => {
+    set((state) => ({
+      gamePhase: 'planning',
+      planningTimeRemaining: 60,
+      actionsPlanned: 0,
+      // 생존자 사용 제한 초기화 (새 계획 단계마다 리셋)
+      survivors: state.survivors.map(s => ({ ...s, used: false })),
+    }));
+  },
+
+  // 계획된 행동 실행 (계획 → 실행 단계)
+  executeActions: () => {
+    set({ gamePhase: 'executing' });
+    // 실행 단계에서는 실시간 효과가 적용됨
+    // 승리 조건 체크
+    const victory = get().checkVictoryCondition();
+    if (victory) {
+      get().showResult();
+    }
+  },
+
+  // 결과 표시 (실행 → 결과 단계)
+  showResult: () => {
+    set({ gamePhase: 'result' });
+  },
+
+  // 실시간 효과 업데이트 (매초 호출)
+  updateRealTimeEffects: () => {
+    const state = get();
+    if (state.gamePhase === 'planning' || state.gameStatus !== 'playing') return;
+
+    const updatedObstacles = state.obstacles.map(obs => {
+      // 불 확산
+      if (obs.type === 'fire' && obs.spreadTimer !== undefined) {
+        const newSpreadTimer = (obs.spreadTimer || 0) + 1;
+
+        if (newSpreadTimer >= 5) {
+          // 5초마다 불이 인접한 나무로 확산
+          // TODO: 인접한 나무 찾아서 불로 변환
+          return { ...obs, spreadTimer: 0 };
+        }
+        return { ...obs, spreadTimer: newSpreadTimer };
+      }
+
+      // 얼음 자연 녹음
+      if (obs.type === 'ice' && obs.naturalDecayTime !== undefined) {
+        const newDecayTime = (obs.naturalDecayTime || 10) - 1;
+
+        if (newDecayTime <= 0) {
+          // 얼음 제거 (녹음)
+          return null;
+        }
+        return { ...obs, naturalDecayTime: newDecayTime };
+      }
+
+      // 불 자연 소멸
+      if (obs.type === 'fire' && obs.naturalDecayTime !== undefined) {
+        const newDecayTime = (obs.naturalDecayTime || 5) - 1;
+
+        if (newDecayTime <= 0) {
+          // 불 제거 (소멸)
+          return null;
+        }
+        return { ...obs, naturalDecayTime: newDecayTime };
+      }
+
+      return obs;
+    }).filter(obs => obs !== null) as ObstacleState[];
+
+    set({ obstacles: updatedObstacles });
+  },
+
+  // 안개 정찰 (아이 생존자만 가능)
+  scoutFog: (obstacleId, survivorId) => {
+    const state = get();
+    const obstacle = state.obstacles.find(obs => obs.id === obstacleId);
+    const survivor = state.survivors.find(s => s.id === survivorId);
+
+    if (!obstacle || obstacle.type !== 'fog' || !survivor) return false;
+
+    // 아이 생존자만 정찰 가능
+    if (survivor.role !== 'child') return false;
+
+    // 안개 정찰 완료 - isRevealed를 true로 설정
+    set((state) => ({
+      obstacles: state.obstacles.map(obs =>
+        obs.id === obstacleId
+          ? { ...obs, isRevealed: true }
+          : obs
+      ),
+    }));
+
+    return true;
+  },
+
+  // 별점 계산 (1~3성)
+  calculateStars: () => {
+    const state = get();
+
+    // 1성: 기본 클리어
+    let stars = 1;
+
+    // 2성: 자원 효율적 클리어 (초기 자원의 50% 이상 남음)
+    const initialTotal = Object.values(state.initialResources).reduce((sum, val) => sum + val, 0);
+    const remainingTotal = Object.values(state.resources).reduce((sum, val) => sum + val, 0);
+    const efficiency = remainingTotal / initialTotal;
+
+    if (efficiency >= 0.5) {
+      stars = 2;
+    }
+
+    // 3성: 완벽한 클리어 (모든 생존자 체력 80% 이상 + 자원 50% 이상)
+    const allSurvivorsHealthy = state.survivors.every(s => s.health >= s.maxHealth * 0.8);
+
+    if (efficiency >= 0.5 && allSurvivorsHealthy) {
+      stars = 3;
+    }
+
+    return stars;
+  },
+
+  // 히든 달성 확인
+  checkHiddenAchievement: () => {
+    const state = get();
+
+    // 히든 달성 예시: "폭탄을 사용하지 않고 클리어"
+    if (state.initialResources.explosive === 3 && state.resources.explosive === 3) {
+      return '평화주의자';
+    }
+
+    // 히든 달성 예시: "모든 생존자 체력 100%로 클리어"
+    if (state.survivors.every(s => s.health === s.maxHealth)) {
+      return '무결한 승리';
+    }
+
+    // 히든 달성 예시: "자원 하나도 사용하지 않고 클리어"
+    const noResourcesUsed = Object.keys(state.initialResources).every(
+      key => state.initialResources[key as keyof ResourceInventory] === state.resources[key as keyof ResourceInventory]
+    );
+    if (noResourcesUsed) {
+      return '미니멀리스트';
+    }
+
+    return null;
   },
 }));

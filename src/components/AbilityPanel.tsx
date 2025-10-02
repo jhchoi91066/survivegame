@@ -16,14 +16,11 @@ interface AbilityPanelProps {
 
 const AbilityPanel: React.FC<AbilityPanelProps> = React.memo(({ survivor }) => {
   const [activeAbilityIndex, setActiveAbilityIndex] = useState<number | null>(null);
-  const { removeObstacle, startBridgeBuild, restoreHealth, restoreEnergy, updateResources } =
-    useGameStore((state) => ({
-      removeObstacle: state.removeObstacle,
-      startBridgeBuild: state.startBridgeBuild,
-      restoreHealth: state.restoreHealth,
-      restoreEnergy: state.restoreEnergy,
-      updateResources: state.updateResources,
-    }));
+  const removeObstacle = useGameStore((state) => state.removeObstacle);
+  const startBridgeBuild = useGameStore((state) => state.startBridgeBuild);
+  const restoreHealth = useGameStore((state) => state.restoreHealth);
+  const restoreEnergy = useGameStore((state) => state.restoreEnergy);
+  const updateResources = useGameStore((state) => state.updateResources);
 
   const abilities = useMemo(() => {
     return ABILITIES[survivor.role];

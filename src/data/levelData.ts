@@ -1,6 +1,30 @@
-import { ObstacleType } from '../game/obstacles';
+import { ObstacleType, ChainReactionType } from '../game/obstacles';
 import { SurvivorRole } from '../game/abilities';
 
+// 퍼즐 게임용 확장된 장애물 데이터
+export interface PuzzleLevelObstacle {
+  id: string;
+  type: ObstacleType;
+  x: number;
+  y: number;
+
+  // 의존성 그래프
+  blockedBy?: string[]; // 먼저 제거해야 할 장애물 ID들
+  blocksIds?: string[]; // 이 장애물 제거 시 잠금 해제되는 ID들
+
+  // 연쇄 반응
+  chainReaction?: ChainReactionType;
+
+  // 실시간 효과
+  spreadTimer?: number;
+  naturalDecayTime?: number;
+
+  // 안개
+  isRevealed?: boolean;
+  hiddenObstacles?: PuzzleLevelObstacle[];
+}
+
+// 기존 레벨 장애물 (하위 호환성)
 export interface LevelObstacle {
   id: string;
   type: ObstacleType;
@@ -14,20 +38,36 @@ export interface LevelConfig {
   difficulty: 'easy' | 'medium' | 'hard';
   gridSize: { width: number; height: number };
   timeLimit: number; // seconds
+  planningTime?: number; // 계획 단계 시간 (기본 60초)
   survivors: Array<{
     role: SurvivorRole;
     position: { x: number; y: number };
   }>;
   rescuePoint: { x: number; y: number };
-  obstacles: LevelObstacle[];
+  obstacles: LevelObstacle[] | PuzzleLevelObstacle[]; // 두 타입 모두 지원
   starThresholds: {
     threeStar: number; // seconds remaining
     twoStar: number; // seconds remaining
   };
+
+  // 퍼즐 게임 전용
+  isPuzzle?: boolean; // true면 퍼즐 모드
+  hint?: string; // 레벨 힌트
+  expectedSolution?: string[]; // 예상 해법 (히든 달성용)
 }
 
-// 레벨 데이터 로드
+// 퍼즐 레벨 임포트
+import { PUZZLE_TUTORIAL_LEVELS } from './puzzleLevels';
+
+// 레벨 데이터 로드 (기존 레벨 + 퍼즐 레벨)
 export const getLevelData = (levelId: number): LevelConfig | null => {
+  // 먼저 퍼즐 레벨 확인 (101~105)
+  if (levelId >= 101 && levelId <= 105) {
+    const puzzleLevel = PUZZLE_TUTORIAL_LEVELS.find(l => l.id === levelId);
+    if (puzzleLevel) return puzzleLevel;
+  }
+
+  // 기존 레벨 확인
   const level = LEVEL_DATA.find(l => l.id === levelId);
   return level || null;
 };

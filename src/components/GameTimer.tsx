@@ -16,7 +16,7 @@ const GameTimer: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [gameStatus, tickTimer]);
+  }, [gameStatus]);
 
   const urgencyLevel = getUrgencyLevel(timeRemaining);
   const timerColor = getTimerColor(urgencyLevel);

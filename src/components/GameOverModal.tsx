@@ -18,20 +18,15 @@ interface GameOverModalProps {
 }
 
 const GameOverModal: React.FC<GameOverModalProps> = ({ visible, onRestart, onNextLevel, onMainMenu }) => {
-  const { gameStatus, timeRemaining, turn, survivors } = useGameStore((state) => ({
-    gameStatus: state.gameStatus,
-    timeRemaining: state.timeRemaining,
-    turn: state.turn,
-    survivors: state.survivors,
-  }));
-
-  if (!visible || (gameStatus !== 'victory' && gameStatus !== 'defeat')) {
-    return null;
-  }
+  const gameStatus = useGameStore((state) => state.gameStatus);
+  const timeRemaining = useGameStore((state) => state.timeRemaining);
+  const survivors = useGameStore((state) => state.survivors);
+  const calculateStars = useGameStore((state) => state.calculateStars);
+  const checkHiddenAchievement = useGameStore((state) => state.checkHiddenAchievement);
 
   const isVictory = gameStatus === 'victory';
 
-  // Animation values
+  // Animation values - MUST be called before any conditional returns
   const scale = useSharedValue(0);
   const starScale = useSharedValue(0);
   const starRotation = useSharedValue(0);
@@ -85,11 +80,15 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ visible, onRestart, onNex
   const totalEnergy = survivors.reduce((sum, s) => sum + s.energy, 0);
   const avgEnergy = Math.floor(totalEnergy / survivors.length);
 
-  // Star rating (1-3 stars)
-  let stars = 1;
-  if (isVictory) {
-    if (timeRemaining > 60 && avgHealth > 80) stars = 3;
-    else if (timeRemaining > 30 || avgHealth > 50) stars = 2;
+  // Star rating (1-3 stars) - 새로운 별점 계산
+  const stars = isVictory ? calculateStars() : 0;
+
+  // 히든 달성 확인
+  const hiddenAchievement = isVictory ? checkHiddenAchievement() : null;
+
+  // Return null after all hooks are called
+  if (!visible || (gameStatus !== 'victory' && gameStatus !== 'defeat')) {
+    return null;
   }
 
   return (
@@ -115,10 +114,6 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ visible, onRestart, onNex
 
           <View style={styles.stats}>
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>총 턴 수:</Text>
-              <Text style={styles.statValue}>{turn}</Text>
-            </View>
-            <View style={styles.statRow}>
               <Text style={styles.statLabel}>남은 시간:</Text>
               <Text style={styles.statValue}>
                 {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
@@ -133,6 +128,17 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ visible, onRestart, onNex
               <Text style={styles.statValue}>{avgEnergy}%</Text>
             </View>
           </View>
+
+          {/* 히든 달성 표시 */}
+          {hiddenAchievement && (
+            <View style={styles.achievementBanner}>
+              <Text style={styles.achievementIcon}>🏆</Text>
+              <View style={styles.achievementTextContainer}>
+                <Text style={styles.achievementTitle}>히든 달성!</Text>
+                <Text style={styles.achievementName}>{hiddenAchievement}</Text>
+              </View>
+            </View>
+          )}
 
           <View style={styles.buttonContainer}>
             {isVictory && onNextLevel && (
@@ -234,6 +240,39 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  achievementBanner: {
+    backgroundColor: '#fef3c7',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#f59e0b',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  achievementIcon: {
+    fontSize: 40,
+    marginRight: 12,
+  },
+  achievementTextContainer: {
+    flex: 1,
+  },
+  achievementTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400e',
+    marginBottom: 4,
+  },
+  achievementName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#b45309',
   },
 });
 

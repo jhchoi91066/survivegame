@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, SafeAreaView } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
+import { hapticPatterns } from '../utils/haptics';
 
 type MenuScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
@@ -22,13 +23,22 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
 
         {/* Menu Buttons */}
         <View style={styles.menu}>
-          <Pressable style={styles.button} onPress={() => navigation.navigate('Game', {})}>
+          <Pressable
+            style={styles.button}
+            onPress={() => {
+              hapticPatterns.buttonPress();
+              navigation.navigate('Game', {});
+            }}
+          >
             <Text style={styles.buttonText}>🎮 게임 시작</Text>
           </Pressable>
 
           <Pressable
             style={[styles.button, styles.secondaryButton]}
-            onPress={() => navigation.navigate('LevelSelect')}
+            onPress={() => {
+              hapticPatterns.buttonPress();
+              navigation.navigate('LevelSelect');
+            }}
           >
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>
               📋 레벨 선택
@@ -37,7 +47,10 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
 
           <Pressable
             style={[styles.button, styles.secondaryButton]}
-            onPress={() => navigation.navigate('Stats')}
+            onPress={() => {
+              hapticPatterns.buttonPress();
+              navigation.navigate('Stats');
+            }}
           >
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>
               📊 통계
@@ -46,7 +59,22 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
 
           <Pressable
             style={[styles.button, styles.secondaryButton]}
-            onPress={() => navigation.navigate('Settings')}
+            onPress={() => {
+              hapticPatterns.buttonPress();
+              navigation.navigate('Achievements');
+            }}
+          >
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+              🏆 업적
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => {
+              hapticPatterns.buttonPress();
+              navigation.navigate('Settings');
+            }}
           >
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>
               ⚙️ 설정
