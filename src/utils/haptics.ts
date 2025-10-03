@@ -99,6 +99,12 @@ export const hapticPatterns = {
   // 에러 (불가능한 액션)
   errorAction: () => triggerHaptic('error'),
 
+  // 정답
+  correctAnswer: () => triggerHaptic('success'),
+
+  // 오답
+  wrongAnswer: () => triggerHaptic('error'),
+
   // 스와이프/드래그
   dragStart: () => triggerHaptic('light'),
   dragEnd: () => triggerHaptic('medium'),

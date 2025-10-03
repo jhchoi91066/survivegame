@@ -21,7 +21,7 @@ import {
   loadAchievementProgress,
   getAchievementCompletionRate,
 } from '../utils/achievementManager';
-import AchievementCard from '../components/AchievementCard';
+import AchievementCard from '../components/shared/AchievementCard';
 
 type AchievementsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
