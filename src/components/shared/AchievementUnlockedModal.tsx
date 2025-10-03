@@ -7,7 +7,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { Achievement } from '../data/achievements';
+import { Achievement } from '../../data/achievements';
 
 interface AchievementUnlockedModalProps {
   visible: boolean;

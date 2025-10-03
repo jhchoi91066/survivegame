@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Achievement, AchievementProgress } from '../data/achievements';
+import { Achievement, AchievementProgress } from '../../data/achievements';
 
 interface AchievementCardProps {
   achievement: Achievement;
