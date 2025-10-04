@@ -1,5 +1,5 @@
 // 게임 타입 정의
-export type GameType = 'flip_match' | 'sequence' | 'math_rush' | 'connect_flow';
+export type GameType = 'flip_match' | 'sequence' | 'math_rush' | 'merge_puzzle';
 
 // 게임 통계 인터페이스
 export interface GameStats {
@@ -14,17 +14,25 @@ export interface GameRecord {
   flip_match: {
     bestTime: number; // 초
     difficulty: 'easy' | 'medium' | 'hard';
+    totalPlays: number;
+    totalPlayTime: number; // 초
   };
   sequence: {
     highestLevel: number;
+    totalPlays: number;
+    totalPlayTime: number; // 초
   };
   math_rush: {
     highScore: number;
     highestCombo: number;
+    totalPlays: number;
+    totalPlayTime: number; // 초
   };
-  connect_flow: {
+  merge_puzzle: {
     bestMoves: number;
-    levelsCompleted: number[];
+    highestNumber: number;
+    totalPlays: number;
+    totalPlayTime: number; // 초
   };
 }
 

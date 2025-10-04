@@ -6,6 +6,8 @@ import NumberTile from '../components/mergepuzzle/NumberTile';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
+import { updateMergePuzzleRecord } from '../utils/statsManager';
+import { incrementGameCount } from '../utils/reviewManager';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'MergePuzzleGame'>;
 
@@ -14,9 +16,24 @@ const MergePuzzleGame: React.FC = () => {
   const { tiles, moves, maxMoves, gameStatus, targetNumber, initializeGame, selectTile, resetGame } =
     useMergePuzzleStore();
 
+  const [gameStartTime, setGameStartTime] = React.useState<number>(0);
+
   useEffect(() => {
     initializeGame();
+    setGameStartTime(Date.now());
   }, []);
+
+  // 게임 종료 시 기록 저장
+  useEffect(() => {
+    if (gameStatus === 'won' || gameStatus === 'lost') {
+      const highestNumber = Math.max(...tiles.map(t => t.value));
+      const playTime = (Date.now() - gameStartTime) / 1000;
+      updateMergePuzzleRecord(moves, highestNumber, playTime);
+
+      // 게임 카운트 증가 및 리뷰 요청
+      incrementGameCount();
+    }
+  }, [gameStatus]);
 
   const handleTilePress = (tileId: string) => {
     selectTile(tileId);
@@ -24,6 +41,7 @@ const MergePuzzleGame: React.FC = () => {
 
   const handleRestart = () => {
     resetGame();
+    setGameStartTime(Date.now());
   };
 
   const handleBackToMenu = () => {

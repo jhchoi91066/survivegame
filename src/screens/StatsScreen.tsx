@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, Pressable } from 'rea
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { getStats, loadProgress, LevelProgress } from '../utils/progressManager';
+import { loadGameRecord } from '../utils/statsManager';
+import { GameRecord } from '../game/shared/types';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,124 +14,123 @@ import Animated, {
 
 type StatsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Stats'>;
 
-interface Stats {
-  totalLevels: number;
-  completedLevels: number;
-  totalStars: number;
-  maxStars: number;
-  totalAttempts: number;
-}
-
 const StatsScreen: React.FC = () => {
   const navigation = useNavigation<StatsScreenNavigationProp>();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [topLevels, setTopLevels] = useState<LevelProgress[]>([]);
+  const [flipMatchRecord, setFlipMatchRecord] = useState<GameRecord['flip_match'] | null>(null);
+  const [sequenceRecord, setSequenceRecord] = useState<GameRecord['sequence'] | null>(null);
+  const [mathRushRecord, setMathRushRecord] = useState<GameRecord['math_rush'] | null>(null);
+  const [mergePuzzleRecord, setMergePuzzleRecord] = useState<GameRecord['merge_puzzle'] | null>(null);
 
   useEffect(() => {
-    loadStats();
+    loadAllStats();
   }, []);
 
-  const loadStats = async () => {
-    const statsData = await getStats();
-    setStats(statsData);
+  const loadAllStats = async () => {
+    const flipMatch = await loadGameRecord('flip_match');
+    const sequence = await loadGameRecord('sequence');
+    const mathRush = await loadGameRecord('math_rush');
+    const mergePuzzle = await loadGameRecord('merge_puzzle');
 
-    // Get top 5 levels by stars and best time
-    const progress = await loadProgress();
-    const levels = Object.values(progress.levels)
-      .filter(l => l.completed)
-      .sort((a, b) => {
-        if (b.stars !== a.stars) return b.stars - a.stars;
-        return b.bestTime - a.bestTime;
-      })
-      .slice(0, 5);
-    setTopLevels(levels);
+    setFlipMatchRecord(flipMatch);
+    setSequenceRecord(sequence);
+    setMathRushRecord(mathRush);
+    setMergePuzzleRecord(mergePuzzle);
   };
-
-  if (!stats) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>로딩 중...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const completionRate = ((stats.completedLevels / stats.totalLevels) * 100).toFixed(1);
-  const starRate = ((stats.totalStars / stats.maxStars) * 100).toFixed(1);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>📊 통계</Text>
           <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← 돌아가기</Text>
+            <Text style={styles.backButtonText}>← 뒤로</Text>
           </Pressable>
+          <Text style={styles.title}>통계</Text>
+          <View style={styles.placeholder} />
         </View>
 
-        {/* Summary Cards */}
-        <View style={styles.cardsContainer}>
-          <StatCard
-            icon="⭐"
-            value={stats.totalStars}
-            max={stats.maxStars}
-            label="총 별"
-            percentage={starRate}
-            delay={0}
-          />
-          <StatCard
-            icon="✅"
-            value={stats.completedLevels}
-            max={stats.totalLevels}
-            label="완료한 레벨"
-            percentage={completionRate}
-            delay={100}
-          />
-          <StatCard
-            icon="🎮"
-            value={stats.totalAttempts}
-            max={null}
-            label="총 플레이 횟수"
-            percentage={null}
-            delay={200}
-          />
-        </View>
+        {/* Game Stats Cards */}
+        <GameStatCard
+          icon="🎴"
+          title="Flip & Match"
+          stats={[
+            { label: '최고 기록', value: flipMatchRecord?.bestTime ? `${flipMatchRecord.bestTime}초` : '-' },
+            { label: '난이도', value: flipMatchRecord?.difficulty ? getDifficultyText(flipMatchRecord.difficulty) : '-' },
+            { label: '플레이 횟수', value: flipMatchRecord?.totalPlays ? `${flipMatchRecord.totalPlays}회` : '-' },
+            { label: '총 플레이 시간', value: flipMatchRecord?.totalPlayTime ? formatPlayTime(flipMatchRecord.totalPlayTime) : '-' },
+          ]}
+          delay={0}
+        />
 
-        {/* Top Levels */}
-        {topLevels.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🏆 최고 기록</Text>
-            {topLevels.map((level, index) => (
-              <TopLevelCard key={level.levelId} level={level} rank={index + 1} />
-            ))}
-          </View>
-        )}
+        <GameStatCard
+          icon="🔢"
+          title="Sequence"
+          stats={[
+            { label: '최고 레벨', value: sequenceRecord?.highestLevel ? `Level ${sequenceRecord.highestLevel}` : '-' },
+            { label: '플레이 횟수', value: sequenceRecord?.totalPlays ? `${sequenceRecord.totalPlays}회` : '-' },
+            { label: '총 플레이 시간', value: sequenceRecord?.totalPlayTime ? formatPlayTime(sequenceRecord.totalPlayTime) : '-' },
+          ]}
+          delay={100}
+        />
 
-        {/* Achievement Placeholder */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🎯 업적</Text>
-          <View style={styles.achievementPlaceholder}>
-            <Text style={styles.placeholderText}>업적 시스템 준비 중...</Text>
-          </View>
-        </View>
+        <GameStatCard
+          icon="➕"
+          title="Math Rush"
+          stats={[
+            { label: '최고 점수', value: mathRushRecord?.highScore ? `${mathRushRecord.highScore}점` : '-' },
+            { label: '최고 콤보', value: mathRushRecord?.highestCombo ? `${mathRushRecord.highestCombo}연속` : '-' },
+            { label: '플레이 횟수', value: mathRushRecord?.totalPlays ? `${mathRushRecord.totalPlays}회` : '-' },
+            { label: '총 플레이 시간', value: mathRushRecord?.totalPlayTime ? formatPlayTime(mathRushRecord.totalPlayTime) : '-' },
+          ]}
+          delay={200}
+        />
+
+        <GameStatCard
+          icon="🔢"
+          title="Merge Puzzle"
+          stats={[
+            { label: '최소 이동', value: mergePuzzleRecord?.bestMoves ? `${mergePuzzleRecord.bestMoves}회` : '-' },
+            { label: '최고 숫자', value: mergePuzzleRecord?.highestNumber ? `${mergePuzzleRecord.highestNumber}` : '-' },
+            { label: '플레이 횟수', value: mergePuzzleRecord?.totalPlays ? `${mergePuzzleRecord.totalPlays}회` : '-' },
+            { label: '총 플레이 시간', value: mergePuzzleRecord?.totalPlayTime ? formatPlayTime(mergePuzzleRecord.totalPlayTime) : '-' },
+          ]}
+          delay={300}
+        />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-// Animated stat card component
-interface StatCardProps {
+const getDifficultyText = (difficulty: 'easy' | 'medium' | 'hard'): string => {
+  switch (difficulty) {
+    case 'easy': return '쉬움 (4x4)';
+    case 'medium': return '보통 (4x6)';
+    case 'hard': return '어려움 (4x8)';
+  }
+};
+
+const formatPlayTime = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  if (hours > 0) {
+    return `${hours}시간 ${minutes}분`;
+  } else if (minutes > 0) {
+    return `${minutes}분 ${secs}초`;
+  } else {
+    return `${secs}초`;
+  }
+};
+
+interface GameStatCardProps {
   icon: string;
-  value: number;
-  max: number | null;
-  label: string;
-  percentage: string | null;
+  title: string;
+  stats: { label: string; value: string }[];
   delay: number;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ icon, value, max, label, percentage, delay }) => {
+const GameStatCard: React.FC<GameStatCardProps> = ({ icon, title, stats, delay }) => {
   const scale = useSharedValue(0);
 
   useEffect(() => {
@@ -148,81 +148,34 @@ const StatCard: React.FC<StatCardProps> = ({ icon, value, max, label, percentage
   }));
 
   return (
-    <Animated.View style={[styles.statCard, animatedStyle]}>
-      <Text style={styles.statIcon}>{icon}</Text>
-      <View style={styles.statContent}>
-        <Text style={styles.statValue}>
-          {value}
-          {max !== null && <Text style={styles.statMax}> / {max}</Text>}
-        </Text>
-        <Text style={styles.statLabel}>{label}</Text>
-        {percentage !== null && (
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${parseFloat(percentage)}%` as any }]} />
+    <Animated.View style={[styles.gameCard, animatedStyle]}>
+      <View style={styles.gameCardHeader}>
+        <Text style={styles.gameIcon}>{icon}</Text>
+        <Text style={styles.gameTitle}>{title}</Text>
+      </View>
+      <View style={styles.statsContainer}>
+        {stats.map((stat, index) => (
+          <View key={index} style={styles.statRow}>
+            <Text style={styles.statLabel}>{stat.label}</Text>
+            <Text style={styles.statValue}>{stat.value}</Text>
           </View>
-        )}
-        {percentage !== null && (
-          <Text style={styles.percentageText}>{percentage}%</Text>
-        )}
+        ))}
       </View>
     </Animated.View>
-  );
-};
-
-// Top level card component
-interface TopLevelCardProps {
-  level: LevelProgress;
-  rank: number;
-}
-
-const TopLevelCard: React.FC<TopLevelCardProps> = ({ level, rank }) => {
-  const getRankEmoji = (rank: number) => {
-    switch (rank) {
-      case 1: return '🥇';
-      case 2: return '🥈';
-      case 3: return '🥉';
-      default: return `${rank}위`;
-    }
-  };
-
-  return (
-    <View style={styles.topLevelCard}>
-      <Text style={styles.rankEmoji}>{getRankEmoji(rank)}</Text>
-      <View style={styles.topLevelContent}>
-        <Text style={styles.topLevelName}>레벨 {level.levelId}</Text>
-        <View style={styles.topLevelStats}>
-          <Text style={styles.topLevelStar}>
-            {'⭐'.repeat(level.stars)}{'☆'.repeat(3 - level.stars)}
-          </Text>
-          <Text style={styles.topLevelTime}>
-            최고 시간: {Math.floor(level.bestTime / 60)}:{(level.bestTime % 60).toString().padStart(2, '0')}
-          </Text>
-        </View>
-        <Text style={styles.topLevelAttempts}>시도 횟수: {level.attempts}</Text>
-      </View>
-    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#6b7280',
+    backgroundColor: '#0f172a',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: 20,
+    paddingTop: 60,
   },
   header: {
     flexDirection: 'row',
@@ -230,145 +183,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
   backButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    width: 60,
   },
   backButtonText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#6b7280',
+    color: '#22d3ee',
   },
-  cardsContainer: {
-    gap: 16,
-    marginBottom: 24,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
   },
-  statCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+  placeholder: {
+    width: 60,
+  },
+  gameCard: {
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  gameCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
   },
-  statIcon: {
-    fontSize: 48,
-    marginRight: 16,
+  gameIcon: {
+    fontSize: 32,
+    marginRight: 12,
   },
-  statContent: {
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  statMax: {
+  gameTitle: {
     fontSize: 20,
-    color: '#9ca3af',
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  statsContainer: {
+    gap: 12,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   statLabel: {
     fontSize: 14,
-    color: '#6b7280',
-    marginTop: 4,
-    marginBottom: 8,
+    color: '#94a3b8',
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 4,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#3b82f6',
-    borderRadius: 4,
-  },
-  percentageText: {
-    fontSize: 12,
-    color: '#3b82f6',
-    fontWeight: '600',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 12,
-  },
-  topLevelCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  rankEmoji: {
-    fontSize: 32,
-    marginRight: 16,
-  },
-  topLevelContent: {
-    flex: 1,
-  },
-  topLevelName: {
+  statValue: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  topLevelStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 4,
-  },
-  topLevelStar: {
-    fontSize: 14,
-  },
-  topLevelTime: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  topLevelAttempts: {
-    fontSize: 11,
-    color: '#9ca3af',
-  },
-  achievementPlaceholder: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
-    borderStyle: 'dashed',
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: '#9ca3af',
-    fontStyle: 'italic',
+    fontWeight: '600',
+    color: '#22d3ee',
   },
 });
 

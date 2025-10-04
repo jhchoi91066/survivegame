@@ -9,6 +9,7 @@ import GameBoard from '../components/flipmatch/GameBoard';
 import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { updateFlipMatchRecord } from '../utils/statsManager';
+import { incrementGameCount } from '../utils/reviewManager';
 
 type FlipMatchGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FlipMatchGame'>;
 
@@ -52,13 +53,12 @@ const FlipMatchGame: React.FC = () => {
   const handleGameWon = async () => {
     hapticPatterns.levelComplete();
 
-    // 통계 업데이트
-    incrementTotalPlays('flip_match');
-    addPlayTime('flip_match', timeElapsed);
-
-    // 최고 기록 업데이트
-    await updateFlipMatchRecord(timeElapsed, settings.difficulty);
+    // 최고 기록 업데이트 (플레이 통계 포함)
+    await updateFlipMatchRecord(timeElapsed, settings.difficulty, timeElapsed);
     updateBestRecord('flip_match', timeElapsed);
+
+    // 게임 카운트 증가 및 리뷰 요청
+    await incrementGameCount();
   };
 
   const handleStartGame = () => {
