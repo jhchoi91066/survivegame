@@ -7,6 +7,7 @@ import { useMathRushStore } from '../game/mathrush/store';
 import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { updateMathRushRecord } from '../utils/statsManager';
+import { incrementGameCount } from '../utils/reviewManager';
 
 type MathRushGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MathRushGame'>;
 
@@ -47,10 +48,12 @@ const MathRushGame: React.FC = () => {
 
   const handleGameFinish = async () => {
     hapticPatterns.gameOver();
-    incrementTotalPlays('math_rush');
-    addPlayTime('math_rush', 30 - timeRemaining);
-    await updateMathRushRecord(score, highestCombo);
+    const playTime = 30 - timeRemaining;
+    await updateMathRushRecord(score, highestCombo, playTime);
     updateBestRecord('math_rush', score);
+
+    // 게임 카운트 증가 및 리뷰 요청
+    await incrementGameCount();
   };
 
   const handleAnswer = (answer: number) => {
