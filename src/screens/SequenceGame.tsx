@@ -8,6 +8,7 @@ import NumberTile from '../components/sequence/NumberTile';
 import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { updateSequenceRecord } from '../utils/statsManager';
+import { incrementGameCount } from '../utils/reviewManager';
 
 type SequenceGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SequenceGame'>;
 
@@ -34,6 +35,7 @@ const SequenceGame: React.FC = () => {
   const { incrementTotalPlays, updateBestRecord } = useGameStore();
   const [showDifficultyModal, setShowDifficultyModal] = useState(true);
   const [selectedDifficulty, setSelectedDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
+  const [gameStartTime, setGameStartTime] = useState<number>(0);
 
   // 타이머 업데이트
   useEffect(() => {
@@ -61,18 +63,27 @@ const SequenceGame: React.FC = () => {
       setBestLevelTime(levelTime);
     }
 
-    await updateSequenceRecord(level);
+    // 총 플레이 시간 계산
+    const totalPlayTime = (Date.now() - gameStartTime) / 1000;
+    await updateSequenceRecord(level, totalPlayTime);
     updateBestRecord('sequence', level);
   };
 
-  const handleGameOver = () => {
+  const handleGameOver = async () => {
     hapticPatterns.gameOver();
-    incrementTotalPlays('sequence');
+
+    // 게임 오버 시에도 플레이 시간 기록
+    const totalPlayTime = (Date.now() - gameStartTime) / 1000;
+    await updateSequenceRecord(level, totalPlayTime);
+
+    // 게임 카운트 증가 및 리뷰 요청
+    await incrementGameCount();
   };
 
   const handleStartGame = () => {
     initializeGame(1, selectedDifficulty);
     setShowDifficultyModal(false);
+    setGameStartTime(Date.now());
     hapticPatterns.buttonPress();
   };
 

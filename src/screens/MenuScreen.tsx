@@ -6,6 +6,17 @@ import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { GameType, GameInfo } from '../game/shared/types';
 import { loadStats, loadGameRecord } from '../utils/statsManager';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withDelay,
+  interpolate,
+} from 'react-native-reanimated';
+import { useTheme } from '../contexts/ThemeContext';
+import { Tutorial } from '../components/shared/Tutorial';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type MenuScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
@@ -13,22 +24,72 @@ interface MenuScreenProps {
   navigation: MenuScreenNavigationProp;
 }
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const isSmallScreen = width < 375;
+const cardWidth = (width - 60) / 2; // padding 20 * 2 + gap 20
+
+const FIRST_VISIT_KEY = '@brain_games_first_visit';
+
+const tutorialSteps = [
+  {
+    title: '환영합니다! 🎉',
+    description: '4가지 두뇌 게임으로 당신의 기억력, 집중력, 계산 능력을 테스트하세요!',
+    emoji: '🎮',
+  },
+  {
+    title: '게임 선택 ⚡',
+    description: '원하는 게임을 탭하여 바로 시작하세요. 각 게임은 고유한 도전 과제를 제공합니다.',
+    emoji: '🎯',
+  },
+  {
+    title: '기록 확인 📊',
+    description: '통계 탭에서 당신의 성장을 확인하고 최고 기록을 경신하세요!',
+    emoji: '📈',
+  },
+  {
+    title: '준비 완료! 🎮',
+    description: '지금 바로 첫 게임을 시작해보세요. 즐거운 시간 되세요!',
+    emoji: '🚀',
+  },
+];
 
 const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
+  const { theme } = useTheme();
   const { globalStats } = useGameStore();
   const [gameInfos, setGameInfos] = useState<GameInfo[]>([]);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     loadGameData();
+    checkFirstVisit();
   }, []);
+
+  const checkFirstVisit = async () => {
+    try {
+      const visited = await AsyncStorage.getItem(FIRST_VISIT_KEY);
+      if (!visited) {
+        setShowTutorial(true);
+      }
+    } catch (error) {
+      console.error('Failed to check first visit:', error);
+    }
+  };
+
+  const handleTutorialComplete = async () => {
+    try {
+      await AsyncStorage.setItem(FIRST_VISIT_KEY, 'true');
+      setShowTutorial(false);
+      hapticPatterns.buttonPress();
+    } catch (error) {
+      console.error('Failed to save first visit:', error);
+    }
+  };
 
   const loadGameData = async () => {
     const flipMatchRecord = await loadGameRecord('flip_match');
     const sequenceRecord = await loadGameRecord('sequence');
     const mathRushRecord = await loadGameRecord('math_rush');
-    const connectFlowRecord = await loadGameRecord('connect_flow');
+    const mergePuzzleRecord = await loadGameRecord('merge_puzzle');
 
     const games: GameInfo[] = [
       {
@@ -62,13 +123,13 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
           : '-',
       },
       {
-        id: 'connect_flow',
-        name: 'Color Match',
-        emoji: '🎨',
-        description: '색깔 매칭',
+        id: 'merge_puzzle',
+        name: 'Merge Puzzle',
+        emoji: '🔢',
+        description: '숫자 합치기',
         bestRecordLabel: 'Best',
-        bestRecordValue: connectFlowRecord?.bestMoves
-          ? `${connectFlowRecord.bestMoves}회`
+        bestRecordValue: mergePuzzleRecord?.bestMoves
+          ? `${mergePuzzleRecord.bestMoves}회`
           : '-',
       },
     ];
@@ -89,208 +150,406 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
       case 'math_rush':
         navigation.navigate('MathRushGame');
         break;
-      case 'connect_flow':
-        navigation.navigate('ConnectFlowGame');
+      case 'merge_puzzle':
+        navigation.navigate('MergePuzzleGame');
         break;
     }
   };
 
+  const getGradientColors = (gameId: GameType): [string, string] => {
+    switch (gameId) {
+      case 'flip_match':
+        return theme.gradients.flipMatch;
+      case 'sequence':
+        return theme.gradients.sequence;
+      case 'math_rush':
+        return theme.gradients.mathRush;
+      case 'merge_puzzle':
+        return theme.gradients.mergePuzzle;
+      default:
+        return theme.gradients.flipMatch;
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>Brain Games</Text>
-            <Text style={styles.subtitle}>두뇌 게임 컬렉션</Text>
-          </View>
-          <Pressable
-            style={styles.settingsButton}
-            onPress={() => {
-              hapticPatterns.buttonPress();
-              navigation.navigate('Settings');
-            }}
-          >
-            <Text style={styles.settingsIcon}>⚙️</Text>
-          </Pressable>
-        </View>
+    <View style={styles.container}>
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={theme.gradients.background}
+        style={styles.backgroundGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
 
-        {/* Game Grid - 2x2 */}
-        <View style={styles.gamesContainer}>
-          {gameInfos.map((game) => (
+      {/* First-time Tutorial */}
+      <Tutorial
+        visible={showTutorial}
+        steps={tutorialSteps}
+        onComplete={handleTutorialComplete}
+        gradientColors={theme.gradients.flipMatch}
+      />
+
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>Brain Games</Text>
+              <Text style={styles.subtitle}>두뇌를 깨우는 즐거운 시간</Text>
+            </View>
             <Pressable
-              key={game.id}
-              style={styles.gameCard}
-              onPress={() => handleGamePress(game.id)}
+              style={styles.settingsButton}
+              onPress={() => {
+                hapticPatterns.buttonPress();
+                navigation.navigate('Settings');
+              }}
             >
-              <View style={styles.gameIconContainer}>
-                <Text style={styles.gameEmoji}>{game.emoji}</Text>
-              </View>
-              <Text style={styles.gameName}>{game.name}</Text>
-              <Text style={styles.gameDescription}>{game.description}</Text>
-              <View style={styles.recordContainer}>
-                <Text style={styles.recordValue}>{game.bestRecordValue}</Text>
-              </View>
+              <LinearGradient
+                colors={['#334155', '#1e293b']}
+                style={styles.settingsGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.settingsIcon}>⚙️</Text>
+              </LinearGradient>
             </Pressable>
-          ))}
-        </View>
+          </View>
 
-        {/* Bottom Buttons */}
-        <View style={styles.bottomButtons}>
-          <Pressable
-            style={styles.bottomButton}
-            onPress={() => {
-              hapticPatterns.buttonPress();
-              navigation.navigate('Stats');
-            }}
-          >
-            <Text style={styles.bottomButtonIcon}>📊</Text>
-            <Text style={styles.bottomButtonText}>통계</Text>
-          </Pressable>
+          {/* Game Grid - 2x2 */}
+          <View style={styles.gamesContainer}>
+            {gameInfos.map((game, index) => (
+              <GameCard
+                key={game.id}
+                game={game}
+                onPress={() => handleGamePress(game.id)}
+                gradientColors={getGradientColors(game.id)}
+                index={index}
+              />
+            ))}
+          </View>
 
-          <Pressable
-            style={styles.bottomButton}
-            onPress={() => {
-              hapticPatterns.buttonPress();
-              navigation.navigate('Achievements');
-            }}
-          >
-            <Text style={styles.bottomButtonIcon}>🏆</Text>
-            <Text style={styles.bottomButtonText}>업적</Text>
-          </Pressable>
-        </View>
+          {/* Bottom Buttons */}
+          <View style={styles.bottomButtons}>
+            <Pressable
+              style={styles.bottomButton}
+              onPress={() => {
+                hapticPatterns.buttonPress();
+                navigation.navigate('Stats');
+              }}
+            >
+              <LinearGradient
+                colors={['#1e293b', '#0f172a']}
+                style={styles.bottomButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.bottomButtonIcon}>📊</Text>
+                <Text style={styles.bottomButtonText}>통계</Text>
+              </LinearGradient>
+            </Pressable>
 
-        <Text style={styles.version}>v2.0.0</Text>
-      </ScrollView>
-    </SafeAreaView>
+            <Pressable
+              style={styles.bottomButton}
+              onPress={() => {
+                hapticPatterns.buttonPress();
+                navigation.navigate('Achievements');
+              }}
+            >
+              <LinearGradient
+                colors={['#1e293b', '#0f172a']}
+                style={styles.bottomButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.bottomButtonIcon}>🏆</Text>
+                <Text style={styles.bottomButtonText}>업적</Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
+
+          <Text style={styles.version}>v2.0.0</Text>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+};
+
+interface GameCardProps {
+  game: GameInfo;
+  onPress: () => void;
+  gradientColors: [string, string];
+  index: number;
+}
+
+const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, index }) => {
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withDelay(
+      index * 100,
+      withSpring(1, {
+        damping: 15,
+        stiffness: 100,
+      })
+    );
+    opacity.value = withDelay(index * 100, withSpring(1));
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View style={[styles.gameCardWrapper, animatedStyle]}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.gameCard,
+          pressed && styles.gameCardPressed,
+        ]}
+        onPress={onPress}
+      >
+        <LinearGradient
+          colors={gradientColors}
+          style={styles.gameCardGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          {/* Glassmorphism overlay */}
+          <View style={styles.glassOverlay} />
+
+          <View style={styles.gameIconContainer}>
+            <View style={styles.iconGlow}>
+              <Text style={styles.gameEmoji}>{game.emoji}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.gameName}>{game.name}</Text>
+          <Text style={styles.gameDescription}>{game.description}</Text>
+
+          <View style={styles.recordContainer}>
+            <Text style={styles.recordLabel}>BEST</Text>
+            <Text style={styles.recordValue}>{game.bestRecordValue}</Text>
+          </View>
+        </LinearGradient>
+      </Pressable>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a', // darker slate
+    backgroundColor: '#0f172a',
+  },
+  backgroundGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  safeArea: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
     padding: 20,
+    paddingTop: 10,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 32,
+    marginBottom: 28,
     marginTop: 8,
   },
   titleContainer: {
     flex: 1,
   },
   title: {
-    fontSize: isSmallScreen ? 28 : 32,
-    fontWeight: '800',
+    fontSize: isSmallScreen ? 32 : 36,
+    fontWeight: '900',
     color: '#fff',
-    letterSpacing: -0.5,
+    letterSpacing: -1,
+    textShadowColor: 'rgba(99, 102, 241, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 4,
+    fontSize: 13,
+    color: '#94a3b8',
+    marginTop: 6,
+    fontWeight: '500',
   },
   settingsButton: {
-    width: 44,
-    height: 44,
-    backgroundColor: '#1e293b',
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  settingsGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 24,
   },
   settingsIcon: {
-    fontSize: 20,
+    fontSize: 22,
   },
   gamesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 24,
+    gap: 20,
+    marginBottom: 28,
+  },
+  gameCardWrapper: {
+    width: cardWidth,
   },
   gameCard: {
-    width: `${(100 - 1.5) / 2}%`, // 2열 그리드
-    backgroundColor: '#1e293b',
-    borderRadius: 20,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  gameCardPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  gameCardGradient: {
     padding: 20,
+    paddingVertical: 28,
     alignItems: 'center',
+    minHeight: 200,
+    justifyContent: 'space-between',
+  },
+  glassOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 24,
   },
   gameIconContainer: {
-    width: 64,
-    height: 64,
-    backgroundColor: '#334155',
-    borderRadius: 32,
+    width: 72,
+    height: 72,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
+  iconGlow: {
+    width: 72,
+    height: 72,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#fff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
   gameEmoji: {
-    fontSize: 36,
+    fontSize: 40,
   },
   gameName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
     marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   gameDescription: {
     fontSize: 12,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
+    fontWeight: '500',
   },
   recordContainer: {
-    backgroundColor: '#0f172a',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  recordLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.6)',
+    letterSpacing: 1,
+    marginBottom: 2,
   },
   recordValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#22d3ee',
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fff',
   },
   bottomButtons: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
+    gap: 16,
+    marginBottom: 20,
   },
   bottomButton: {
     flex: 1,
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    paddingVertical: 16,
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  bottomButtonGradient: {
+    paddingVertical: 18,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 18,
   },
   bottomButtonIcon: {
-    fontSize: 20,
+    fontSize: 22,
   },
   bottomButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#fff',
   },
   version: {
     fontSize: 11,
-    color: '#334155',
+    color: '#475569',
     textAlign: 'center',
     marginTop: 8,
+    marginBottom: 20,
+    fontWeight: '500',
   },
 });
 

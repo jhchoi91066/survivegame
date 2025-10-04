@@ -11,7 +11,7 @@ interface MergePuzzleStore {
 
   initializeGame: () => void;
   selectTile: (tileId: string) => void;
-  mergeTiles: () => void;
+  mergeTiles: (secondTileId?: string) => void;
   resetGame: () => void;
 }
 
@@ -104,7 +104,15 @@ export const useMergePuzzleStore = create<MergePuzzleStore>((set, get) => ({
     const secondTile = tile;
 
     if (firstTile && firstTile.value === secondTile.value) {
-      get().mergeTiles();
+      // 두 번째 타일도 선택 표시
+      set({
+        tiles: state.tiles.map(t => ({
+          ...t,
+          isSelected: t.id === tileId || t.id === state.selectedTile,
+        })),
+      });
+      // 합치기 실행
+      setTimeout(() => get().mergeTiles(tileId), 100);
     } else {
       // 값이 다르면 선택만 변경
       set({
@@ -117,12 +125,14 @@ export const useMergePuzzleStore = create<MergePuzzleStore>((set, get) => ({
     }
   },
 
-  mergeTiles: () => {
+  mergeTiles: (secondTileId?: string) => {
     const state = get();
     const firstTile = state.tiles.find(t => t.id === state.selectedTile);
     if (!firstTile) return;
 
-    const secondTile = state.tiles.find(t => t.isSelected && t.id !== state.selectedTile);
+    const secondTile = secondTileId
+      ? state.tiles.find(t => t.id === secondTileId)
+      : state.tiles.find(t => t.isSelected && t.id !== state.selectedTile);
     if (!secondTile) return;
 
     const newValue = firstTile.value * 2;

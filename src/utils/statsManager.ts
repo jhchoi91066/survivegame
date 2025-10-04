@@ -60,64 +60,72 @@ export const loadGameRecord = async <T extends GameType>(
 // Flip & Match 기록 업데이트
 export const updateFlipMatchRecord = async (
   time: number,
-  difficulty: 'easy' | 'medium' | 'hard'
+  difficulty: 'easy' | 'medium' | 'hard',
+  playTime: number
 ): Promise<void> => {
   const current = await loadGameRecord('flip_match');
 
-  if (!current || time < current.bestTime || current.bestTime === 0) {
-    await saveGameRecord('flip_match', {
-      bestTime: time,
-      difficulty,
-    });
-  }
+  const newRecord = {
+    bestTime: !current || time < current.bestTime || current.bestTime === 0 ? time : current.bestTime,
+    difficulty: !current || time < current.bestTime || current.bestTime === 0 ? difficulty : current.difficulty,
+    totalPlays: (current?.totalPlays || 0) + 1,
+    totalPlayTime: (current?.totalPlayTime || 0) + playTime,
+  };
+
+  await saveGameRecord('flip_match', newRecord);
 };
 
 // Sequence 기록 업데이트
-export const updateSequenceRecord = async (level: number): Promise<void> => {
+export const updateSequenceRecord = async (level: number, playTime: number): Promise<void> => {
   const current = await loadGameRecord('sequence');
 
-  if (!current || level > current.highestLevel) {
-    await saveGameRecord('sequence', {
-      highestLevel: level,
-    });
-  }
+  const newRecord = {
+    highestLevel: !current || level > current.highestLevel ? level : current.highestLevel,
+    totalPlays: (current?.totalPlays || 0) + 1,
+    totalPlayTime: (current?.totalPlayTime || 0) + playTime,
+  };
+
+  await saveGameRecord('sequence', newRecord);
 };
 
 // Math Rush 기록 업데이트
 export const updateMathRushRecord = async (
   score: number,
-  combo: number
+  combo: number,
+  playTime: number
 ): Promise<void> => {
   const current = await loadGameRecord('math_rush');
 
   const newRecord = {
     highScore: !current || score > current.highScore ? score : current.highScore,
     highestCombo: !current || combo > current.highestCombo ? combo : current.highestCombo,
+    totalPlays: (current?.totalPlays || 0) + 1,
+    totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
 
   await saveGameRecord('math_rush', newRecord);
 };
 
-// Connect Flow 기록 업데이트
-export const updateConnectFlowRecord = async (
-  levelId: number,
-  moves: number
+// Merge Puzzle 기록 업데이트
+export const updateMergePuzzleRecord = async (
+  moves: number,
+  highestNumber: number,
+  playTime: number
 ): Promise<void> => {
-  const current = await loadGameRecord('connect_flow');
-
-  const levelsCompleted = current?.levelsCompleted || [];
-  if (!levelsCompleted.includes(levelId)) {
-    levelsCompleted.push(levelId);
-  }
+  const current = await loadGameRecord('merge_puzzle');
 
   const newRecord = {
     bestMoves: !current || moves < current.bestMoves || current.bestMoves === 0
       ? moves
       : current.bestMoves,
-    levelsCompleted,
+    highestNumber: !current || highestNumber > current.highestNumber
+      ? highestNumber
+      : current.highestNumber,
+    totalPlays: (current?.totalPlays || 0) + 1,
+    totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
 
-  await saveGameRecord('connect_flow', newRecord);
+  await saveGameRecord('merge_puzzle', newRecord);
 };
 
 // 통계 초기화
@@ -128,7 +136,7 @@ export const clearAllStats = async (): Promise<void> => {
       `${RECORDS_KEY}_flip_match`,
       `${RECORDS_KEY}_sequence`,
       `${RECORDS_KEY}_math_rush`,
-      `${RECORDS_KEY}_connect_flow`,
+      `${RECORDS_KEY}_merge_puzzle`,
     ]);
   } catch (error) {
     console.error('Failed to clear stats:', error);
