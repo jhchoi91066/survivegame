@@ -15,8 +15,11 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Tutorial } from '../components/shared/Tutorial';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { syncGameRecords } from '../utils/cloudSync';
+import Toast from '../components/shared/Toast';
 
 type MenuScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
@@ -55,9 +58,13 @@ const tutorialSteps = [
 
 const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
   const { theme } = useTheme();
+  const { user } = useAuth();
   const { globalStats } = useGameStore();
   const [gameInfos, setGameInfos] = useState<GameInfo[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string>('');
+  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
     loadGameData();
@@ -156,6 +163,35 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
     }
   };
 
+  const handleManualSync = async () => {
+    if (!user) {
+      setToastMessage('로그인이 필요합니다');
+      setShowToast(true);
+      return;
+    }
+
+    setIsSyncing(true);
+    hapticPatterns.buttonPress();
+
+    try {
+      const result = await syncGameRecords();
+      if (result.success) {
+        setToastMessage(`동기화 완료! (업로드: ${result.recordsUploaded || 0}, 다운로드: ${result.recordsDownloaded || 0})`);
+        hapticPatterns.correctAnswer();
+        await loadGameData(); // Refresh game data
+      } else {
+        setToastMessage(`동기화 실패: ${result.error}`);
+        hapticPatterns.wrongAnswer();
+      }
+    } catch (error) {
+      setToastMessage('동기화 중 오류 발생');
+      hapticPatterns.wrongAnswer();
+    } finally {
+      setIsSyncing(false);
+      setShowToast(true);
+    }
+  };
+
   const getGradientColors = (gameId: GameType): [string, string] => {
     switch (gameId) {
       case 'flip_match':
@@ -200,22 +236,61 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
               <Text style={styles.title}>Brain Games</Text>
               <Text style={styles.subtitle}>두뇌를 깨우는 즐거운 시간</Text>
             </View>
-            <Pressable
-              style={styles.settingsButton}
-              onPress={() => {
-                hapticPatterns.buttonPress();
-                navigation.navigate('Settings');
-              }}
-            >
-              <LinearGradient
-                colors={['#334155', '#1e293b']}
-                style={styles.settingsGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+            <View style={styles.headerButtons}>
+              {/* 로그인/프로필 버튼 */}
+              <Pressable
+                style={styles.iconButton}
+                onPress={() => {
+                  hapticPatterns.buttonPress();
+                  navigation.navigate(user ? 'Profile' : 'Login');
+                }}
               >
-                <Text style={styles.settingsIcon}>⚙️</Text>
-              </LinearGradient>
-            </Pressable>
+                <LinearGradient
+                  colors={user ? ['#6366f1', '#8b5cf6'] : ['#334155', '#1e293b']}
+                  style={styles.iconGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.iconText}>{user ? '👤' : '🔐'}</Text>
+                </LinearGradient>
+              </Pressable>
+
+              {/* 동기화 버튼 (로그인 시에만 표시) */}
+              {user && (
+                <Pressable
+                  style={styles.iconButton}
+                  onPress={handleManualSync}
+                  disabled={isSyncing}
+                >
+                  <LinearGradient
+                    colors={isSyncing ? ['#94a3b8', '#64748b'] : ['#10b981', '#059669']}
+                    style={styles.iconGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Text style={styles.iconText}>{isSyncing ? '⏳' : '🔄'}</Text>
+                  </LinearGradient>
+                </Pressable>
+              )}
+
+              {/* 설정 버튼 */}
+              <Pressable
+                style={styles.iconButton}
+                onPress={() => {
+                  hapticPatterns.buttonPress();
+                  navigation.navigate('Settings');
+                }}
+              >
+                <LinearGradient
+                  colors={['#334155', '#1e293b']}
+                  style={styles.iconGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.iconText}>⚙️</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
           </View>
 
           {/* Game Grid - 2x2 */}
@@ -255,6 +330,24 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
               style={styles.bottomButton}
               onPress={() => {
                 hapticPatterns.buttonPress();
+                navigation.navigate('Leaderboard');
+              }}
+            >
+              <LinearGradient
+                colors={user ? ['#6366f1', '#8b5cf6'] : ['#1e293b', '#0f172a']}
+                style={styles.bottomButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.bottomButtonIcon}>🏆</Text>
+                <Text style={styles.bottomButtonText}>리더보드</Text>
+              </LinearGradient>
+            </Pressable>
+
+            <Pressable
+              style={styles.bottomButton}
+              onPress={() => {
+                hapticPatterns.buttonPress();
                 navigation.navigate('Achievements');
               }}
             >
@@ -264,7 +357,7 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Text style={styles.bottomButtonIcon}>🏆</Text>
+                <Text style={styles.bottomButtonIcon}>🎖️</Text>
                 <Text style={styles.bottomButtonText}>업적</Text>
               </LinearGradient>
             </Pressable>
@@ -273,6 +366,14 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
           <Text style={styles.version}>v2.0.0</Text>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Toast for sync status */}
+      <Toast
+        message={toastMessage}
+        visible={showToast}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
     </View>
   );
 };
@@ -384,6 +485,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#94a3b8',
     marginTop: 6,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  iconGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconText: {
+    fontSize: 20,
     fontWeight: '500',
   },
   settingsButton: {

@@ -10,6 +10,7 @@ import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { updateFlipMatchRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
+import { smartSync } from '../utils/cloudSync';
 
 type FlipMatchGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FlipMatchGame'>;
 
@@ -56,6 +57,15 @@ const FlipMatchGame: React.FC = () => {
     // 최고 기록 업데이트 (플레이 통계 포함)
     await updateFlipMatchRecord(timeElapsed, settings.difficulty, timeElapsed);
     updateBestRecord('flip_match', timeElapsed);
+
+    // 클라우드 동기화 (로그인한 경우)
+    await smartSync({
+      game_type: 'flip_match',
+      score: moves,
+      time_seconds: timeElapsed,
+      difficulty: settings.difficulty,
+      played_at: new Date().toISOString()
+    });
 
     // 게임 카운트 증가 및 리뷰 요청
     await incrementGameCount();
