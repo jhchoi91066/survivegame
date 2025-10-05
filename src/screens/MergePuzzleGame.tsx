@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { updateMergePuzzleRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
+import { smartSync } from '../utils/cloudSync';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'MergePuzzleGame'>;
 
@@ -26,12 +27,26 @@ const MergePuzzleGame: React.FC = () => {
   // 게임 종료 시 기록 저장
   useEffect(() => {
     if (gameStatus === 'won' || gameStatus === 'lost') {
-      const highestNumber = Math.max(...tiles.map(t => t.value));
-      const playTime = (Date.now() - gameStartTime) / 1000;
-      updateMergePuzzleRecord(moves, highestNumber, playTime);
+      const handleGameEnd = async () => {
+        const highestNumber = Math.max(...tiles.map(t => t.value));
+        const playTime = (Date.now() - gameStartTime) / 1000;
+        await updateMergePuzzleRecord(moves, highestNumber, playTime);
 
-      // 게임 카운트 증가 및 리뷰 요청
-      incrementGameCount();
+        // 클라우드 동기화 (로그인한 경우)
+        await smartSync({
+          game_type: 'merge_puzzle',
+          score: highestNumber,
+          moves: moves,
+          time_seconds: playTime,
+          difficulty: 'normal',
+          played_at: new Date().toISOString()
+        });
+
+        // 게임 카운트 증가 및 리뷰 요청
+        await incrementGameCount();
+      };
+
+      handleGameEnd();
     }
   }, [gameStatus]);
 

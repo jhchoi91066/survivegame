@@ -9,6 +9,7 @@ import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { updateSequenceRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
+import { smartSync } from '../utils/cloudSync';
 
 type SequenceGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SequenceGame'>;
 
@@ -75,6 +76,16 @@ const SequenceGame: React.FC = () => {
     // 게임 오버 시에도 플레이 시간 기록
     const totalPlayTime = (Date.now() - gameStartTime) / 1000;
     await updateSequenceRecord(level, totalPlayTime);
+
+    // 클라우드 동기화 (로그인한 경우)
+    await smartSync({
+      game_type: 'sequence',
+      score: level,
+      level: level,
+      time_seconds: totalPlayTime,
+      difficulty: difficulty,
+      played_at: new Date().toISOString()
+    });
 
     // 게임 카운트 증가 및 리뷰 요청
     await incrementGameCount();
