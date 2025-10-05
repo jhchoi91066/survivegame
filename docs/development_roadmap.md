@@ -547,3 +547,373 @@
 **예상 출시일**: 2025년 10월 25일 🚀
 
 모든 핵심 기능과 출시 문서가 완성되었으며, 아이콘/스크린샷 제작 후 스토어 등록이 가능합니다.
+
+---
+
+## Phase 9: v3.0 온라인 기능 (v2.0 출시 후) 🌐
+
+**목표**: 소셜 & 온라인 기능으로 사용자 참여도 극대화
+**예상 기간**: 14-16주 (3.5-4개월)
+**예상 출시**: 2026년 1월
+
+### 핵심 원칙
+⚠️ **계정 없이도 완전히 플레이 가능**
+- 로그인은 100% 선택 사항
+- 로그인 안 해도: 모든 게임 + 로컬 기록
+- 로그인하면: 온라인 기능 추가 활성화
+
+### 1. 백엔드 인프라 설정 (1-2주)
+
+#### 1.1 Supabase 프로젝트 설정
+- [x] Supabase MCP 서버 연결
+  - [x] 전역 패키지 설치 (`@supabase/mcp-server-supabase`)
+  - [x] `.mcp.json` 설정 (프로젝트 루트)
+  - [x] `.claude/settings.local.json`에 `enableAllProjectMcpServers: true` 추가
+  - [x] 프로젝트 참조: `yqngfoowohacuozaofyb`
+  - [x] Access Token 설정
+  - [x] .gitignore에 보안 파일 추가
+- [x] 데이터베이스 스키마 설계
+  - [x] `docs/supabase-schema.sql` 작성
+  - [x] 테이블 구조 정의
+- [x] Supabase 설정 가이드 작성
+  - [x] `docs/SUPABASE_SETUP_GUIDE.md` 생성
+  - [x] 단계별 실행 가이드
+  - [x] 문제 해결 섹션
+  - [x] 테스트 쿼리 예시
+- [x] Supabase SQL 스키마 실행
+  - [x] profiles 테이블
+  - [x] game_records 테이블
+  - [x] leaderboards 테이블
+  - [x] friendships 테이블
+  - [x] user_achievements 테이블
+  - [x] Row Level Security (RLS) 정책 설정
+  - [x] 함수 및 트리거 생성
+
+#### 1.2 React Native 라이브러리 설치
+- [x] `@supabase/supabase-js` 설치
+- [x] `react-native-url-polyfill` 설치
+- [x] AsyncStorage 설정 확인
+
+#### 1.3 Supabase 클라이언트 설정
+- [x] `src/lib/supabase.ts` 생성
+- [x] 환경 변수 설정 (.env with Anon Key)
+- [x] 클라이언트 초기화
+
+### 2. 사용자 인증 시스템 (2주)
+
+#### 2.1 인증 Context 생성
+- [x] `src/contexts/AuthContext.tsx` 생성
+  - [x] 로그인 상태 관리
+  - [x] 세션 관리
+  - [x] 자동 로그인 (토큰 저장)
+- [x] App.tsx에 AuthProvider 통합
+
+#### 2.2 로그인 화면 구현
+- [x] `src/screens/LoginScreen.tsx` 생성
+  - [x] Google 로그인 버튼
+  - [x] Apple 로그인 버튼 (iOS)
+  - [x] 익명 로그인 옵션
+  - [x] "나중에" 버튼 (건너뛰기)
+- [x] 로그인 UI 디자인
+  - [x] 프리미엄 그라데이션
+  - [x] 애니메이션 효과
+  - [x] 로딩 상태
+
+#### 2.3 소셜 로그인 통합 (출시 전 보류)
+- [ ] 🔒 Google OAuth 설정 (보류 - 익명 로그인으로 충분)
+  - [ ] Google Cloud Console 설정
+  - [ ] Android Studio 키 지문 생성
+  - [ ] Supabase에 Google 프로바이더 추가
+  - [x] `expo-auth-session` 설치
+- [ ] 🔒 Apple Sign In (iOS) (보류 - 익명 로그인으로 충분)
+  - [ ] Apple Developer 설정
+  - [ ] Supabase에 Apple 프로바이더 추가
+- [x] 익명 로그인 구현 ✅ (현재 사용 중)
+
+#### 2.4 프로필 생성 흐름
+- [x] 닉네임 입력 화면
+- [x] 프로필 이미지 선택 (선택) - Avatar 이니셜 표시
+- [x] 국가 선택 (선택)
+- [x] Supabase profiles 테이블에 저장
+
+### 3. 사용자 프로필 화면 (1주)
+
+#### 3.1 프로필 화면 구현
+- [x] `src/screens/ProfileScreen.tsx` 생성
+  - [x] 사용자 정보 표시
+  - [x] 프로필 편집 버튼
+  - [x] 로그아웃 버튼
+  - [x] 계정 삭제 버튼
+- [x] Navigation에 Profile 라우트 추가
+
+#### 3.2 프로필 편집
+- [x] 닉네임 변경
+- [x] 프로필 이미지 업로드 (Avatar 이니셜로 대체)
+- [x] 국가 변경
+
+#### 3.3 UI 통합
+- [x] MenuScreen에 로그인/프로필 버튼 추가
+  - [x] 로그인 전: 🔐 아이콘
+  - [x] 로그인 후: 👤 아이콘
+
+### 4. 클라우드 동기화 ✅
+
+#### 4.1 동기화 유틸리티 생성
+- [x] `src/utils/cloudSync.ts` 생성
+  - [x] uploadGameRecord 함수
+  - [x] downloadGameRecords 함수
+  - [x] syncConflictResolver 함수
+  - [x] getCurrentUser 함수
+  - [x] smartSync (자동 온라인/오프라인 처리)
+  - [x] queueRecordForUpload (오프라인 큐)
+  - [x] processUploadQueue (큐 처리)
+
+#### 4.2 게임 기록 업로드
+- [x] FlipMatchGame 통합 (smartSync 사용)
+- [x] SequenceGame 통합 (smartSync 사용)
+- [x] MathRushGame 통합 (smartSync 사용)
+- [x] MergePuzzleGame 통합 (smartSync 사용)
+
+#### 4.3 게임 기록 다운로드
+- [x] 앱 시작 시 자동 동기화 (App.tsx)
+- [x] 수동 동기화 버튼 (MenuScreen - 🔄 아이콘)
+- [x] 오프라인 큐 구현
+
+#### 4.4 충돌 해결
+- [x] 로컬 vs 클라우드 비교 (resolveConflicts 함수)
+- [x] 최고 기록 우선 정책 (isBetterScore 함수)
+- [x] 리더보드 자동 업데이트
+
+### 5. 온라인 리더보드 (3주) ✅
+
+#### 5.1 리더보드 데이터 구조 ✅
+- [x] 게임별 리더보드 테이블 (leaderboards)
+- [x] 난이도별 분리 (Easy/Medium/Hard/Normal)
+- [x] 순위 계산 함수 (클라이언트 측에서 정렬 후 순위 부여)
+
+#### 5.2 리더보드 화면 구현 ✅
+- [x] `src/screens/LeaderboardScreen.tsx` 생성
+- [x] 게임 선택 탭 (Horizontal Scroll, 4개 게임)
+- [x] 난이도 선택 (Flip & Match만 Easy/Medium/Hard)
+- [x] 순위 목록 UI (Top 100)
+  - [x] 1-3위 메달 표시 (🥇🥈🥉)
+  - [x] 프로필 정보와 조인 (username)
+  - [x] 게임별 점수 포맷 (초, 레벨, 점, 회)
+  - [x] 현재 사용자 하이라이트
+
+#### 5.3 리더보드 업데이트 ✅
+- [x] 게임 완료 시 자동 제출 (smartSync → updateLeaderboard)
+- [x] Pull-to-Refresh 지원
+- [x] 내 순위 표시 (하단 요약)
+- [x] 로그인 안내 메시지 (비로그인 시)
+
+#### 5.4 게임별 리더보드 ✅
+- [x] Flip & Match 리더보드
+  - [x] Easy/Medium/Hard 별도
+  - [x] 최단 시간 기준 (오름차순)
+- [x] Sequence 리더보드
+  - [x] 최고 레벨 기준 (내림차순)
+- [x] Math Rush 리더보드
+  - [x] 최고 점수 기준 (내림차순)
+- [x] Merge Puzzle 리더보드
+  - [x] 최소 이동 기준 (오름차순)
+
+#### 5.5 Navigation 통합 ✅
+- [x] App.tsx에 Leaderboard 라우트 추가
+- [x] MenuScreen에 리더보드 버튼 추가 (3개 버튼으로 확장)
+  - [x] 📊 통계
+  - [x] 🏆 리더보드 (로그인 시 보라색 그라데이션)
+  - [x] 🎖️ 업적
+
+### 6. 친구 시스템 (2주)
+
+#### 6.1 친구 목록 화면
+- [ ] `src/screens/FriendsScreen.tsx` 생성
+  - [ ] 친구 목록 표시
+  - [ ] 온라인 상태 표시
+  - [ ] 친구 기록 간단 보기
+
+#### 6.2 친구 추가 기능
+- [ ] 사용자 ID로 검색
+- [ ] QR 코드 생성/스캔
+- [ ] 친구 요청 보내기
+- [ ] 친구 요청 알림
+
+#### 6.3 친구 관리
+- [ ] 친구 요청 수락/거절
+- [ ] 친구 삭제
+- [ ] 친구 차단
+
+#### 6.4 친구 기록 비교
+- [ ] `src/screens/FriendComparisonScreen.tsx` 생성
+- [ ] 게임별 기록 비교
+- [ ] 승률 통계
+- [ ] 도전장 보내기 (준비)
+
+### 7. 실시간 멀티플레이어 (3주, 선택적)
+
+#### 7.1 매칭 시스템
+- [ ] `src/screens/MultiplayerLobbyScreen.tsx` 생성
+- [ ] 친구와 대결
+- [ ] 랜덤 매칭
+- [ ] 방 만들기 (코드 공유)
+
+#### 7.2 실시간 게임 룸
+- [ ] Supabase Realtime 설정
+- [ ] 게임 룸 테이블
+- [ ] 플레이어 상태 동기화
+
+#### 7.3 Math Rush 1:1 대결
+- [ ] 실시간 점수 동기화
+- [ ] 30초 타이머 공유
+- [ ] 승패 판정
+
+#### 7.4 Sequence 경쟁 모드
+- [ ] 동시에 같은 패턴 도전
+- [ ] 실시간 진행 상황 공유
+- [ ] 먼저 실패한 사람 패배
+
+### 8. 업적 시스템 확장 (1주)
+
+#### 8.1 온라인 전용 업적
+- [ ] "첫 승리" - 첫 온라인 대결 승리
+- [ ] "소셜 버터플라이" - 친구 10명 추가
+- [ ] "글로벌 스타" - 리더보드 Top 100
+- [ ] "연승 행진" - 5연승
+- [ ] "완벽주의자" - 모든 게임 1위
+
+#### 8.2 업적 알림
+- [ ] 업적 달성 토스트
+- [ ] 업적 배지 표시
+- [ ] 업적 공유 기능
+
+### 9. 설정 & 개인정보 (1주)
+
+#### 9.1 온라인 설정 추가
+- [ ] 자동 동기화 on/off
+- [ ] 리더보드 참여 on/off
+- [ ] 친구 요청 수신 on/off
+- [ ] 온라인 상태 표시 on/off
+
+#### 9.2 개인정보 관리
+- [ ] 데이터 다운로드 (GDPR)
+- [ ] 계정 삭제
+- [ ] 데이터 삭제 확인
+
+#### 9.3 개인정보처리방침 업데이트
+- [ ] v3.0 정보 수집 내역 추가
+- [ ] Supabase 제3자 공유 명시
+- [ ] 사용자 권리 안내
+
+### 10. 테스트 & 최적화 (2주)
+
+#### 10.1 기능 테스트
+- [ ] 로그인/로그아웃 흐름
+- [ ] 데이터 동기화 정확성
+- [ ] 리더보드 순위 정확성
+- [ ] 친구 기능 동작
+- [ ] 멀티플레이어 안정성
+
+#### 10.2 성능 최적화
+- [ ] 리더보드 캐싱
+- [ ] 이미지 최적화
+- [ ] 네트워크 요청 최소화
+- [ ] 오프라인 모드 개선
+
+#### 10.3 보안 테스트
+- [ ] RLS 정책 검증
+- [ ] SQL Injection 방지
+- [ ] 토큰 보안 확인
+- [ ] 민감 정보 암호화
+
+#### 10.4 베타 테스트
+- [ ] 베타 테스터 100명 모집
+- [ ] 피드백 수집
+- [ ] 버그 수정
+- [ ] 성능 모니터링
+
+### 11. UI/UX 개선 (1주)
+
+#### 11.1 로딩 상태
+- [ ] 네트워크 요청 시 로딩 인디케이터
+- [ ] 스켈레톤 UI (리더보드)
+- [ ] 오프라인 모드 안내
+
+#### 11.2 에러 처리
+- [ ] 네트워크 에러 핸들링
+- [ ] 인증 에러 처리
+- [ ] 재시도 로직
+- [ ] 사용자 친화적 에러 메시지
+
+#### 11.3 온보딩 업데이트
+- [ ] 온라인 기능 소개 추가
+- [ ] 로그인 유도 메시지
+- [ ] 리더보드 소개
+
+---
+
+## 📊 v3.0 개발 진행 상황
+
+### ✅ 완료
+- Supabase MCP 서버 연결
+- 데이터베이스 스키마 설계
+- 온라인 기능 계획 문서
+- **Section 1**: 백엔드 인프라 설정 ✅
+- **Section 2**: 사용자 인증 시스템 ✅
+- **Section 3**: 사용자 프로필 화면 ✅
+- **Section 4**: 클라우드 동기화 ✅
+- **Section 5**: 온라인 리더보드 ✅ (2025-10-06 완료)
+
+### 🚧 현재 작업
+- ✅ Supabase SQL 스키마 실행 완료 (2025-10-06)
+  - 5개 테이블 생성 완료 (profiles, game_records, leaderboards, friendships, user_achievements)
+  - RLS 정책 활성화 완료
+  - 4개 Functions 생성 완료 (handle_new_user, handle_updated_at, upsert_game_record, update_daily_leaderboard)
+  - leaderboards 테이블에 게임별 컬럼 추가 (best_score, best_level, best_time_seconds, best_moves)
+  - difficulty_type ENUM에 'normal' 값 추가
+- 🔒 Google/Apple OAuth 설정 (출시 전 보류 - 익명 로그인으로 충분)
+- ⏳ 친구 시스템 구현 (다음 단계)
+
+### 🎯 다음 작업
+1. ~~**Week 1-2**: Supabase 설정 & 인증 시스템~~ ✅
+2. ~~**Week 3-4**: 프로필 & 클라우드 동기화~~ ✅
+3. ~~**Week 5-7**: 리더보드 구현~~ ✅
+4. **Week 8-9**: Supabase 배포 & 테스트 ← 현재
+5. **Week 10-11**: 친구 시스템
+6. **Week 12-14**: 멀티플레이어 (선택)
+7. **Week 15-16**: 테스트 & 최적화
+8. **Week 17**: 베타 & 버그 수정
+
+---
+
+## 🎨 기술 스택 (v3.0 추가)
+
+### 백엔드
+- **데이터베이스**: Supabase (PostgreSQL)
+- **인증**: Supabase Auth
+- **실시간**: Supabase Realtime
+- **저장소**: Supabase Storage
+
+### 프론트엔드 추가
+- **Supabase 클라이언트**: @supabase/supabase-js
+- **OAuth**: expo-auth-session
+- **QR 코드**: react-native-qrcode-svg
+
+---
+
+## 💰 예상 비용 (v3.0)
+
+### Supabase 무료 티어
+- 500MB 데이터베이스
+- 1GB 파일 저장소
+- 50,000 MAU
+- 2GB 대역폭
+
+### 예상 사용량 (10,000 DAU)
+- 월 비용: **$0** (무료 티어 내)
+
+### 확장 시 (50,000+ DAU)
+- Pro Plan: **$25/월**
+- 또는 수익화로 충당
+
+---

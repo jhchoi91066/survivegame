@@ -8,6 +8,7 @@ import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { updateMathRushRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
+import { smartSync } from '../utils/cloudSync';
 
 type MathRushGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MathRushGame'>;
 
@@ -51,6 +52,15 @@ const MathRushGame: React.FC = () => {
     const playTime = 30 - timeRemaining;
     await updateMathRushRecord(score, highestCombo, playTime);
     updateBestRecord('math_rush', score);
+
+    // 클라우드 동기화 (로그인한 경우)
+    await smartSync({
+      game_type: 'math_rush',
+      score: score,
+      time_seconds: playTime,
+      difficulty: 'normal',
+      played_at: new Date().toISOString()
+    });
 
     // 게임 카운트 증가 및 리뷰 요청
     await incrementGameCount();

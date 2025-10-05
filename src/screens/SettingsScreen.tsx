@@ -5,7 +5,7 @@ import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 
-const TUTORIAL_KEY = '@tutorial_completed';
+const TUTORIAL_KEY = '@brain_games_first_visit';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 

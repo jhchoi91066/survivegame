@@ -49,7 +49,7 @@ const initialGlobalStats: GlobalStats = {
       bestRecord: 0,
       lastPlayed: 0,
     },
-    connect_flow: {
+    merge_puzzle: {
       totalPlays: 0,
       totalPlayTime: 0,
       bestRecord: 0,
