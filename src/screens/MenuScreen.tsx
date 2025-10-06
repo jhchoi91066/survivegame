@@ -307,7 +307,7 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
           </View>
 
           {/* Bottom Buttons */}
-          <View style={styles.bottomButtons}>
+          <View style={styles.bottomButtonsGrid}>
             <Pressable
               style={styles.bottomButton}
               onPress={() => {
@@ -341,6 +341,24 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
               >
                 <Text style={styles.bottomButtonIcon}>🏆</Text>
                 <Text style={styles.bottomButtonText}>리더보드</Text>
+              </LinearGradient>
+            </Pressable>
+
+            <Pressable
+              style={styles.bottomButton}
+              onPress={() => {
+                hapticPatterns.buttonPress();
+                navigation.navigate('Friends');
+              }}
+            >
+              <LinearGradient
+                colors={user ? ['#10b981', '#059669'] : ['#1e293b', '#0f172a']}
+                style={styles.bottomButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.bottomButtonIcon}>👥</Text>
+                <Text style={styles.bottomButtonText}>친구</Text>
               </LinearGradient>
             </Pressable>
 
@@ -630,14 +648,15 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fff',
   },
-  bottomButtons: {
+  bottomButtonsGrid: {
     flexDirection: 'row',
-    gap: 16,
+    flexWrap: 'wrap',
+    gap: 12,
     marginBottom: 20,
   },
   bottomButton: {
-    flex: 1,
-    borderRadius: 18,
+    width: (width - 60) / 2, // 2개 버튼 너비 (padding 20*2 + gap 12*1)
+    borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },

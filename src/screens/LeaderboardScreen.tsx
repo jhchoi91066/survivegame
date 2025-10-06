@@ -15,6 +15,11 @@ import { supabase } from '../lib/supabase';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import * as Haptics from 'expo-haptics';
+import { updateLeaderboardRanks } from '../utils/achievementManager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_KEY_PREFIX = '@leaderboard_cache_';
 
 type LeaderboardScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
@@ -51,9 +56,37 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
     loadLeaderboard();
   }, [selectedGame, selectedDifficulty]);
 
-  const loadLeaderboard = async () => {
+  useEffect(() => {
+    if (user) {
+      updateMyRanksForAchievements();
+    }
+  }, [user]);
+
+  const loadLeaderboard = async (forceRefresh = false) => {
     try {
       setLoading(true);
+
+      const cacheKey = `${CACHE_KEY_PREFIX}${selectedGame}_${selectedDifficulty}`;
+
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cachedData = await AsyncStorage.getItem(cacheKey);
+        if (cachedData) {
+          const { data, timestamp } = JSON.parse(cachedData);
+          const isValid = Date.now() - timestamp < CACHE_DURATION;
+
+          if (isValid) {
+            setLeaderboard(data);
+            if (user) {
+              const userIndex = data.findIndex((entry: LeaderboardEntry) => entry.user_id === user.id);
+              setMyRank(userIndex >= 0 ? userIndex + 1 : null);
+            }
+            setLoading(false);
+            setRefreshing(false);
+            return;
+          }
+        }
+      }
 
       // Fetch leaderboard data with profile info
       const { data, error } = await supabase
@@ -98,6 +131,12 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
 
       setLeaderboard(formattedData);
 
+      // Cache the data
+      await AsyncStorage.setItem(cacheKey, JSON.stringify({
+        data: formattedData,
+        timestamp: Date.now(),
+      }));
+
       // Find current user's rank
       if (user) {
         const userIndex = formattedData.findIndex(entry => entry.user_id === user.id);
@@ -114,7 +153,65 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadLeaderboard();
+    await loadLeaderboard(true); // Force refresh
+    if (user) {
+      await updateMyRanksForAchievements();
+    }
+  };
+
+  const updateMyRanksForAchievements = async () => {
+    if (!user) return;
+
+    try {
+      const games: GameType[] = ['flip_match', 'sequence', 'math_rush', 'merge_puzzle'];
+      const ranks: { [gameType: string]: number } = {};
+
+      for (const game of games) {
+        // Get the best difficulty for each game
+        let difficulty: Difficulty = 'normal';
+        if (game === 'flip_match') {
+          difficulty = 'hard'; // Use hardest difficulty for flip_match
+        }
+
+        const { data, error } = await supabase
+          .from('leaderboards')
+          .select('user_id')
+          .eq('game_type', game)
+          .eq('difficulty', difficulty)
+          .order(getOrderColumnForGame(game), { ascending: getOrderAscendingForGame(game) });
+
+        if (!error && data) {
+          const userIndex = data.findIndex(entry => entry.user_id === user.id);
+          if (userIndex >= 0) {
+            ranks[game] = userIndex + 1;
+          }
+        }
+      }
+
+      // Update achievements
+      await updateLeaderboardRanks(ranks);
+    } catch (error) {
+      console.error('Failed to update ranks for achievements:', error);
+    }
+  };
+
+  const getOrderColumnForGame = (game: GameType): string => {
+    switch (game) {
+      case 'flip_match':
+        return 'best_time_seconds';
+      case 'sequence':
+        return 'best_level';
+      case 'math_rush':
+        return 'best_score';
+      case 'merge_puzzle':
+        return 'best_moves';
+      default:
+        return 'best_score';
+    }
+  };
+
+  const getOrderAscendingForGame = (game: GameType): boolean => {
+    return game === 'flip_match' || game === 'merge_puzzle';
   };
 
   const getOrderColumn = (): string => {

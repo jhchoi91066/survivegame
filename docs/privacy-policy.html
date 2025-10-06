@@ -3,337 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Brain Games 개인정보처리방침">
     <title>개인정보처리방침 - Brain Games</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.8;
-            color: #1f2937;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
             max-width: 800px;
             margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
+            padding: 20px;
+            color: #333;
         }
-
-        .header {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 32px;
-            font-weight: 800;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .content {
-            padding: 40px 30px;
-        }
-
-        .lang-switch {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
-
-        .lang-btn {
-            padding: 10px 24px;
-            border: 2px solid #6366f1;
-            background: white;
-            color: #6366f1;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .lang-btn.active {
-            background: #6366f1;
-            color: white;
-        }
-
-        .section {
-            display: none;
-        }
-
-        .section.active {
-            display: block;
-        }
-
-        h2 {
-            font-size: 24px;
-            font-weight: 700;
-            color: #6366f1;
-            margin: 30px 0 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        h3 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #4b5563;
-            margin: 20px 0 10px;
-        }
-
-        p {
-            margin-bottom: 15px;
-            color: #4b5563;
-        }
-
-        ul {
-            margin: 10px 0 15px 20px;
-            color: #4b5563;
-        }
-
-        li {
-            margin: 8px 0;
-        }
-
-        .highlight {
-            background: #fef3c7;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: 600;
-        }
-
-        .footer {
-            background: #f9fafb;
-            padding: 20px 30px;
-            text-align: center;
-            color: #6b7280;
-            font-size: 14px;
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 24px;
-            }
-
-            .content {
-                padding: 30px 20px;
-            }
-
-            h2 {
-                font-size: 20px;
-            }
-        }
+        h1 { color: #6366f1; border-bottom: 3px solid #6366f1; padding-bottom: 10px; }
+        h2 { color: #4f46e5; margin-top: 30px; }
+        .version { color: #64748b; font-size: 0.9em; }
+        .important { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎮 Brain Games</h1>
-            <p>개인정보처리방침 / Privacy Policy</p>
-        </div>
+    <h1>개인정보처리방침 / Privacy Policy</h1>
+    <p class="version"><strong>최종 수정일 / Last Updated: 2025년 10월 6일 / October 6, 2025</strong><br><strong>버전 / Version: 3.0.0</strong></p>
 
-        <div class="content">
-            <div class="lang-switch">
-                <button class="lang-btn active" onclick="switchLang('ko')">한국어</button>
-                <button class="lang-btn" onclick="switchLang('en')">English</button>
-            </div>
+    <h2>1. 개요 / Overview</h2>
+    <p>Brain Games는 사용자의 개인정보를 중요하게 생각하며, 개인정보 보호에 최선을 다하고 있습니다.</p>
+    <p>Brain Games values user privacy and is committed to protecting personal information.</p>
 
-            <!-- Korean Version -->
-            <div id="ko" class="section active">
-                <p><strong>최종 수정일: 2025년 10월 4일</strong></p>
+    <h2>2. 수집하는 정보 / Information We Collect</h2>
+    <h3>2.1 로컬 저장 (오프라인) / Local Storage (Offline)</h3>
+    <ul>
+        <li>게임 기록 (최고 점수, 최단 시간) / Game records (high scores, best times)</li>
+        <li>게임 통계 (플레이 횟수, 총 플레이 시간) / Game statistics (play count, total play time)</li>
+        <li>앱 설정 (다크/라이트 모드) / App settings (dark/light mode)</li>
+    </ul>
 
-                <h2>1. 개요</h2>
-                <p>Brain Games("본 앱")는 사용자의 개인정보를 중요하게 생각하며, 개인정보 보호에 최선을 다하고 있습니다.</p>
+    <h3>2.2 온라인 기능 (선택적) / Online Features (Optional)</h3>
+    <p><strong>로그인 선택 시에만 / Only when you choose to log in:</strong></p>
+    <ul>
+        <li>익명 사용자 ID / Anonymous user ID</li>
+        <li>사용자명 / Username</li>
+        <li>게임 기록 및 순위 / Game records and rankings</li>
+        <li>친구 관계 정보 / Friend relationships</li>
+    </ul>
 
-                <h2>2. 수집하는 정보</h2>
-                <h3>2.1 자동으로 수집되는 정보</h3>
-                <p>본 앱은 다음의 정보를 <span class="highlight">기기 내부에만</span> 저장합니다:</p>
-                <ul>
-                    <li>게임 기록 (최고 점수, 최단 시간 등)</li>
-                    <li>게임 통계 (플레이 횟수, 총 플레이 시간)</li>
-                    <li>앱 설정 (테마 설정: 다크/라이트 모드)</li>
-                    <li>온보딩 완료 여부</li>
-                </ul>
-
-                <h3>2.2 개인 식별 정보</h3>
-                <p><span class="highlight">본 앱은 어떠한 개인 식별 정보도 수집하지 않습니다.</span></p>
-                <ul>
-                    <li>이름, 이메일, 전화번호 등을 요구하지 않음</li>
-                    <li>위치 정보를 수집하지 않음</li>
-                    <li>연락처나 사진에 접근하지 않음</li>
-                </ul>
-
-                <h2>3. 정보의 사용</h2>
-                <p>수집된 정보는 다음 목적으로만 사용됩니다:</p>
-                <ul>
-                    <li>게임 진행 상황 저장</li>
-                    <li>통계 및 기록 표시</li>
-                    <li>사용자 설정 유지</li>
-                </ul>
-
-                <h2>4. 정보의 저장</h2>
-                <p>모든 데이터는 <span class="highlight">기기 내부(AsyncStorage)</span>에만 저장되며:</p>
-                <ul>
-                    <li>외부 서버로 전송되지 않음</li>
-                    <li>제3자와 공유되지 않음</li>
-                    <li>앱 삭제 시 모든 데이터가 함께 삭제됨</li>
-                </ul>
-
-                <h2>5. 제3자 서비스</h2>
-                <p>본 앱은 다음의 제3자 서비스를 사용하지 않습니다:</p>
-                <ul>
-                    <li>광고 네트워크</li>
-                    <li>분석 서비스 (Analytics)</li>
-                    <li>소셜 미디어 통합</li>
-                    <li>클라우드 저장소</li>
-                </ul>
-
-                <h2>6. 권한</h2>
-                <p>본 앱이 요청하는 권한:</p>
-                <ul>
-                    <li><strong>진동 (VIBRATE)</strong>: 게임 피드백을 위한 햅틱 진동에만 사용</li>
-                </ul>
-
-                <h2>7. 아동의 개인정보 보호</h2>
-                <p>본 앱은 모든 연령층이 안전하게 사용할 수 있습니다. 어떠한 개인정보도 수집하지 않으므로 아동이 사용하기에 안전합니다.</p>
-
-                <h2>8. 보안</h2>
-                <p>모든 데이터는 기기 내부에 암호화되어 저장되며, 네트워크를 통해 전송되지 않습니다.</p>
-
-                <h2>9. 데이터 삭제</h2>
-                <p>사용자는 언제든지 다음 방법으로 데이터를 삭제할 수 있습니다:</p>
-                <ul>
-                    <li>앱 내 설정 > 통계 > "통계 초기화" 버튼</li>
-                    <li>앱 삭제 (모든 데이터가 함께 삭제됨)</li>
-                </ul>
-
-                <h2>10. 정책 변경</h2>
-                <p>개인정보처리방침이 변경될 경우, 앱 업데이트를 통해 공지됩니다.</p>
-
-                <h2>11. 문의</h2>
-                <p>개인정보처리방침에 대한 질문이 있으시면 다음으로 연락해 주세요:</p>
-                <p>이메일: support@braingames.com</p>
-            </div>
-
-            <!-- English Version -->
-            <div id="en" class="section">
-                <p><strong>Last Updated: October 4, 2025</strong></p>
-
-                <h2>1. Overview</h2>
-                <p>Brain Games ("the App") values your privacy and is committed to protecting your personal information.</p>
-
-                <h2>2. Information We Collect</h2>
-                <h3>2.1 Automatically Collected Information</h3>
-                <p>The App stores the following information <span class="highlight">locally on your device only</span>:</p>
-                <ul>
-                    <li>Game records (high scores, best times, etc.)</li>
-                    <li>Game statistics (play count, total play time)</li>
-                    <li>App settings (theme: dark/light mode)</li>
-                    <li>Onboarding completion status</li>
-                </ul>
-
-                <h3>2.2 Personal Identification Information</h3>
-                <p><span class="highlight">The App does NOT collect any personal identification information.</span></p>
-                <ul>
-                    <li>No name, email, or phone number required</li>
-                    <li>No location data collected</li>
-                    <li>No access to contacts or photos</li>
-                </ul>
-
-                <h2>3. Use of Information</h2>
-                <p>Collected information is used only for:</p>
-                <ul>
-                    <li>Saving game progress</li>
-                    <li>Displaying statistics and records</li>
-                    <li>Maintaining user preferences</li>
-                </ul>
-
-                <h2>4. Data Storage</h2>
-                <p>All data is stored <span class="highlight">locally on your device (AsyncStorage)</span> only:</p>
-                <ul>
-                    <li>Not transmitted to external servers</li>
-                    <li>Not shared with third parties</li>
-                    <li>Deleted when the app is uninstalled</li>
-                </ul>
-
-                <h2>5. Third-Party Services</h2>
-                <p>The App does NOT use:</p>
-                <ul>
-                    <li>Advertising networks</li>
-                    <li>Analytics services</li>
-                    <li>Social media integration</li>
-                    <li>Cloud storage</li>
-                </ul>
-
-                <h2>6. Permissions</h2>
-                <p>Permissions requested by the App:</p>
-                <ul>
-                    <li><strong>VIBRATE</strong>: Used only for haptic feedback during gameplay</li>
-                </ul>
-
-                <h2>7. Children's Privacy</h2>
-                <p>The App is safe for all ages. Since we collect no personal information, it is safe for children to use.</p>
-
-                <h2>8. Security</h2>
-                <p>All data is encrypted and stored locally on your device, never transmitted over the network.</p>
-
-                <h2>9. Data Deletion</h2>
-                <p>Users can delete their data at any time by:</p>
-                <ul>
-                    <li>App Settings > Statistics > "Reset Statistics" button</li>
-                    <li>Uninstalling the app (all data is deleted)</li>
-                </ul>
-
-                <h2>10. Policy Changes</h2>
-                <p>If our privacy policy changes, we will notify users through app updates.</p>
-
-                <h2>11. Contact</h2>
-                <p>For questions about this privacy policy, please contact:</p>
-                <p>Email: support@braingames.com</p>
-            </div>
-        </div>
-
-        <div class="footer">
-            <p>&copy; 2025 Brain Games. All rights reserved.</p>
-        </div>
+    <div class="important">
+        <strong>중요 / Important:</strong>
+        <ul>
+            <li>개인 식별 정보 수집 안 함 / No personal identification collected</li>
+            <li>익명 로그인 / Anonymous login</li>
+            <li>로그인 100% 선택사항 / Login is 100% optional</li>
+        </ul>
     </div>
 
-    <script>
-        function switchLang(lang) {
-            // Hide all sections
-            document.querySelectorAll('.section').forEach(section => {
-                section.classList.remove('active');
-            });
+    <h2>3. 정보의 사용 / How We Use Information</h2>
+    <ul>
+        <li>게임 진행 저장 / Save game progress</li>
+        <li>통계 표시 / Display statistics</li>
+        <li>리더보드 순위 (로그인 시) / Leaderboard rankings (when logged in)</li>
+        <li>클라우드 동기화 (로그인 시) / Cloud sync (when logged in)</li>
+    </ul>
 
-            // Remove active class from all buttons
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+    <h2>4. 제3자 서비스 / Third-Party Services</h2>
+    <ul>
+        <li><strong>Supabase</strong>: 백엔드 데이터베이스 / Backend database<br>
+        Privacy Policy: <a href="https://supabase.com/privacy">https://supabase.com/privacy</a></li>
+    </ul>
 
-            // Show selected section
-            document.getElementById(lang).classList.add('active');
+    <h2>5. 사용자 권리 / User Rights</h2>
+    <ul>
+        <li>데이터 다운로드 / Data download: 설정 > 내 데이터 다운로드 / Settings > Download My Data</li>
+        <li>계정 삭제 / Account deletion: 설정 > 계정 삭제 / Settings > Delete Account</li>
+    </ul>
 
-            // Add active class to clicked button
-            event.target.classList.add('active');
-        }
-    </script>
+    <h2>6. 아동 안전 / Children's Safety</h2>
+    <p>13세 이상 사용자 대상 / For users aged 13 and above</p>
+
+    <h2>7. 문의 / Contact</h2>
+    <p><strong>Email</strong>: braingames.support@example.com</p>
+
+    <footer style="margin-top: 40px; text-align: center; color: #64748b;">
+        <p>© 2025 Brain Games. All rights reserved.</p>
+    </footer>
 </body>
 </html>
