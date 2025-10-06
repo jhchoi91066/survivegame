@@ -1146,14 +1146,14 @@
 - [ ] 개인/법인 선택
 - [ ] 승인 대기 (1-2일)
 
-#### 3.3 개인정보처리방침 호스팅
-- [ ] GitHub Pages 설정
-  - [ ] `docs` 폴더에 privacy-policy.html 생성
-  - [ ] GitHub Repository Settings에서 Pages 활성화
-  - [ ] URL 확인 (https://[username].github.io/[repo]/privacy-policy.html)
-- [ ] 또는 무료 호스팅 (Netlify, Vercel)
+#### 3.3 개인정보처리방침 호스팅 ✅
+- [x] GitHub Pages 설정
+  - [x] `docs` 폴더에 privacy-policy.html 생성
+  - [x] main 브랜치에 머지
+  - [x] GitHub Pages 자동 배포
+  - [x] URL 확인: https://jhchoi91066.github.io/survivegame/privacy-policy.html
 
-**예상 소요**: 1시간 + 승인 대기
+**완료**: 개인정보처리방침 호스팅 완료 (스토어 제출용)
 
 ---
 
