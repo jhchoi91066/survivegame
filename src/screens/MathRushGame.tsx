@@ -9,11 +9,13 @@ import { useGameStore } from '../game/shared/store';
 import { updateMathRushRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
 import { smartSync } from '../utils/cloudSync';
+import { useTheme } from '../contexts/ThemeContext';
 
 type MathRushGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MathRushGame'>;
 
 const MathRushGame: React.FC = () => {
   const navigation = useNavigation<MathRushGameNavigationProp>();
+  const { theme } = useTheme();
   const {
     currentQuestion,
     score,
@@ -21,26 +23,24 @@ const MathRushGame: React.FC = () => {
     highestCombo,
     timeRemaining,
     gameStatus,
+    lives,
     answerQuestion,
     decrementTime,
     startGame,
     resetGame,
   } = useMathRushStore();
 
-  const { incrementTotalPlays, addPlayTime, updateBestRecord } = useGameStore();
+  const { updateBestRecord } = useGameStore();
 
-  // 타이머
   useEffect(() => {
     if (gameStatus === 'playing') {
       const interval = setInterval(() => {
         decrementTime();
       }, 1000);
-
       return () => clearInterval(interval);
     }
   }, [gameStatus]);
 
-  // 게임 종료 처리
   useEffect(() => {
     if (gameStatus === 'finished') {
       handleGameFinish();
@@ -52,8 +52,6 @@ const MathRushGame: React.FC = () => {
     const playTime = 30 - timeRemaining;
     await updateMathRushRecord(score, highestCombo, playTime);
     updateBestRecord('math_rush', score);
-
-    // 클라우드 동기화 (로그인한 경우)
     await smartSync({
       game_type: 'math_rush',
       score: score,
@@ -61,21 +59,17 @@ const MathRushGame: React.FC = () => {
       difficulty: 'normal',
       played_at: new Date().toISOString()
     });
-
-    // 게임 카운트 증가 및 리뷰 요청
     await incrementGameCount();
   };
 
   const handleAnswer = (answer: number) => {
-    if (!currentQuestion) return;
-
+    if (!currentQuestion || gameStatus !== 'playing') return;
     const isCorrect = answer === currentQuestion.correctAnswer;
     if (isCorrect) {
       hapticPatterns.correctAnswer();
     } else {
       hapticPatterns.wrongAnswer();
     }
-
     answerQuestion(answer);
   };
 
@@ -96,112 +90,107 @@ const MathRushGame: React.FC = () => {
   };
 
   const getTimerColor = (): string => {
-    if (timeRemaining > 30) return '#10b981'; // green
-    if (timeRemaining > 10) return '#f59e0b'; // yellow
-    return '#ef4444'; // red
+    if (timeRemaining > 10) return theme.colors.text;
+    if (timeRemaining > 5) return theme.colors.warning;
+    return theme.colors.error;
   };
 
+  const styles = getStyles(theme);
+
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← 메뉴</Text>
-        </Pressable>
-        <Text style={styles.title}>➕ Math Rush</Text>
-        <View style={{ width: 60 }} />
-      </View>
-
-      {gameStatus === 'ready' && (
-        <View style={styles.startContainer}>
-          <Text style={styles.startEmoji}>🧮</Text>
-          <Text style={styles.startTitle}>Math Rush</Text>
-          <Text style={styles.startDescription}>
-            30초 안에 틀리지 않고 최대한 많이 푸세요!{'\n'}
-            한 문제당 1점, 틀리면 즉시 종료!
-          </Text>
-          <Pressable style={styles.startButton} onPress={handleStart}>
-            <Text style={styles.startButtonText}>시작하기</Text>
+    <View style={styles.container}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.header}>
+          <Pressable onPress={handleBackToMenu} style={styles.backButton}>
+            <Text style={styles.backButtonText}>← 메뉴</Text>
           </Pressable>
+          <Text style={styles.title}>➕ Math Rush</Text>
+          <View style={{ width: 60 }} />
         </View>
-      )}
 
-      {gameStatus === 'playing' && currentQuestion && (
-        <>
-          {/* Stats */}
-          <View style={styles.stats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>점수</Text>
-              <Text style={styles.statValue}>{score}</Text>
+        {gameStatus === 'ready' && (
+          <View style={styles.startContainer}>
+            <Text style={styles.startEmoji}>🧮</Text>
+            <Text style={styles.startTitle}>Math Rush</Text>
+            <Text style={styles.startDescription}>
+              30초 안에 최대한 많은 문제를 푸세요!{`\n`}
+              3번 틀리면 게임이 종료됩니다.
+            </Text>
+            <Pressable style={styles.startButton} onPress={handleStart}>
+              <Text style={styles.startButtonText}>시작하기</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {gameStatus === 'playing' && currentQuestion && (
+          <>
+            <View style={styles.stats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>점수</Text>
+                <Text style={styles.statValue}>{score}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>시간</Text>
+                <Text style={[styles.statValue, { color: getTimerColor() }]}>
+                  {timeRemaining}
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>생명</Text>
+                <Text style={styles.statValue}>{'❤️'.repeat(lives)}</Text>
+              </View>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>시간</Text>
-              <Text style={[styles.statValue, { color: getTimerColor() }]}>
-                {timeRemaining}s
+
+            {combo >= 5 && (
+              <View style={styles.comboContainer}>
+                <Text style={styles.comboText}>🔥 {combo} COMBO!</Text>
+              </View>
+            )}
+
+            <View style={styles.questionContainer}>
+              <Text style={styles.question}>
+                {currentQuestion.num1} {currentQuestion.operation} {currentQuestion.num2} = ?
               </Text>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>콤보</Text>
-              <Text style={styles.statValue}>{combo}</Text>
+
+            <View style={styles.optionsContainer}>
+              {currentQuestion.options.map((option, index) => (
+                <Pressable
+                  key={index}
+                  style={styles.optionButton}
+                  onPress={() => handleAnswer(option)}>
+                  <Text style={styles.optionText}>{option}</Text>
+                </Pressable>
+              ))}
             </View>
-          </View>
+          </>
+        )}
 
-          {/* Combo Indicator */}
-          {combo >= 5 && (
-            <View style={styles.comboContainer}>
-              <Text style={styles.comboText}>🔥 {combo} COMBO!</Text>
-            </View>
-          )}
-
-          {/* Question */}
-          <View style={styles.questionContainer}>
-            <Text style={styles.question}>
-              {currentQuestion.num1} {currentQuestion.operation} {currentQuestion.num2} = ?
-            </Text>
-          </View>
-
-          {/* Answer Options */}
-          <View style={styles.optionsContainer}>
-            {currentQuestion.options.map((option, index) => (
-              <Pressable
-                key={index}
-                style={styles.optionButton}
-                onPress={() => handleAnswer(option)}
-              >
-                <Text style={styles.optionText}>{option}</Text>
+        <Modal visible={gameStatus === 'finished'} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.victoryEmoji}>🎯</Text>
+              <Text style={styles.modalTitle}>게임 종료!</Text>
+              <Text style={styles.finalScore}>최종 점수: {score}</Text>
+              <Text style={styles.finalCombo}>최고 콤보: {highestCombo}</Text>
+              <Pressable style={styles.nextButton} onPress={handleRestart}>
+                <Text style={styles.nextButtonText}>다시 하기</Text>
               </Pressable>
-            ))}
+              <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+                <Text style={styles.menuButtonText}>메뉴로</Text>
+              </Pressable>
+            </View>
           </View>
-        </>
-      )}
-
-      {/* Game Over Modal */}
-      <Modal visible={gameStatus === 'finished'} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.victoryEmoji}>🎯</Text>
-            <Text style={styles.modalTitle}>게임 종료!</Text>
-            <Text style={styles.finalScore}>최종 점수: {score}</Text>
-            <Text style={styles.finalCombo}>최고 콤보: {highestCombo}</Text>
-
-            <Pressable style={styles.nextButton} onPress={handleRestart}>
-              <Text style={styles.nextButtonText}>다시 하기</Text>
-            </Pressable>
-
-            <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
-              <Text style={styles.menuButtonText}>메뉴로</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1e293b',
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -213,13 +202,13 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   backButtonText: {
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     fontSize: 16,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: theme.colors.text,
   },
   startContainer: {
     flex: 1,
@@ -234,17 +223,18 @@ const styles = StyleSheet.create({
   startTitle: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#fff',
+    color: theme.colors.text,
     marginBottom: 16,
   },
   startDescription: {
     fontSize: 16,
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
+    lineHeight: 24,
   },
   startButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: theme.colors.success,
     paddingVertical: 16,
     paddingHorizontal: 48,
     borderRadius: 12,
@@ -259,23 +249,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#334155',
+    backgroundColor: theme.colors.surface,
     marginHorizontal: 16,
     borderRadius: 12,
     marginBottom: 16,
   },
   statItem: {
     alignItems: 'center',
+    minWidth: 60,
   },
   statLabel: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     marginBottom: 4,
   },
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: theme.colors.text,
   },
   comboContainer: {
     alignItems: 'center',
@@ -284,20 +275,21 @@ const styles = StyleSheet.create({
   comboText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#f59e0b',
+    color: theme.colors.warning,
   },
   questionContainer: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: 40,
+    justifyContent: 'center',
     marginHorizontal: 16,
-    backgroundColor: '#334155',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     marginBottom: 24,
   },
   question: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#fff',
+    color: theme.colors.text,
   },
   optionsContainer: {
     flexDirection: 'row',
@@ -305,10 +297,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
     gap: 12,
+    paddingBottom: 16,
   },
   optionButton: {
     width: '45%',
-    backgroundColor: '#3b82f6',
+    backgroundColor: theme.colors.primary,
     paddingVertical: 24,
     borderRadius: 12,
     alignItems: 'center',
@@ -320,12 +313,12 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: theme.colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#334155',
+    backgroundColor: theme.colors.surface,
     borderRadius: 20,
     padding: 32,
     width: '80%',
@@ -335,7 +328,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: theme.colors.text,
     marginBottom: 16,
   },
   victoryEmoji: {
@@ -344,18 +337,18 @@ const styles = StyleSheet.create({
   },
   finalScore: {
     fontSize: 20,
-    color: '#10b981',
+    color: theme.colors.success,
     marginBottom: 8,
     fontWeight: 'bold',
   },
   finalCombo: {
     fontSize: 16,
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     marginBottom: 24,
   },
   nextButton: {
     width: '100%',
-    backgroundColor: '#10b981',
+    backgroundColor: theme.colors.success,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -369,7 +362,7 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     width: '100%',
-    backgroundColor: '#475569',
+    backgroundColor: theme.colors.surfaceSecondary,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -378,7 +371,7 @@ const styles = StyleSheet.create({
   menuButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: theme.colors.text,
   },
 });
 

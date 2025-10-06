@@ -445,26 +445,25 @@
 
 ## 🎉 프로젝트 현황
 
-**현재 상태**: v4.0 정식 출시 준비 단계 (Phase 11)
-**개발 기간**: Phase 0-10 완료 (약 8주)
-**앱 버전**: 3.0.0
+**현재 상태**: 🚀 **최종 출시 직전 단계** (Phase 11 완료)
+**개발 기간**: Phase 0-11 완료 (약 10주)
+**앱 버전**: 1.0.0
 
-**기능 완료율**:
+**개발 완료율**: ✅ **100%**
 - ✅ 코어 게임 기능: 100% (4개 게임)
 - ✅ 온라인 기능: 100% (리더보드, 친구, 동기화)
 - ✅ UI/UX: 100% (다크/라이트 모드, 햅틱)
 - ✅ 출시 문서: 100% (개인정보처리방침, 스토어 정보)
-- ⏳ 그래픽 자산: 0% (아이콘, 스크린샷 필요)
-- ⏳ 스토어 등록: 0% (Phase 11 진행 예정)
+- ✅ 그래픽 자산: 100% (아이콘, 스크린샷 6개)
+- ✅ EAS Build 설정: 100%
 
-**다음 단계**: Phase 11 (v4.0) 출시 준비
-- 앱 아이콘 & 스플래시
-- 스크린샷 촬영
-- 개발자 계정 등록
-- Production 빌드
-- 스토어 제출
+**남은 작업** (수동 진행 필요):
+1. 개발자 계정 등록 ($124)
+2. EAS 빌드 생성 (2회)
+3. 스토어 등록 & 제출
+4. 심사 대기 (1-3일)
 
-**예상 출시일**: Phase 11 완료 후 2-3주 (심사 포함)
+**예상 출시일**: 1-2주 내 (계정 등록 & 심사 포함)
 
 ---
 
@@ -831,107 +830,33 @@
 - [x] 로그인 유도 메시지 (각 화면별 비로그인 안내)
 - [ ] 🔒 온라인 기능 전용 튜토리얼 (선택적)
 
-### 11. 실시간 멀티플레이어 (3주, 선택적) 🔒
-
-#### 11.1 매칭 시스템
-- [ ] `src/screens/MultiplayerLobbyScreen.tsx` 생성
-- [ ] 친구와 대결
-- [ ] 랜덤 매칭
-- [ ] 방 만들기 (코드 공유)
-
-#### 11.2 실시간 게임 룸
-- [ ] Supabase Realtime 설정
-- [ ] 게임 룸 테이블
-- [ ] 플레이어 상태 동기화
-
-#### 11.3 Math Rush 1:1 대결
-- [ ] 실시간 점수 동기화
-- [ ] 30초 타이머 공유
-- [ ] 승패 판정
-
-#### 11.4 Sequence 경쟁 모드
-- [ ] 동시에 같은 패턴 도전
-- [ ] 실시간 진행 상황 공유
-- [ ] 먼저 실패한 사람 패배
-
 ---
 
 ## 📊 v3.0 개발 진행 상황
 
 ### ✅ Phase 9 완료 (2025-10-06)
-- **Section 1-6**: 백엔드, 인증, 프로필, 동기화, 리더보드, 친구 ✅
-- **Section 7**: 업적 시스템 확장 ✅
-- **Section 8**: 설정 & 개인정보 ✅
-- **Section 9**: 테스트 & 최적화 ✅
-  - 9.2: 성능 최적화 (Phase 10에서 완료)
-  - 9.3: 보안 테스트 (Phase 10에서 완료)
-  - 9.4: 성능 검사 (Phase 10에서 완료)
-- **Section 10**: UI/UX 개선 ✅
-- **Section 11**: 멀티플레이어 (v3.2 이후 연기)
+- Section 1-6: 백엔드, 인증, 프로필, 동기화, 리더보드, 친구 ✅
+- Section 7: 업적 시스템 확장 ✅
+- Section 8: 설정 & 개인정보 ✅
+- Section 9: 테스트 & 최적화 (보안, 성능 검사) ✅
+- Section 10: UI/UX 개선 ✅
 
 ### ✅ Phase 10 완료 (2025-10-06)
-- **Priority 2**: GDPR 데이터 다운로드 ✅
-- **Priority 3**: DB 최적화 (search_path, RLS) ✅
-- **Priority 4**: 성능 & UI (캐싱, 네트워크) ✅
+- GDPR 데이터 다운로드 ✅
+- DB 최적화 (search_path, RLS) ✅
+- 성능 개선 (리더보드 캐싱) ✅
 
-### 🔒 연기된 기능
-- **Phase 9 Section 2.3**: Google/Apple OAuth (익명 로그인 충분)
-- **Phase 9 Section 6.2-6.3**: QR 친구 추가, 친구 차단
-- **Phase 9 Section 7.2**: 업적 알림
-- **Phase 9 Section 11**: 멀티플레이어 (v3.2 이후)
-- **Phase 10 Priority 1**: OAuth, QR, 업적 알림 (v3.1 이후)
-- **Phase 10 Priority 5**: 멀티플레이어 (v3.2 이후)
-
-### 🎯 다음 단계
-- v3.0 출시 준비 (Phase 8 완료)
-- 사용자 피드백 수집
-- KPI 모니터링
-- v3.1/v3.2 개발 계획 수립
+### ✅ Phase 11 완료 (2025-10-06)
+- 앱 아이콘 & 스플래시 ✅
+- 스크린샷 6개 촬영 ✅
+- 개인정보처리방침 호스팅 ✅
+- EAS Build 설정 ✅
 
 ---
 
-## Phase 10: v3.1 개선 및 최적화 (Phase 9 연기 항목) 🔧
+## Phase 10: v3.1 개선 및 최적화 ✅
 
-**목표**: Phase 9에서 보류한 선택적 기능 구현 및 성능 최적화
-**예상 기간**: 8-10주
-**우선순위**: v3.0 안정화 이후 진행
-
-### Priority 1: 사용자 편의성 개선 (3-4주)
-
-#### 1.1 소셜 로그인 통합
-- [ ] Google OAuth 설정
-  - [ ] Google Cloud Console 프로젝트 생성
-  - [ ] Android Studio 키 지문 생성
-  - [ ] Supabase에 Google 프로바이더 추가
-  - [ ] `expo-auth-session` 설정
-- [ ] Apple Sign In (iOS)
-  - [ ] Apple Developer 설정
-  - [ ] Supabase에 Apple 프로바이더 추가
-  - [ ] iOS 전용 로그인 플로우 구현
-- [ ] 기존 익명 계정 → 소셜 계정 연동 기능
-
-#### 1.2 친구 기능 확장
-- [ ] QR 코드로 친구 추가
-  - [ ] `react-native-qrcode-svg` 통합
-  - [ ] QR 코드 생성 (내 사용자 ID)
-  - [ ] QR 스캔 기능 (expo-camera)
-  - [ ] 스캔 후 즉시 친구 요청 전송
-- [ ] 친구 차단 기능
-  - [ ] friendships 테이블에 blocked_at 필드 추가
-  - [ ] 차단 목록 UI
-  - [ ] 차단된 사용자 검색 제외
-
-#### 1.3 업적 알림 시스템
-- [ ] 업적 달성 토스트 알림
-  - [ ] 게임 종료 시 새 업적 확인
-  - [ ] 애니메이션 토스트 표시 (업적 아이콘 + 이름)
-  - [ ] 햅틱 피드백 (성공 패턴)
-- [ ] 업적 배지 표시
-  - [ ] MenuScreen에 미확인 업적 카운트
-  - [ ] AchievementsScreen에 "NEW" 라벨
-- [ ] 업적 공유 기능
-  - [ ] expo-sharing으로 스크린샷 공유
-  - [ ] 소셜 공유 메시지 템플릿
+**완료 항목만 표시**
 
 ### Priority 2: GDPR 준수 (1주) ✅
 
@@ -989,312 +914,74 @@
 - [x] 로딩 상태 최적화 (ActivityIndicator 활용)
 - [ ] 🔒 요청 배칭 (선택적, 필요 시 추가)
 
-#### 4.3 고급 UI 구현
-- [x] 기본 UI 완료 (Phase 9에서 구현)
-  - [x] ActivityIndicator 로딩 (5개 화면)
-  - [x] Pull-to-Refresh (2개 화면)
-  - [x] Alert 기반 에러 처리 (28개소)
-- [ ] 🔒 스켈레톤 UI (선택적, 고급 기능)
-  - [ ] LeaderboardScreen 스켈레톤
-  - [ ] FriendsScreen 스켈레톤
-  - [ ] FriendComparisonScreen 스켈레톤
-- [ ] 🔒 자동 재시도 로직 (선택적)
-  - [ ] 네트워크 에러 시 재시도 버튼
-  - [ ] 지수 백오프 (exponential backoff)
-- [ ] 🔒 온라인 기능 전용 튜토리얼 (선택적)
-  - [ ] 친구 추가 가이드
-  - [ ] 리더보드 설명
-  - [ ] 동기화 안내
-
-### Priority 5: 실시간 멀티플레이어 (3-4주, v3.1 이후)
-
-#### 5.1 매칭 시스템
-- [ ] `src/screens/MultiplayerLobbyScreen.tsx` 생성
-- [ ] 친구와 대결 초대
-- [ ] 랜덤 매칭 (ELO 기반)
-- [ ] 방 만들기 (코드 공유)
-
-#### 5.2 실시간 게임 룸
-- [ ] Supabase Realtime 설정
-- [ ] game_rooms 테이블 생성
-- [ ] 플레이어 상태 동기화
-- [ ] WebSocket 연결 관리
-
-#### 5.3 Math Rush 1:1 대결
-- [ ] 실시간 점수 동기화
-- [ ] 30초 타이머 공유
-- [ ] 승패 판정 로직
-- [ ] 대결 기록 저장
-
-#### 5.4 Sequence 경쟁 모드
-- [ ] 동시에 같은 패턴 도전
-- [ ] 실시간 진행 상황 공유
-- [ ] 먼저 실패한 사람 패배
-- [ ] 경쟁 모드 리더보드
+#### 4.3 고급 UI 구현 ✅
+- [x] ActivityIndicator 로딩 (5개 화면)
+- [x] Pull-to-Refresh (2개 화면)
+- [x] Alert 기반 에러 처리 (28개소)
 
 ---
 
-## 📊 Phase 10 개발 계획
+## Phase 11: v4.0 정식 출시 준비 ✅
 
-### 구현 우선순위
-1. ~~**Priority 1** (3-4주): OAuth, 친구 기능 확장, 업적 알림~~ (건너뛰기)
-2. **Priority 2** (1주): GDPR 데이터 다운로드 ✅
-3. **Priority 3** (1-2주): DB 최적화 (search_path, RLS) ✅
-4. **Priority 4** (1-2주): 캐싱, 네트워크 최적화, 고급 UI ✅
-5. **Priority 5** (3-4주): 멀티플레이어 (v3.2 이후 진행)
-
-### 완료 현황 (2025-10-06)
-- ✅ **Priority 2**: GDPR 데이터 다운로드 기능 완료
-  - 모든 사용자 데이터 JSON 내보내기
-  - expo-sharing으로 파일 공유
-- ✅ **Priority 3**: 데이터베이스 최적화 완료
-  - 4개 함수 search_path 보안 수정
-  - 13개 RLS 정책 성능 개선
-- ✅ **Priority 4**: 성능 & UI 개선 완료
-  - 리더보드 5분 캐싱 시스템 구현
-  - 불필요한 네트워크 요청 방지
-
-### 남은 작업
-- 🔒 **Priority 1**: 소셜 로그인, QR 친구 추가, 업적 알림 (v3.1 이후)
-- 🔒 **Priority 5**: 멀티플레이어 (v3.2 이후)
-
-### 예상 일정
-- ~~**v3.1.0** (Priority 1-2): 4-5주~~
-- ~~**v3.1.1** (Priority 3): 1-2주~~
-- ~~**v3.1.2** (Priority 4): 1-2주~~
-- **v3.1.0** (Priority 1, 선택): 3-4주
-- **v3.2.0** (Priority 5, 멀티플레이어): 3-4주
-
-### 진행 조건
-- ✅ v3.0 안정화 완료
-- ✅ 핵심 최적화 완료 (Priority 2-4)
-- ⏳ 사용자 피드백 수집 (출시 후)
-- ⏳ KPI 달성 확인 (MAU, 리텐션)
-
----
-
-## Phase 11: v4.0 정식 출시 준비 🚀
-
-**목표**: 앱스토어 출시를 위한 필수 자산 및 설정 완료
-**예상 기간**: 1-2주
-**우선순위**: 최우선 (출시 블로커)
-
-### 1. 앱 아이콘 & 스플래시 스크린 (필수) ✅
-
-#### 1.1 앱 아이콘 제작 ✅
-- [x] 메인 아이콘 디자인 (1024x1024px)
-  - [x] Brain Games 브랜드 컬러 (인디고/퍼플 계열)
-  - [x] 두뇌/게임 테마 아이콘
-  - [x] 심플하고 인식 가능한 디자인
-  - [x] AI 툴 사용 (DALL-E)
-
-#### 1.2 Android Adaptive Icon ✅
-- [x] Foreground 레이어 (icon.png 사용)
-- [x] Background 색상 (#0f172a)
-- [x] app.json에 설정 완료
-
-#### 1.3 Splash Screen ✅
-- [x] 로딩 스크린 디자인 (icon 기반)
-- [x] 브랜드 로고 + 앱 이름
-- [x] 그라데이션 배경 (#0f172a)
-
-#### 1.4 app.json 설정 ✅
-- [x] `icon` 경로 설정 (./assets/icon.png)
-- [x] `splash.image` 경로 설정 (./assets/splash-icon.png)
-- [x] `adaptive-icon` 설정 완료 (Android)
-
-**완료**: 아이콘 제작 및 적용 완료
-
----
-
-### 2. 스토어 스크린샷 (필수) ✅
-
-#### 2.1 iPhone 스크린샷 (최소 5장) ✅
-- [x] iPhone 17 Pro (웹 버전 스크린샷)
-  - [x] 메뉴 화면 (4개 게임 카드)
-  - [x] Flip & Match 플레이 화면
-  - [x] Sequence 플레이 화면
-  - [x] Math Rush 플레이 화면
-  - [x] Merge Puzzle 플레이 화면
-  - [x] 통계 화면
-- [x] 총 6개 스크린샷 (screenshots/ 폴더)
-
-#### 2.2 Android 스크린샷 ✅
-- [x] iOS 스크린샷 동일하게 사용 가능
-  - Google Play와 App Store 모두 동일 이미지 허용
-
-#### 2.3 추가 스크린샷 (선택)
-- [ ] 다크/라이트 모드 비교
-- [ ] 승리 모달
-- [ ] 온라인 기능 (친구, 리더보드)
-
-**완료**: iOS Simulator 웹 버전 스크린샷 6개 촬영
-**위치**: `screenshots/01-menu.png` ~ `06-stats.png`
-
----
-
-### 3. 개발자 계정 & 호스팅 (필수) ⏳
-
-#### 3.1 Google Play Console
-- [ ] 계정 생성 ($25 1회 결제)
-- [ ] 개발자 프로필 작성
-- [ ] 결제 정보 등록
-- [ ] 승인 대기 (1-2일)
-
-#### 3.2 Apple Developer Program
-- [ ] 계정 가입 ($99/년)
-- [ ] 개인/법인 선택
-- [ ] 승인 대기 (1-2일)
-
-#### 3.3 개인정보처리방침 호스팅
-- [ ] GitHub Pages 설정
-  - [ ] `docs` 폴더에 privacy-policy.html 생성
-  - [ ] GitHub Repository Settings에서 Pages 활성화
-  - [ ] URL 확인 (https://[username].github.io/[repo]/privacy-policy.html)
-- [ ] 또는 무료 호스팅 (Netlify, Vercel)
-
-**예상 소요**: 1시간 + 승인 대기
-
----
-
-### 4. Production 빌드 설정 (필수) ⏳
-
-#### 4.1 EAS Build 설정
-- [ ] `npm install -g eas-cli` (EAS CLI 설치)
-- [ ] `eas login` (Expo 계정 로그인)
-- [ ] `eas build:configure` (eas.json 생성)
-- [ ] eas.json 프로필 설정
-  ```json
-  {
-    "build": {
-      "production": {
-        "android": {
-          "buildType": "app-bundle"
-        },
-        "ios": {
-          "buildConfiguration": "Release"
-        }
-      }
-    }
-  }
-  ```
-
-#### 4.2 app.json 검증
-- [ ] 앱 이름 확인
-- [ ] 버전 확인 (3.0.0 → 1.0.0으로 변경 권장)
-- [ ] Bundle ID 확인 (iOS: com.yourname.braingames)
-- [ ] Package Name 확인 (Android: com.yourname.braingames)
-- [ ] 권한 확인 (VIBRATE만 필요)
-
-#### 4.3 빌드 생성
-- [ ] Android AAB 빌드
-  ```bash
-  eas build --profile production --platform android
-  ```
-- [ ] iOS IPA 빌드 (Apple Developer 필요)
-  ```bash
-  eas build --profile production --platform ios
-  ```
-
-**예상 소요**: 빌드 설정 1시간 + 빌드 시간 각 20-40분
-
----
-
-### 5. QA 테스트 (권장) ⏳
-
-#### 5.1 기능 테스트
-- [ ] 4개 게임 정상 작동
-- [ ] 로그인/로그아웃 흐름
-- [ ] 데이터 동기화 (온라인)
-- [ ] 리더보드 순위 표시
-- [ ] 친구 추가/삭제
-- [ ] 업적 획득
-
-#### 5.2 기기 테스트
-- [ ] Android (최소 1개 기기)
-- [ ] iOS (최소 1개 기기)
-- [ ] 다양한 화면 크기 확인
-
-#### 5.3 에러 테스트
-- [ ] 네트워크 오프라인 시나리오
-- [ ] 앱 재시작 시 데이터 복원
-- [ ] 크래시 없이 안정적 작동
-
-**예상 소요**: 2-3시간
-
----
-
-### 6. 스토어 등록 (필수) ⏳
-
-#### 6.1 Google Play Store
-- [ ] Play Console에 앱 생성
-- [ ] 스토어 등록 정보 입력
-  - [ ] 앱 이름, 설명 (docs/store-listing.md 참고)
-  - [ ] 스크린샷 업로드
-  - [ ] 아이콘 업로드
-  - [ ] 카테고리: 퍼즐/교육
-  - [ ] 개인정보처리방침 URL
-- [ ] AAB 파일 업로드
-- [ ] 내부 테스트 트랙 설정 (선택)
-- [ ] 심사 제출
-
-#### 6.2 Apple App Store
-- [ ] App Store Connect에 앱 생성
-- [ ] 스토어 정보 입력
-  - [ ] 앱 이름, 부제목, 설명
-  - [ ] 스크린샷 업로드 (기기별)
-  - [ ] 아이콘 (자동 포함됨)
-  - [ ] 카테고리: 게임 > 퍼즐
-  - [ ] 개인정보처리방침 URL
-- [ ] IPA 빌드 업로드 (EAS 자동 또는 Transporter 앱)
-- [ ] TestFlight 베타 (선택)
-- [ ] 심사 제출
-
-**예상 소요**: 각 2-3시간
-
----
-
-### 7. 심사 & 출시 🎉
-
-#### 7.1 심사 대기
-- [ ] Google Play 심사 (보통 1-3일)
-- [ ] App Store 심사 (보통 1-2일)
-- [ ] 거절 시 피드백 확인 및 재제출
-
-#### 7.2 출시 후 모니터링
-- [ ] 크래시 리포트 확인
-- [ ] 사용자 리뷰 모니터링
-- [ ] 초기 버그 핫픽스 준비
+### 완료 항목
+- [x] 앱 아이콘 & 스플래시 (1024x1024px, AI 생성)
+- [x] 스크린샷 6개 촬영 (screenshots/ 폴더)
+- [x] 개인정보처리방침 호스팅 (GitHub Pages)
+- [x] EAS Build 설정 (eas.json, app.json v1.0.0)
+- [x] 앱 번들 ID 설정 (com.braingames.collection)
 
 ---
 
 ## 📋 v4.0 출시 체크리스트
 
-### Phase 1: 그래픽 자산 (이번 주) ✅
-- [x] 앱 아이콘 제작 (1024x1024px + Adaptive)
-- [x] 스플래시 스크린 디자인
-- [x] 스크린샷 6장 촬영 (iOS Simulator)
+### ✅ 완료 항목 (2025-10-06)
+- [x] 앱 아이콘 & 스플래시 제작
+- [x] 스크린샷 6장 촬영
+- [x] 개인정보처리방침 호스팅 (GitHub Pages)
+- [x] EAS Build 설정 완료
+- [x] app.json 검증 (v1.0.0)
 
-### Phase 2: 계정 & 설정 (다음 주)
-- [ ] Google Play Console 등록 ($25)
-- [ ] Apple Developer 등록 ($99)
-- [ ] 개인정보처리방침 GitHub Pages 호스팅
-- [ ] EAS Build 설정
+### 📋 최종 출시 직전 단계 (수동 작업 필요)
 
-### Phase 3: 빌드 & 테스트 (2주차)
-- [ ] Production 빌드 생성 (Android AAB + iOS IPA)
-- [ ] QA 테스트 (최소 2개 기기)
-- [ ] 버그 수정
+#### Step 1: 개발자 계정 등록 (30분 + 승인 1-2일)
+- [ ] Google Play Console 등록 ($25 1회)
+  - https://play.google.com/console/signup
+  - 개발자 프로필 작성
+  - 결제 정보 등록
+- [ ] Apple Developer Program 가입 ($99/년)
+  - https://developer.apple.com/programs/enroll/
+  - 개인/법인 선택
+  - 승인 대기
 
-### Phase 4: 스토어 제출 (3주차)
-- [ ] Google Play 등록 정보 입력 & 제출
-- [ ] App Store 등록 정보 입력 & 제출
-- [ ] 심사 대기
+#### Step 2: EAS 빌드 생성 (각 20-40분)
+- [ ] EAS 로그인: `eas login`
+- [ ] Android 빌드: `eas build --platform android --profile production`
+- [ ] iOS 빌드: `eas build --platform ios --profile production` (Apple Developer 필요)
 
-### Phase 5: 출시 🚀
-- [ ] 두 스토어 모두 승인 대기
-- [ ] 출시 버튼 클릭!
+#### Step 3: 스토어 등록 & 제출 (각 2-3시간)
+- [ ] **Google Play Store**
+  - Play Console에 앱 생성
+  - 스토어 정보 입력 (docs/store-listing.md 참고)
+  - 스크린샷 6개 업로드 (screenshots/)
+  - 개인정보처리방침 URL: https://jhchoi91066.github.io/survivegame/privacy-policy.html
+  - AAB 파일 업로드
+  - 심사 제출
+
+- [ ] **Apple App Store**
+  - App Store Connect에 앱 생성
+  - 스토어 정보 입력
+  - 스크린샷 업로드
+  - 개인정보처리방침 URL 입력
+  - IPA 빌드 업로드
+  - 심사 제출
+
+#### Step 4: 심사 & 출시 🚀 (1-3일)
+- [ ] Google Play 심사 대기
+- [ ] App Store 심사 대기
+- [ ] 승인 후 출시 버튼 클릭
 - [ ] 마케팅 시작
+
+**예상 소요 시간**: 총 1-2주 (승인 대기 포함)
 
 ---
 
@@ -1329,11 +1016,51 @@
 - ✅ v3.0 온라인 기능 포함
 - ✅ 전 세계 사용자 다운로드 가능
 
-### 다음 단계 (v4.1+)
-- 사용자 피드백 수집
-- 버그 수정 및 안정화
-- v3.1 기능 (소셜 로그인, QR 친구, 업적 알림)
-- v3.2 멀티플레이어
+---
+
+## Phase 12: v4.1+ 향후 개선 계획 (출시 후) 🚀
+
+**목표**: 사용자 피드백 기반 기능 추가 및 개선
+**우선순위**: v4.0 출시 & 안정화 이후 진행
+**예상 기간**: 출시 후 사용자 반응에 따라 결정
+
+### 📊 우선순위 1: 사용자 피드백 대응 (출시 직후)
+- [ ] 크래시 리포트 분석 및 버그 수정
+- [ ] 사용자 리뷰 모니터링
+- [ ] 성능 최적화 (실제 사용 데이터 기반)
+- [ ] 긴급 핫픽스 배포
+
+### 🎯 우선순위 2: 사용자 편의성 개선 (v4.1)
+**Phase 10 Priority 1에서 연기된 항목**
+
+#### 2.1 소셜 로그인 (선택적)
+- [ ] Google OAuth 설정
+- [ ] Apple Sign In (iOS)
+- [ ] 익명 계정 → 소셜 계정 연동
+
+#### 2.2 친구 기능 확장 (선택적)
+- [ ] QR 코드로 친구 추가
+- [ ] 친구 차단 기능
+
+#### 2.3 업적 알림 시스템
+- [ ] 업적 달성 토스트 알림
+- [ ] MenuScreen 미확인 업적 배지
+- [ ] 업적 공유 기능
+
+### 🎮 우선순위 3: 실시간 멀티플레이어 (v4.2)
+**Phase 10 Priority 5에서 연기된 항목**
+
+- [ ] 매칭 시스템 (친구/랜덤)
+- [ ] Supabase Realtime 설정
+- [ ] Math Rush 1:1 대결
+- [ ] Sequence 경쟁 모드
+
+### 📈 우선순위 4: 데이터 기반 최적화
+- [ ] 실제 사용자 데이터로 인덱스 재평가
+- [ ] 프로필 데이터 캐싱 (필요 시)
+- [ ] 네트워크 요청 배칭 (필요 시)
+
+**참고**: Phase 10의 Priority 2-4는 이미 완료됨 (GDPR, DB 최적화, 캐싱)
 
 ---
 

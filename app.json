@@ -2,7 +2,7 @@
   "expo": {
     "name": "Brain Games",
     "slug": "brain-games-collection",
-    "version": "3.0.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

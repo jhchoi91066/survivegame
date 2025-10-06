@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, SafeAreaView, ScrollView, Dimensions, Platform } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { hapticPatterns } from '../utils/haptics';
@@ -27,7 +27,10 @@ interface MenuScreenProps {
   navigation: MenuScreenNavigationProp;
 }
 
-const { width, height } = Dimensions.get('window');
+// 웹에서는 고정된 모바일 크기, 모바일에서는 실제 디바이스 크기
+const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
+const width = Platform.OS === 'web' ? 430 : windowWidth;
+const height = Platform.OS === 'web' ? 932 : windowHeight;
 const isSmallScreen = width < 375;
 const cardWidth = (width - 60) / 2; // padding 20 * 2 + gap 20
 
@@ -96,7 +99,7 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
     const flipMatchRecord = await loadGameRecord('flip_match');
     const sequenceRecord = await loadGameRecord('sequence');
     const mathRushRecord = await loadGameRecord('math_rush');
-    const mergePuzzleRecord = await loadGameRecord('merge_puzzle');
+    const spatialMemoryRecord = await loadGameRecord('spatial_memory');
 
     const games: GameInfo[] = [
       {
@@ -130,13 +133,13 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
           : '-',
       },
       {
-        id: 'merge_puzzle',
-        name: 'Merge Puzzle',
-        emoji: '🔢',
-        description: '숫자 합치기',
+        id: 'spatial_memory',
+        name: 'Spatial Memory',
+        emoji: '🧠',
+        description: '공간 기억',
         bestRecordLabel: 'Best',
-        bestRecordValue: mergePuzzleRecord?.bestMoves
-          ? `${mergePuzzleRecord.bestMoves}회`
+        bestRecordValue: spatialMemoryRecord?.highestLevel
+          ? `Lv.${spatialMemoryRecord.highestLevel}`
           : '-',
       },
     ];
@@ -157,8 +160,8 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
       case 'math_rush':
         navigation.navigate('MathRushGame');
         break;
-      case 'merge_puzzle':
-        navigation.navigate('MergePuzzleGame');
+      case 'spatial_memory':
+        navigation.navigate('SpatialMemoryGame');
         break;
     }
   };
@@ -200,8 +203,8 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
         return theme.gradients.sequence;
       case 'math_rush':
         return theme.gradients.mathRush;
-      case 'merge_puzzle':
-        return theme.gradients.mergePuzzle;
+      case 'spatial_memory':
+        return ['#8b5cf6', '#6366f1']; // 보라색 그라데이션
       default:
         return theme.gradients.flipMatch;
     }
