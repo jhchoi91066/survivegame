@@ -17,6 +17,7 @@ import { supabase } from '../lib/supabase';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import * as Haptics from 'expo-haptics';
+import { updateFriendCount } from '../utils/achievementManager';
 
 type FriendsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
@@ -83,6 +84,11 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
 
       if (friendsError) throw friendsError;
       setFriends(friendsData || []);
+
+      // Update achievement for friend count
+      if (friendsData) {
+        await updateFriendCount(friendsData.length);
+      }
 
       // Load pending requests (received)
       const { data: pendingData, error: pendingError } = await supabase
@@ -424,7 +430,20 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
               </View>
             ) : (
               friends.map((friend) => (
-                <View key={friend.id} style={styles.friendCard}>
+                <Pressable
+                  key={friend.id}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    navigation.navigate('FriendComparison', {
+                      friendId: friend.friend_id,
+                      friendUsername: friend.friend_profile.username,
+                    });
+                  }}
+                  style={({ pressed }) => [
+                    styles.friendCard,
+                    pressed && styles.friendCardPressed,
+                  ]}
+                >
                   <LinearGradient
                     colors={['#6366f1', '#8b5cf6']}
                     style={styles.friendAvatar}
@@ -446,18 +465,22 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
                       친구된 날짜: {new Date(friend.created_at).toLocaleDateString('ko-KR')}
                     </Text>
                   </View>
-                  <Pressable
-                    onPress={() =>
-                      handleRemoveFriend(friend.id, friend.friend_profile.username)
-                    }
-                    style={({ pressed }) => [
-                      styles.removeButton,
-                      pressed && styles.removeButtonPressed,
-                    ]}
-                  >
-                    <Text style={styles.removeButtonText}>✕</Text>
-                  </Pressable>
-                </View>
+                  <View style={styles.friendActions}>
+                    <Text style={styles.compareText}>기록 비교 ›</Text>
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleRemoveFriend(friend.id, friend.friend_profile.username);
+                      }}
+                      style={({ pressed }) => [
+                        styles.removeButton,
+                        pressed && styles.removeButtonPressed,
+                      ]}
+                    >
+                      <Text style={styles.removeButtonText}>✕</Text>
+                    </Pressable>
+                  </View>
+                </Pressable>
               ))
             )
           ) : pendingRequests.length === 0 ? (
@@ -732,6 +755,9 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
     marginBottom: 12,
   },
+  friendCardPressed: {
+    opacity: 0.7,
+  },
   friendAvatar: {
     width: 48,
     height: 48,
@@ -762,6 +788,16 @@ const styles = StyleSheet.create({
   friendDate: {
     fontSize: 11,
     color: '#475569',
+  },
+  friendActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  compareText: {
+    fontSize: 12,
+    color: '#6366f1',
+    fontWeight: '600',
   },
   removeButton: {
     width: 32,

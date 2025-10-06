@@ -4,8 +4,16 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import * as Haptics from 'expo-haptics';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 
 const TUTORIAL_KEY = '@brain_games_first_visit';
+const AUTO_SYNC_KEY = '@auto_sync_enabled';
+const LEADERBOARD_PARTICIPATE_KEY = '@leaderboard_participate';
+const FRIEND_REQUESTS_KEY = '@friend_requests_enabled';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 
@@ -15,9 +23,15 @@ interface SettingsScreenProps {
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const { theme, themeMode, toggleTheme } = useTheme();
+  const { user, signOut } = useAuth();
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
+
+  // Online settings
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+  const [leaderboardParticipate, setLeaderboardParticipate] = useState(true);
+  const [friendRequestsEnabled, setFriendRequestsEnabled] = useState(true);
 
   const handleResetTutorial = async () => {
     try {
@@ -44,6 +58,115 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
         },
       ]
     );
+  };
+
+  const handleDownloadData = async () => {
+    if (!user) {
+      Alert.alert('오류', '로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // Fetch all user data
+      const [profileData, gameRecordsData, leaderboardsData, friendshipsData, achievementsData] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('game_records').select('*').eq('user_id', user.id),
+        supabase.from('leaderboards').select('*').eq('user_id', user.id),
+        supabase.from('friendships').select('*').or(`user_id.eq.${user.id},friend_id.eq.${user.id}`),
+        supabase.from('user_achievements').select('*').eq('user_id', user.id),
+      ]);
+
+      const userData = {
+        profile: profileData.data,
+        game_records: gameRecordsData.data,
+        leaderboards: leaderboardsData.data,
+        friendships: friendshipsData.data,
+        achievements: achievementsData.data,
+        export_date: new Date().toISOString(),
+      };
+
+      // Save to file
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const filename = `brain-games-data-${timestamp}.json`;
+      const fileUri = FileSystem.documentDirectory + filename;
+
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(userData, null, 2));
+
+      // Share the file
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(fileUri);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Alert.alert('완료', `데이터가 다운로드되었습니다: ${filename}`);
+      }
+    } catch (error: any) {
+      console.error('Download data error:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('오류', '데이터 다운로드에 실패했습니다: ' + error.message);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    if (!user) {
+      Alert.alert('오류', '로그인이 필요합니다.');
+      return;
+    }
+
+    Alert.alert(
+      '계정 삭제',
+      '계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+              // Delete user data from all tables
+              await supabase.from('user_achievements').delete().eq('user_id', user.id);
+              await supabase.from('friendships').delete().or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+              await supabase.from('leaderboards').delete().eq('user_id', user.id);
+              await supabase.from('game_records').delete().eq('user_id', user.id);
+              await supabase.from('profiles').delete().eq('id', user.id);
+
+              // Sign out
+              await signOut();
+
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert('완료', '계정이 삭제되었습니다.');
+              navigation.navigate('Menu');
+            } catch (error: any) {
+              console.error('Delete account error:', error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert('오류', '계정 삭제에 실패했습니다: ' + error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleToggleAutoSync = async (value: boolean) => {
+    setAutoSyncEnabled(value);
+    await AsyncStorage.setItem(AUTO_SYNC_KEY, JSON.stringify(value));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleToggleLeaderboard = async (value: boolean) => {
+    setLeaderboardParticipate(value);
+    await AsyncStorage.setItem(LEADERBOARD_PARTICIPATE_KEY, JSON.stringify(value));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleToggleFriendRequests = async (value: boolean) => {
+    setFriendRequestsEnabled(value);
+    await AsyncStorage.setItem(FRIEND_REQUESTS_KEY, JSON.stringify(value));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const dynamicStyles = {
@@ -170,10 +293,92 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
           </Pressable>
         </View>
 
+        {/* Online Settings */}
+        {user && (
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>온라인 설정</Text>
+
+            <View style={dynamicStyles.setting}>
+              <View style={{ flex: 1 }}>
+                <Text style={dynamicStyles.settingLabel}>자동 동기화</Text>
+                <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
+                  게임 기록을 자동으로 클라우드에 저장
+                </Text>
+              </View>
+              <Switch
+                value={autoSyncEnabled}
+                onValueChange={handleToggleAutoSync}
+                trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
+              />
+            </View>
+
+            <View style={dynamicStyles.setting}>
+              <View style={{ flex: 1 }}>
+                <Text style={dynamicStyles.settingLabel}>리더보드 참여</Text>
+                <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
+                  내 기록을 리더보드에 표시
+                </Text>
+              </View>
+              <Switch
+                value={leaderboardParticipate}
+                onValueChange={handleToggleLeaderboard}
+                trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
+              />
+            </View>
+
+            <View style={dynamicStyles.setting}>
+              <View style={{ flex: 1 }}>
+                <Text style={dynamicStyles.settingLabel}>친구 요청 수신</Text>
+                <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
+                  다른 사용자의 친구 요청 허용
+                </Text>
+              </View>
+              <Switch
+                value={friendRequestsEnabled}
+                onValueChange={handleToggleFriendRequests}
+                trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Account Management */}
+        {user && (
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>계정 관리</Text>
+
+            <Pressable
+              style={dynamicStyles.button}
+              onPress={handleDownloadData}
+            >
+              <Text style={dynamicStyles.buttonText}>
+                내 데이터 다운로드
+              </Text>
+            </Pressable>
+
+            <Text style={[dynamicStyles.infoText, { marginTop: 8, marginBottom: 16 }]}>
+              GDPR 규정에 따라 모든 개인정보를 JSON 파일로 다운로드할 수 있습니다
+            </Text>
+
+            <Pressable
+              style={[dynamicStyles.button, { backgroundColor: '#ef4444' }]}
+              onPress={handleDeleteAccount}
+            >
+              <Text style={[dynamicStyles.buttonText, { color: '#ffffff' }]}>
+                계정 삭제
+              </Text>
+            </Pressable>
+
+            <Text style={[dynamicStyles.infoText, { marginTop: 8 }]}>
+              계정 삭제 시 모든 데이터가 영구적으로 삭제됩니다
+            </Text>
+          </View>
+        )}
+
         {/* About */}
         <View style={dynamicStyles.section}>
           <Text style={dynamicStyles.sectionTitle}>정보</Text>
-          <Text style={dynamicStyles.infoText}>버전: 2.0.0</Text>
+          <Text style={dynamicStyles.infoText}>버전: 3.0.0</Text>
           <Text style={dynamicStyles.infoText}>개발: React Native + Expo</Text>
         </View>
       </View>

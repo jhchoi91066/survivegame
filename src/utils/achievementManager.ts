@@ -21,6 +21,9 @@ export interface AchievementStats {
   resourceEfficientClears: number;
   noDamageClears: number;
   specificMethodUsage: { [key: string]: number };
+  // 온라인 통계
+  friendCount: number;
+  leaderboardRanks: { [gameType: string]: number };
 }
 
 // 초기 통계
@@ -34,6 +37,8 @@ const DEFAULT_STATS: AchievementStats = {
   resourceEfficientClears: 0,
   noDamageClears: 0,
   specificMethodUsage: {},
+  friendCount: 0,
+  leaderboardRanks: {},
 };
 
 // 업적 진행도 불러오기
@@ -208,6 +213,56 @@ export const getAchievementCompletionRate = async (): Promise<number> => {
   const progress = await loadAchievementProgress();
   const unlockedCount = progress.filter(p => p.unlocked).length;
   return Math.round((unlockedCount / ACHIEVEMENTS.length) * 100);
+};
+
+// 친구 수 업데이트 (온라인)
+export const updateFriendCount = async (friendCount: number): Promise<Achievement[]> => {
+  const stats = await loadAchievementStats();
+  const previousProgress = await loadAchievementProgress();
+
+  stats.friendCount = friendCount;
+  await saveAchievementStats(stats);
+
+  const updatedProgress: AchievementProgress[] = ACHIEVEMENTS.map(achievement => {
+    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, stats);
+
+    return {
+      achievementId: achievement.id,
+      unlocked,
+      unlockedAt: unlocked ? Date.now() : undefined,
+      progress,
+      currentCount,
+    };
+  });
+
+  await saveAchievementProgress(updatedProgress);
+
+  return getNewlyUnlockedAchievements(previousProgress, updatedProgress);
+};
+
+// 리더보드 순위 업데이트 (온라인)
+export const updateLeaderboardRanks = async (ranks: { [gameType: string]: number }): Promise<Achievement[]> => {
+  const stats = await loadAchievementStats();
+  const previousProgress = await loadAchievementProgress();
+
+  stats.leaderboardRanks = ranks;
+  await saveAchievementStats(stats);
+
+  const updatedProgress: AchievementProgress[] = ACHIEVEMENTS.map(achievement => {
+    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, stats);
+
+    return {
+      achievementId: achievement.id,
+      unlocked,
+      unlockedAt: unlocked ? Date.now() : undefined,
+      progress,
+      currentCount,
+    };
+  });
+
+  await saveAchievementProgress(updatedProgress);
+
+  return getNewlyUnlockedAchievements(previousProgress, updatedProgress);
 };
 
 // 업적 초기화 (디버그용)
