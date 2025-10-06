@@ -1079,31 +1079,31 @@
 **예상 기간**: 1-2주
 **우선순위**: 최우선 (출시 블로커)
 
-### 1. 앱 아이콘 & 스플래시 스크린 (필수) ⏳
+### 1. 앱 아이콘 & 스플래시 스크린 (필수) ✅
 
-#### 1.1 앱 아이콘 제작
-- [ ] 메인 아이콘 디자인 (1024x1024px)
-  - [ ] Brain Games 브랜드 컬러 (인디고/퍼플 계열)
-  - [ ] 두뇌/게임 테마 아이콘
-  - [ ] 심플하고 인식 가능한 디자인
-  - [ ] Figma/Canva/Adobe Illustrator 사용
+#### 1.1 앱 아이콘 제작 ✅
+- [x] 메인 아이콘 디자인 (1024x1024px)
+  - [x] Brain Games 브랜드 컬러 (인디고/퍼플 계열)
+  - [x] 두뇌/게임 테마 아이콘
+  - [x] 심플하고 인식 가능한 디자인
+  - [x] AI 툴 사용 (DALL-E)
 
-#### 1.2 Android Adaptive Icon
-- [ ] Foreground 레이어 (512x512px)
-- [ ] Background 레이어 (512x512px)
-- [ ] Safe zone 준수 (중앙 66%)
+#### 1.2 Android Adaptive Icon ✅
+- [x] Foreground 레이어 (icon.png 사용)
+- [x] Background 색상 (#0f172a)
+- [x] app.json에 설정 완료
 
-#### 1.3 Splash Screen
-- [ ] 로딩 스크린 디자인
-- [ ] 브랜드 로고 + 앱 이름
-- [ ] 그라데이션 배경 (앱 테마와 일치)
+#### 1.3 Splash Screen ✅
+- [x] 로딩 스크린 디자인 (icon 기반)
+- [x] 브랜드 로고 + 앱 이름
+- [x] 그라데이션 배경 (#0f172a)
 
-#### 1.4 app.json 설정
-- [ ] `icon` 경로 설정
-- [ ] `splash.image` 경로 설정
-- [ ] `adaptive-icon` 설정 (Android)
+#### 1.4 app.json 설정 ✅
+- [x] `icon` 경로 설정 (./assets/icon.png)
+- [x] `splash.image` 경로 설정 (./assets/splash-icon.png)
+- [x] `adaptive-icon` 설정 완료 (Android)
 
-**예상 소요**: 2-4시간
+**완료**: 아이콘 제작 및 적용 완료
 
 ---
 
