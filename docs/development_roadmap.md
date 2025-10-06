@@ -1107,31 +1107,29 @@
 
 ---
 
-### 2. 스토어 스크린샷 (필수) ⏳
+### 2. 스토어 스크린샷 (필수) ✅
 
-#### 2.1 iPhone 스크린샷 (최소 5장)
-- [ ] iPhone 15 Pro Max (1290x2796px)
-  - [ ] 메뉴 화면 (4개 게임 카드)
-  - [ ] Flip & Match 플레이 화면
-  - [ ] Sequence 플레이 화면
-  - [ ] Math Rush 플레이 화면
-  - [ ] Merge Puzzle 플레이 화면
-- [ ] iPhone 13 Pro (1170x2532px) - 선택
-- [ ] iPhone 8 Plus (1242x2208px) - 선택
+#### 2.1 iPhone 스크린샷 (최소 5장) ✅
+- [x] iPhone 17 Pro (웹 버전 스크린샷)
+  - [x] 메뉴 화면 (4개 게임 카드)
+  - [x] Flip & Match 플레이 화면
+  - [x] Sequence 플레이 화면
+  - [x] Math Rush 플레이 화면
+  - [x] Merge Puzzle 플레이 화면
+  - [x] 통계 화면
+- [x] 총 6개 스크린샷 (screenshots/ 폴더)
 
-#### 2.2 Android 스크린샷 (최소 5장)
-- [ ] 1080x1920px 이상
-  - [ ] 메뉴 화면
-  - [ ] 4개 게임 플레이
-  - [ ] 통계/리더보드 화면
+#### 2.2 Android 스크린샷 ✅
+- [x] iOS 스크린샷 동일하게 사용 가능
+  - Google Play와 App Store 모두 동일 이미지 허용
 
 #### 2.3 추가 스크린샷 (선택)
 - [ ] 다크/라이트 모드 비교
 - [ ] 승리 모달
 - [ ] 온라인 기능 (친구, 리더보드)
 
-**촬영 방법**: Xcode Simulator/Android Emulator 또는 실제 기기
-**예상 소요**: 1-2시간
+**완료**: iOS Simulator 웹 버전 스크린샷 6개 촬영
+**위치**: `screenshots/01-menu.png` ~ `06-stats.png`
 
 ---
 
@@ -1272,10 +1270,10 @@
 
 ## 📋 v4.0 출시 체크리스트
 
-### Phase 1: 그래픽 자산 (이번 주)
-- [ ] 앱 아이콘 제작 (1024x1024px + Adaptive)
-- [ ] 스플래시 스크린 디자인
-- [ ] 스크린샷 8-10장 촬영 (iOS + Android)
+### Phase 1: 그래픽 자산 (이번 주) ✅
+- [x] 앱 아이콘 제작 (1024x1024px + Adaptive)
+- [x] 스플래시 스크린 디자인
+- [x] 스크린샷 6장 촬영 (iOS Simulator)
 
 ### Phase 2: 계정 & 설정 (다음 주)
 - [ ] Google Play Console 등록 ($25)
