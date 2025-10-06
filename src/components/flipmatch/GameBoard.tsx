@@ -1,23 +1,18 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useFlipMatchStore } from '../../game/flipmatch/store';
 import { GRID_SIZES } from '../../game/flipmatch/types';
 import Card from './Card';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 const GameBoard: React.FC = () => {
   const { cards, settings, flipCard } = useFlipMatchStore();
   const { rows, cols } = GRID_SIZES[settings.difficulty];
 
-  // 카드 간격 계산
-  const padding = 8;
   const gap = 6;
-  const containerWidth = Math.min(screenWidth - padding * 2, 500);
 
   return (
     <View style={styles.container}>
-      <View style={[styles.grid, { width: containerWidth, aspectRatio: cols / rows }]}>
+      <View style={[styles.grid, { aspectRatio: cols / rows }]}>
         {cards.map((card) => (
           <View
             key={card.id}
@@ -41,10 +36,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 8,
+    padding: 8,
   },
   grid: {
+    width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
   },

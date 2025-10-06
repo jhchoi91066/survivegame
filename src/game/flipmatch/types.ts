@@ -12,12 +12,12 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 // 난이도별 그리드 크기
 export const GRID_SIZES: Record<Difficulty, { rows: number; cols: number }> = {
   easy: { rows: 4, cols: 4 }, // 16장 (8쌍)
-  medium: { rows: 4, cols: 6 }, // 24장 (12쌍)
-  hard: { rows: 4, cols: 8 }, // 32장 (16쌍)
+  medium: { rows: 6, cols: 4 }, // 24장 (12쌍)
+  hard: { rows: 8, cols: 4 }, // 32장 (16쌍)
 };
 
 // 게임 상태
-export type GameStatus = 'ready' | 'playing' | 'paused' | 'won' | 'lost';
+export type GameStatus = 'ready' | 'preview' | 'playing' | 'paused' | 'won' | 'lost';
 
 // 카드 테마 (이모지)
 export const CARD_THEMES = {

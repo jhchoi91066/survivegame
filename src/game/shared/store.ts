@@ -49,7 +49,7 @@ const initialGlobalStats: GlobalStats = {
       bestRecord: 0,
       lastPlayed: 0,
     },
-    merge_puzzle: {
+    spatial_memory: {
       totalPlays: 0,
       totalPlayTime: 0,
       bestRecord: 0,
@@ -121,9 +121,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   updateBestRecord: (game, record) => {
     const state = get();
-    state.updateGameStats(game, {
-      bestRecord: record,
-    });
+    const currentBest = state.globalStats.gamesStats[game].bestRecord;
+
+    // 게임별 최고 기록 비교 로직
+    let shouldUpdate = false;
+
+    if (currentBest === 0) {
+      // 첫 기록이면 무조건 저장
+      shouldUpdate = true;
+    } else if (game === 'flip_match') {
+      // Flip Match: 낮을수록 좋음 (시간)
+      shouldUpdate = (record as number) < currentBest;
+    } else {
+      // Sequence, Math Rush, Spatial Memory: 높을수록 좋음 (레벨, 점수)
+      shouldUpdate = (record as number) > currentBest;
+    }
+
+    if (shouldUpdate) {
+      state.updateGameStats(game, {
+        bestRecord: record,
+      });
+    }
   },
 
   // 전역 통계 조회

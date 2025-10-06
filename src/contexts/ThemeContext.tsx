@@ -37,7 +37,7 @@ const lightTheme: Theme = {
     background: '#f8fafc',
     backgroundSecondary: '#e2e8f0',
     surface: '#ffffff',
-    surfaceSecondary: '#f1f5f9',
+    surfaceSecondary: '#e2e8f0',
     primary: '#6366f1',
     primaryDark: '#4f46e5',
     text: '#0f172a',
