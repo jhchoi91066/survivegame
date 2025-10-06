@@ -9,6 +9,7 @@ import StatsScreen from './src/screens/StatsScreen';
 import AchievementsScreen from './src/screens/AchievementsScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import FriendsScreen from './src/screens/FriendsScreen';
+import FriendComparisonScreen from './src/screens/FriendComparisonScreen';
 import FlipMatchGame from './src/screens/FlipMatchGame';
 import SequenceGame from './src/screens/SequenceGame';
 import MathRushGame from './src/screens/MathRushGame';
@@ -28,6 +29,10 @@ export type RootStackParamList = {
   Achievements: undefined;
   Leaderboard: undefined;
   Friends: undefined;
+  FriendComparison: {
+    friendId: string;
+    friendUsername: string;
+  };
   FlipMatchGame: undefined;
   SequenceGame: undefined;
   MathRushGame: undefined;
@@ -70,6 +75,8 @@ function AppNavigator() {
         <Stack.Screen name="Stats" component={StatsScreen} />
         <Stack.Screen name="Achievements" component={AchievementsScreen} />
         <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+        <Stack.Screen name="Friends" component={FriendsScreen} />
+        <Stack.Screen name="FriendComparison" component={FriendComparisonScreen} />
         <Stack.Screen name="FlipMatchGame" component={FlipMatchGame} />
         <Stack.Screen name="SequenceGame" component={SequenceGame} />
         <Stack.Screen name="MathRushGame" component={MathRushGame} />

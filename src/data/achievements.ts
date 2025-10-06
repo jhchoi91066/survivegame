@@ -1,6 +1,6 @@
 // 업적 시스템
 
-export type AchievementCategory = 'progress' | 'skill' | 'challenge' | 'collection' | 'hidden';
+export type AchievementCategory = 'progress' | 'skill' | 'challenge' | 'collection' | 'hidden' | 'online';
 
 export interface Achievement {
   id: string;
@@ -31,7 +31,10 @@ export interface AchievementRequirement {
     | 'chain_reaction'      // 연쇄 반응 트리거
     | 'no_damage'           // 무피해 클리어
     | 'all_survivors'       // 모든 생존자 사용
-    | 'specific_method';    // 특정 방법 사용
+    | 'specific_method'     // 특정 방법 사용
+    | 'friend_count'        // 친구 수 (온라인)
+    | 'leaderboard_rank'    // 리더보드 순위 (온라인)
+    | 'all_games_rank_one'; // 모든 게임 1위 (온라인)
 
   value: number | string | string[];
   count?: number; // 필요 횟수
@@ -249,6 +252,41 @@ export const ACHIEVEMENTS: Achievement[] = [
       value: 'special_level',
     },
   },
+
+  // === 온라인 업적 ===
+  {
+    id: 'social_butterfly',
+    name: '소셜 버터플라이',
+    description: '친구 10명을 추가하세요',
+    category: 'online',
+    emoji: '🦋',
+    requirement: {
+      type: 'friend_count',
+      value: 10,
+    },
+  },
+  {
+    id: 'global_star',
+    name: '글로벌 스타',
+    description: '리더보드 Top 100에 진입하세요',
+    category: 'online',
+    emoji: '🌟',
+    requirement: {
+      type: 'leaderboard_rank',
+      value: 100,
+    },
+  },
+  {
+    id: 'perfect_champion',
+    name: '완벽한 챔피언',
+    description: '모든 게임에서 1위를 달성하세요',
+    category: 'online',
+    emoji: '👑',
+    requirement: {
+      type: 'all_games_rank_one',
+      value: 4, // 4개 게임
+    },
+  },
 ];
 
 // 업적 진행도 확인
@@ -263,6 +301,9 @@ export const checkAchievementProgress = (
     speedClears: number;
     resourceEfficientClears: number;
     specificMethodUsage: { [key: string]: number };
+    // 온라인 통계
+    friendCount?: number;
+    leaderboardRanks?: { [gameType: string]: number };
   }
 ): { unlocked: boolean; progress: number; currentCount: number } => {
   const req = achievement.requirement;
@@ -331,6 +372,33 @@ export const checkAchievementProgress = (
 
     case 'all_survivors':
       // 특별 처리 필요
+      break;
+
+    case 'friend_count':
+      currentCount = stats.friendCount || 0;
+      const targetFriends = req.value as number;
+      progress = Math.min(100, (currentCount / targetFriends) * 100);
+      unlocked = currentCount >= targetFriends;
+      break;
+
+    case 'leaderboard_rank':
+      // Check if user is in top N in ANY game
+      const targetRank = req.value as number;
+      const ranks = stats.leaderboardRanks || {};
+      const hasTopRank = Object.values(ranks).some(rank => rank > 0 && rank <= targetRank);
+      unlocked = hasTopRank;
+      progress = hasTopRank ? 100 : 0;
+      currentCount = hasTopRank ? 1 : 0;
+      break;
+
+    case 'all_games_rank_one':
+      // Check if user is #1 in all games
+      const ranks2 = stats.leaderboardRanks || {};
+      const targetGames = req.value as number;
+      const rankOnes = Object.values(ranks2).filter(rank => rank === 1).length;
+      currentCount = rankOnes;
+      progress = Math.min(100, (rankOnes / targetGames) * 100);
+      unlocked = rankOnes >= targetGames;
       break;
   }
 
