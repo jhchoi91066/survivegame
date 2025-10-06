@@ -3,98 +3,80 @@ import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal } from 'react-na
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { useFlipMatchStore } from '../game/flipmatch/store';
-import { Difficulty } from '../game/flipmatch/types';
-import GameBoard from '../components/flipmatch/GameBoard';
+import { useSpatialMemoryStore } from '../game/spatialmemory/store';
+import { Difficulty } from '../game/spatialmemory/types';
+import TileGrid from '../components/spatialmemory/TileGrid';
 import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
-import { updateFlipMatchRecord } from '../utils/statsManager';
-import { incrementGameCount } from '../utils/reviewManager';
-import { smartSync } from '../utils/cloudSync';
+import { updateSpatialMemoryRecord } from '../utils/statsManager';
 
-type FlipMatchGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FlipMatchGame'>;
+type SpatialMemoryGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SpatialMemoryGame'>;
 
-const FlipMatchGame: React.FC = () => {
-  const navigation = useNavigation<FlipMatchGameNavigationProp>();
+const SpatialMemoryGame: React.FC = () => {
+  const navigation = useNavigation<SpatialMemoryGameNavigationProp>();
   const {
     gameStatus,
-    moves,
-    matchedPairs,
-    totalPairs,
-    timeRemaining,
+    currentLevel,
     initializeGame,
+    startRound,
     resetGame,
-    decrementTime,
     settings,
-  } = useFlipMatchStore();
+  } = useSpatialMemoryStore();
 
-  const { incrementTotalPlays, addPlayTime, updateBestRecord } = useGameStore();
+  const { updateBestRecord } = useGameStore();
 
   const [showDifficultyModal, setShowDifficultyModal] = useState(true);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
+  const [startTime, setStartTime] = useState<number>(0);
 
-  // 카운트다운 타이머 (미리보기 중에는 작동 안 함)
+  // 게임 시작 시간 기록
   useEffect(() => {
-    if (gameStatus === 'playing') {
-      const interval = setInterval(() => {
-        decrementTime();
-      }, 1000);
-
-      return () => clearInterval(interval);
+    if (gameStatus === 'showing' && startTime === 0) {
+      setStartTime(Date.now());
     }
   }, [gameStatus]);
 
-  // 게임 승리/패배 처리
+  // 게임 오버 처리
   useEffect(() => {
-    if (gameStatus === 'won') {
-      handleGameWon();
-    } else if (gameStatus === 'lost') {
-      handleGameLost();
+    if (gameStatus === 'gameover') {
+      handleGameOver();
     }
   }, [gameStatus]);
 
-  const handleGameWon = async () => {
-    hapticPatterns.levelComplete();
-
-    // 최고 기록 업데이트 (플레이 통계 포함 - 남은 시간으로 계산)
-    const timeTaken = getTimeLimit() - timeRemaining;
-    await updateFlipMatchRecord(timeTaken, settings.difficulty, timeTaken);
-    updateBestRecord('flip_match', timeTaken);
-
-    // 클라우드 동기화 (로그인한 경우)
-    await smartSync({
-      game_type: 'flip_match',
-      score: moves,
-      time_seconds: timeTaken,
-      difficulty: settings.difficulty,
-      played_at: new Date().toISOString()
-    });
-
-    // 게임 카운트 증가 및 리뷰 요청
-    await incrementGameCount();
-  };
-
-  const handleGameLost = () => {
+  const handleGameOver = async () => {
     hapticPatterns.error();
-  };
 
-  const getTimeLimit = (): number => {
-    const limits = { easy: 120, medium: 90, hard: 60 };
-    return limits[settings.difficulty];
+    // 최고 기록 업데이트 (레벨은 높을수록 좋음)
+    const finalLevel = currentLevel - 1; // 실패한 레벨이므로 -1
+    const playTime = Math.floor((Date.now() - startTime) / 1000);
+
+    await updateSpatialMemoryRecord(finalLevel, settings.difficulty, playTime);
+    updateBestRecord('spatial_memory', finalLevel);
   };
 
   const handleStartGame = () => {
-    initializeGame({
-      difficulty: selectedDifficulty,
-      theme: 'animals',
-    });
+    const difficultySettings = {
+      easy: { difficulty: 'easy' as Difficulty, flashSpeed: 600, startingLevel: 3 },
+      medium: { difficulty: 'medium' as Difficulty, flashSpeed: 500, startingLevel: 3 },
+      hard: { difficulty: 'hard' as Difficulty, flashSpeed: 400, startingLevel: 4 },
+    };
+
+    initializeGame(difficultySettings[selectedDifficulty]);
     setShowDifficultyModal(false);
     hapticPatterns.buttonPress();
+
+    // 게임 시작
+    setTimeout(() => {
+      startRound();
+    }, 500);
   };
 
   const handleRestart = () => {
     resetGame();
     hapticPatterns.buttonPress();
+    setTimeout(() => {
+      startRound();
+    }, 500);
   };
 
   const handleBackToMenu = () => {
@@ -102,10 +84,23 @@ const FlipMatchGame: React.FC = () => {
     navigation.goBack();
   };
 
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const getStatusText = () => {
+    switch (gameStatus) {
+      case 'ready':
+        return '준비';
+      case 'showing':
+        return '패턴 기억하기...';
+      case 'input':
+        return '입력하세요!';
+      case 'correct':
+        return '정답! 🎉';
+      case 'wrong':
+        return '틀렸습니다 ❌';
+      case 'gameover':
+        return '게임 오버';
+      default:
+        return '';
+    }
   };
 
   return (
@@ -115,7 +110,7 @@ const FlipMatchGame: React.FC = () => {
         <Pressable onPress={handleBackToMenu} style={styles.backButton}>
           <Text style={styles.backButtonText}>← 메뉴</Text>
         </Pressable>
-        <Text style={styles.title}>🎴 Flip & Match</Text>
+        <Text style={styles.title}>🧠 Spatial Memory</Text>
         <Pressable onPress={handleRestart} style={styles.restartButton}>
           <Text style={styles.restartButtonText}>🔄</Text>
         </Pressable>
@@ -124,37 +119,38 @@ const FlipMatchGame: React.FC = () => {
       {/* Stats */}
       <View style={styles.stats}>
         <View style={styles.statItem}>
-          <Text style={styles.statLabel}>남은 시간</Text>
+          <Text style={styles.statLabel}>레벨</Text>
+          <Text style={styles.statValue}>{currentLevel}</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>상태</Text>
           <Text style={[
             styles.statValue,
-            timeRemaining <= 10 && styles.statValueWarning
-          ]}>{formatTime(timeRemaining)}</Text>
+            styles.statusText,
+            gameStatus === 'wrong' && styles.wrongText,
+            gameStatus === 'correct' && styles.correctText,
+          ]}>{getStatusText()}</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statLabel}>이동</Text>
-          <Text style={styles.statValue}>{moves}</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>진행</Text>
-          <Text style={styles.statValue}>{matchedPairs}/{totalPairs}</Text>
+          <Text style={styles.statLabel}>난이도</Text>
+          <Text style={styles.statValue}>
+            {settings.difficulty === 'easy' ? '쉬움' : settings.difficulty === 'medium' ? '보통' : '어려움'}
+          </Text>
         </View>
       </View>
 
-      {/* Preview Message */}
-      {gameStatus === 'preview' && (
-        <View style={styles.previewOverlay}>
-          <Text style={styles.previewText}>🧠 카드를 기억하세요!</Text>
-        </View>
-      )}
-
-      {/* Game Board */}
-      {gameStatus !== 'ready' && <GameBoard />}
+      {/* Game Grid */}
+      {gameStatus !== 'ready' && <TileGrid />}
 
       {/* Difficulty Selection Modal */}
       <Modal visible={showDifficultyModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>난이도 선택</Text>
+            <Text style={styles.modalDescription}>
+              깜빡이는 타일의 순서를 기억하세요!{'\n'}
+              레벨이 올라갈수록 더 많은 타일이 깜빡입니다.
+            </Text>
 
             <Pressable
               style={[
@@ -166,8 +162,8 @@ const FlipMatchGame: React.FC = () => {
                 hapticPatterns.buttonPress();
               }}
             >
-              <Text style={styles.difficultyButtonText}>쉬움 (4x4)</Text>
-              <Text style={styles.difficultyTimeText}>제한 시간: 2분</Text>
+              <Text style={styles.difficultyButtonText}>쉬움 (3×3)</Text>
+              <Text style={styles.difficultySubText}>레벨 3부터 시작 · 느린 속도</Text>
             </Pressable>
 
             <Pressable
@@ -180,8 +176,8 @@ const FlipMatchGame: React.FC = () => {
                 hapticPatterns.buttonPress();
               }}
             >
-              <Text style={styles.difficultyButtonText}>보통 (4x6)</Text>
-              <Text style={styles.difficultyTimeText}>제한 시간: 1분 30초</Text>
+              <Text style={styles.difficultyButtonText}>보통 (4×4)</Text>
+              <Text style={styles.difficultySubText}>레벨 3부터 시작 · 보통 속도</Text>
             </Pressable>
 
             <Pressable
@@ -194,8 +190,8 @@ const FlipMatchGame: React.FC = () => {
                 hapticPatterns.buttonPress();
               }}
             >
-              <Text style={styles.difficultyButtonText}>어려움 (4x8)</Text>
-              <Text style={styles.difficultyTimeText}>제한 시간: 1분</Text>
+              <Text style={styles.difficultyButtonText}>어려움 (5×5)</Text>
+              <Text style={styles.difficultySubText}>레벨 4부터 시작 · 빠른 속도</Text>
             </Pressable>
 
             <Pressable style={styles.startButton} onPress={handleStartGame}>
@@ -205,34 +201,16 @@ const FlipMatchGame: React.FC = () => {
         </View>
       </Modal>
 
-      {/* Victory Modal */}
-      <Modal visible={gameStatus === 'won'} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.victoryEmoji}>🎉</Text>
-            <Text style={styles.modalTitle}>완료!</Text>
-            <Text style={styles.victoryStats}>소요 시간: {formatTime(getTimeLimit() - timeRemaining)}</Text>
-            <Text style={styles.victoryStats}>이동 횟수: {moves}</Text>
-
-            <Pressable style={styles.startButton} onPress={handleRestart}>
-              <Text style={styles.startButtonText}>다시 하기</Text>
-            </Pressable>
-
-            <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
-              <Text style={styles.menuButtonText}>메뉴로</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
       {/* Game Over Modal */}
-      <Modal visible={gameStatus === 'lost'} transparent animationType="fade">
+      <Modal visible={gameStatus === 'gameover'} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.defeatEmoji}>⏰</Text>
-            <Text style={styles.modalTitle}>시간 초과!</Text>
-            <Text style={styles.victoryStats}>완성: {matchedPairs}/{totalPairs} 쌍</Text>
-            <Text style={styles.victoryStats}>이동 횟수: {moves}</Text>
+            <Text style={styles.gameOverEmoji}>🧠</Text>
+            <Text style={styles.modalTitle}>게임 오버!</Text>
+            <Text style={styles.finalScore}>최종 레벨: {currentLevel - 1}</Text>
+            <Text style={styles.victoryStats}>
+              {currentLevel - 1}개의 타일 순서를 기억했습니다!
+            </Text>
 
             <Pressable style={styles.startButton} onPress={handleRestart}>
               <Text style={styles.startButtonText}>다시 하기</Text>
@@ -300,25 +278,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
-  statValueWarning: {
+  statusText: {
+    fontSize: 16,
+  },
+  wrongText: {
     color: '#ef4444',
   },
-  previewOverlay: {
-    position: 'absolute',
-    top: 120,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  previewText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    backgroundColor: 'rgba(59, 130, 246, 0.9)',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 16,
+  correctText: {
+    color: '#10b981',
   },
   modalOverlay: {
     flex: 1,
@@ -338,7 +305,14 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
+    marginBottom: 12,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
     marginBottom: 24,
+    lineHeight: 20,
   },
   difficultyButton: {
     width: '100%',
@@ -357,9 +331,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
-  difficultyTimeText: {
-    fontSize: 14,
-    color: '#94a3b8',
+  difficultySubText: {
+    fontSize: 12,
+    color: '#cbd5e1',
     marginTop: 4,
   },
   startButton: {
@@ -376,18 +350,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
-  victoryEmoji: {
+  gameOverEmoji: {
     fontSize: 64,
     marginBottom: 16,
   },
-  defeatEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
+  finalScore: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+    marginBottom: 8,
   },
   victoryStats: {
     fontSize: 16,
     color: '#94a3b8',
-    marginBottom: 8,
+    marginBottom: 24,
+    textAlign: 'center',
   },
   menuButton: {
     width: '100%',
@@ -405,4 +382,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default FlipMatchGame;
+export default SpatialMemoryGame;

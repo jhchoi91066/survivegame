@@ -19,7 +19,7 @@ const StatsScreen: React.FC = () => {
   const [flipMatchRecord, setFlipMatchRecord] = useState<GameRecord['flip_match'] | null>(null);
   const [sequenceRecord, setSequenceRecord] = useState<GameRecord['sequence'] | null>(null);
   const [mathRushRecord, setMathRushRecord] = useState<GameRecord['math_rush'] | null>(null);
-  const [mergePuzzleRecord, setMergePuzzleRecord] = useState<GameRecord['merge_puzzle'] | null>(null);
+  const [spatialMemoryRecord, setSpatialMemoryRecord] = useState<GameRecord['spatial_memory'] | null>(null);
 
   useEffect(() => {
     loadAllStats();
@@ -29,12 +29,12 @@ const StatsScreen: React.FC = () => {
     const flipMatch = await loadGameRecord('flip_match');
     const sequence = await loadGameRecord('sequence');
     const mathRush = await loadGameRecord('math_rush');
-    const mergePuzzle = await loadGameRecord('merge_puzzle');
+    const spatialMemory = await loadGameRecord('spatial_memory');
 
     setFlipMatchRecord(flipMatch);
     setSequenceRecord(sequence);
     setMathRushRecord(mathRush);
-    setMergePuzzleRecord(mergePuzzle);
+    setSpatialMemoryRecord(spatialMemory);
   };
 
   return (
@@ -86,13 +86,13 @@ const StatsScreen: React.FC = () => {
         />
 
         <GameStatCard
-          icon="🔢"
-          title="Merge Puzzle"
+          icon="🧠"
+          title="Spatial Memory"
           stats={[
-            { label: '최소 이동', value: mergePuzzleRecord?.bestMoves ? `${mergePuzzleRecord.bestMoves}회` : '-' },
-            { label: '최고 숫자', value: mergePuzzleRecord?.highestNumber ? `${mergePuzzleRecord.highestNumber}` : '-' },
-            { label: '플레이 횟수', value: mergePuzzleRecord?.totalPlays ? `${mergePuzzleRecord.totalPlays}회` : '-' },
-            { label: '총 플레이 시간', value: mergePuzzleRecord?.totalPlayTime ? formatPlayTime(mergePuzzleRecord.totalPlayTime) : '-' },
+            { label: '최고 레벨', value: spatialMemoryRecord?.highestLevel ? `Level ${spatialMemoryRecord.highestLevel}` : '-' },
+            { label: '난이도', value: spatialMemoryRecord?.difficulty ? getDifficultyText(spatialMemoryRecord.difficulty) : '-' },
+            { label: '플레이 횟수', value: spatialMemoryRecord?.totalPlays ? `${spatialMemoryRecord.totalPlays}회` : '-' },
+            { label: '총 플레이 시간', value: spatialMemoryRecord?.totalPlayTime ? formatPlayTime(spatialMemoryRecord.totalPlayTime) : '-' },
           ]}
           delay={300}
         />
@@ -175,7 +175,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 10,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#334155',
   },
   gameIcon: {
-    fontSize: 32,
+    fontSize: 20,
     marginRight: 12,
   },
   gameTitle: {

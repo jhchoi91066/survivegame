@@ -106,26 +106,22 @@ export const updateMathRushRecord = async (
   await saveGameRecord('math_rush', newRecord);
 };
 
-// Merge Puzzle 기록 업데이트
-export const updateMergePuzzleRecord = async (
-  moves: number,
-  highestNumber: number,
+// Spatial Memory 기록 업데이트
+export const updateSpatialMemoryRecord = async (
+  level: number,
+  difficulty: 'easy' | 'medium' | 'hard',
   playTime: number
 ): Promise<void> => {
-  const current = await loadGameRecord('merge_puzzle');
+  const current = await loadGameRecord('spatial_memory');
 
   const newRecord = {
-    bestMoves: !current || moves < current.bestMoves || current.bestMoves === 0
-      ? moves
-      : current.bestMoves,
-    highestNumber: !current || highestNumber > current.highestNumber
-      ? highestNumber
-      : current.highestNumber,
+    highestLevel: !current || level > current.highestLevel ? level : current.highestLevel,
+    difficulty: !current || level > current.highestLevel ? difficulty : current.difficulty,
     totalPlays: (current?.totalPlays || 0) + 1,
     totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
 
-  await saveGameRecord('merge_puzzle', newRecord);
+  await saveGameRecord('spatial_memory', newRecord);
 };
 
 // 통계 초기화
@@ -136,7 +132,7 @@ export const clearAllStats = async (): Promise<void> => {
       `${RECORDS_KEY}_flip_match`,
       `${RECORDS_KEY}_sequence`,
       `${RECORDS_KEY}_math_rush`,
-      `${RECORDS_KEY}_merge_puzzle`,
+      `${RECORDS_KEY}_spatial_memory`,
     ]);
   } catch (error) {
     console.error('Failed to clear stats:', error);

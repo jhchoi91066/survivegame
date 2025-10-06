@@ -17,7 +17,7 @@ export const GRID_SIZES: Record<Difficulty, { rows: number; cols: number }> = {
 };
 
 // 게임 상태
-export type GameStatus = 'ready' | 'playing' | 'paused' | 'won' | 'lost';
+export type GameStatus = 'ready' | 'preview' | 'playing' | 'paused' | 'won' | 'lost';
 
 // 카드 테마 (이모지)
 export const CARD_THEMES = {

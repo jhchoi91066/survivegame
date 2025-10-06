@@ -1,6 +1,20 @@
 import { create } from 'zustand';
 import { Card, Difficulty, GameStatus, GameSettings, GRID_SIZES, CARD_THEMES } from './types';
 
+// 난이도별 제한 시간 (초)
+const TIME_LIMITS: Record<Difficulty, number> = {
+  easy: 120,   // 2분 (4x4 = 8쌍)
+  medium: 90,  // 1분 30초 (4x6 = 12쌍)
+  hard: 60,    // 1분 (4x8 = 16쌍)
+};
+
+// 난이도별 미리보기 시간 (밀리초)
+const PREVIEW_TIMES: Record<Difficulty, number> = {
+  easy: 2000,    // 2초
+  medium: 1500,  // 1.5초
+  hard: 1000,    // 1초
+};
+
 interface FlipMatchStore {
   // 게임 상태
   cards: Card[];
@@ -9,7 +23,7 @@ interface FlipMatchStore {
   moves: number;
   matchedPairs: number;
   totalPairs: number;
-  timeElapsed: number;
+  timeRemaining: number; // 카운트다운으로 변경
   settings: GameSettings;
 
   // 액션
@@ -18,7 +32,7 @@ interface FlipMatchStore {
   checkMatch: () => void;
   resetGame: () => void;
   setGameStatus: (status: GameStatus) => void;
-  incrementTime: () => void;
+  decrementTime: () => void; // incrementTime -> decrementTime
 }
 
 // 카드 배열 생성 및 셔플
@@ -53,7 +67,7 @@ export const useFlipMatchStore = create<FlipMatchStore>((set, get) => ({
   moves: 0,
   matchedPairs: 0,
   totalPairs: 0,
-  timeElapsed: 0,
+  timeRemaining: 0,
   settings: {
     difficulty: 'easy',
     theme: 'animals',
@@ -63,17 +77,30 @@ export const useFlipMatchStore = create<FlipMatchStore>((set, get) => ({
   initializeGame: (settings) => {
     const cards = createShuffledCards(settings);
     const totalPairs = cards.length / 2;
+    const timeLimit = TIME_LIMITS[settings.difficulty];
+
+    // 모든 카드를 뒤집은 상태로 시작 (미리보기)
+    const previewCards = cards.map(c => ({ ...c, isFlipped: true }));
 
     set({
-      cards,
+      cards: previewCards,
       flippedCards: [],
-      gameStatus: 'playing',
+      gameStatus: 'preview', // 미리보기 상태
       moves: 0,
       matchedPairs: 0,
       totalPairs,
-      timeElapsed: 0,
+      timeRemaining: timeLimit,
       settings,
     });
+
+    // 난이도별 시간 후 카드 뒤집기
+    setTimeout(() => {
+      const hiddenCards = cards.map(c => ({ ...c, isFlipped: false }));
+      set({
+        cards: hiddenCards,
+        gameStatus: 'playing',
+      });
+    }, PREVIEW_TIMES[settings.difficulty]);
   },
 
   // 카드 뒤집기
@@ -163,8 +190,19 @@ export const useFlipMatchStore = create<FlipMatchStore>((set, get) => ({
     set({ gameStatus: status });
   },
 
-  // 시간 증가
-  incrementTime: () => {
-    set((state) => ({ timeElapsed: state.timeElapsed + 1 }));
+  // 시간 감소 (카운트다운)
+  decrementTime: () => {
+    const state = get();
+    const newTime = state.timeRemaining - 1;
+
+    if (newTime <= 0) {
+      // 시간 초과 - 게임 오버
+      set({
+        timeRemaining: 0,
+        gameStatus: 'lost'
+      });
+    } else {
+      set({ timeRemaining: newTime });
+    }
   },
 }));
