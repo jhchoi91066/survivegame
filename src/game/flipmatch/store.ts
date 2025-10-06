@@ -10,9 +10,9 @@ const TIME_LIMITS: Record<Difficulty, number> = {
 
 // 난이도별 미리보기 시간 (밀리초)
 const PREVIEW_TIMES: Record<Difficulty, number> = {
-  easy: 2000,    // 2초
-  medium: 1500,  // 1.5초
-  hard: 1000,    // 1초
+  easy: 2500,    // 2.5초
+  medium: 2500,  // 2.5초
+  hard: 2500,    // 2.5초
 };
 
 interface FlipMatchStore {
