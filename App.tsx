@@ -15,6 +15,8 @@ import FlipMatchGame from './src/screens/FlipMatchGame';
 import SequenceGame from './src/screens/SequenceGame';
 import MathRushGame from './src/screens/MathRushGame';
 import SpatialMemoryGame from './src/screens/SpatialMemoryGame';
+import StroopTestGame from './src/screens/StroopTestGame';
+import FindTheOddGame from './src/screens/FindTheOddGame';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { AccessibilityProvider } from './src/contexts/AccessibilityContext';
@@ -38,6 +40,8 @@ export type RootStackParamList = {
   SequenceGame: undefined;
   MathRushGame: undefined;
   SpatialMemoryGame: undefined;
+  StroopTestGame: undefined;
+  FindTheOddGame: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -84,6 +88,8 @@ function AppNavigator() {
             <Stack.Screen name="SequenceGame" component={SequenceGame} />
             <Stack.Screen name="MathRushGame" component={MathRushGame} />
             <Stack.Screen name="SpatialMemoryGame" component={SpatialMemoryGame} />
+            <Stack.Screen name="StroopTestGame" component={StroopTestGame} />
+            <Stack.Screen name="FindTheOddGame" component={FindTheOddGame} />
           </Stack.Navigator>
         </NavigationContainer>
       </View>
