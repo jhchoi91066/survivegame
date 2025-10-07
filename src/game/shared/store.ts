@@ -2,26 +2,17 @@ import { create } from 'zustand';
 import { GameType, GameState, GlobalStats, GameStats } from './types';
 
 interface GameStore extends GameState {
-  // 전역 통계
   globalStats: GlobalStats;
-
-  // 액션
   setCurrentGame: (game: GameType | null) => void;
   setIsPlaying: (isPlaying: boolean) => void;
   setIsPaused: (isPaused: boolean) => void;
-
-  // 통계 업데이트
   updateGameStats: (game: GameType, stats: Partial<GameStats>) => void;
   incrementTotalPlays: (game: GameType) => void;
   addPlayTime: (game: GameType, seconds: number) => void;
   updateBestRecord: (game: GameType, record: number | string) => void;
-
-  // 전역 통계
   getTotalGamesPlayed: () => number;
   getTotalPlayTime: () => number;
   getFavoriteGame: () => GameType | null;
-
-  // 초기화
   resetGame: () => void;
 }
 
@@ -31,56 +22,30 @@ const initialGlobalStats: GlobalStats = {
   favoriteGame: null,
   achievementsUnlocked: 0,
   gamesStats: {
-    flip_match: {
-      totalPlays: 0,
-      totalPlayTime: 0,
-      bestRecord: 0,
-      lastPlayed: 0,
-    },
-    sequence: {
-      totalPlays: 0,
-      totalPlayTime: 0,
-      bestRecord: 0,
-      lastPlayed: 0,
-    },
-    math_rush: {
-      totalPlays: 0,
-      totalPlayTime: 0,
-      bestRecord: 0,
-      lastPlayed: 0,
-    },
-    spatial_memory: {
-      totalPlays: 0,
-      totalPlayTime: 0,
-      bestRecord: 0,
-      lastPlayed: 0,
-    },
+    flip_match: { totalPlays: 0, totalPlayTime: 0, bestRecord: 0, lastPlayed: 0 },
+    math_rush: { totalPlays: 0, totalPlayTime: 0, bestRecord: 0, lastPlayed: 0 },
+    spatial_memory: { totalPlays: 0, totalPlayTime: 0, bestRecord: 0, lastPlayed: 0 },
+    stroop: { totalPlays: 0, totalPlayTime: 0, bestRecord: 0, lastPlayed: 0 },
   },
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
-  // 초기 상태
   currentGame: null,
   isPlaying: false,
   isPaused: false,
   globalStats: initialGlobalStats,
 
-  // 게임 상태 설정
   setCurrentGame: (game) => set({ currentGame: game }),
   setIsPlaying: (isPlaying) => set({ isPlaying }),
   setIsPaused: (isPaused) => set({ isPaused }),
 
-  // 통계 업데이트
   updateGameStats: (game, stats) => {
     set((state) => ({
       globalStats: {
         ...state.globalStats,
         gamesStats: {
           ...state.globalStats.gamesStats,
-          [game]: {
-            ...state.globalStats.gamesStats[game],
-            ...stats,
-          },
+          [game]: { ...state.globalStats.gamesStats[game], ...stats },
         },
       },
     }));
@@ -89,91 +54,41 @@ export const useGameStore = create<GameStore>((set, get) => ({
   incrementTotalPlays: (game) => {
     const state = get();
     const currentStats = state.globalStats.gamesStats[game];
-    state.updateGameStats(game, {
-      totalPlays: currentStats.totalPlays + 1,
-      lastPlayed: Date.now(),
-    });
-
-    // 전역 통계 업데이트
-    set((state) => ({
-      globalStats: {
-        ...state.globalStats,
-        totalGamesPlayed: state.globalStats.totalGamesPlayed + 1,
-      },
-    }));
+    state.updateGameStats(game, { totalPlays: currentStats.totalPlays + 1, lastPlayed: Date.now() });
+    set((s) => ({ globalStats: { ...s.globalStats, totalGamesPlayed: s.globalStats.totalGamesPlayed + 1 } }));
   },
 
   addPlayTime: (game, seconds) => {
     const state = get();
     const currentStats = state.globalStats.gamesStats[game];
-    state.updateGameStats(game, {
-      totalPlayTime: currentStats.totalPlayTime + seconds,
-    });
-
-    // 전역 통계 업데이트
-    set((state) => ({
-      globalStats: {
-        ...state.globalStats,
-        totalPlayTime: state.globalStats.totalPlayTime + seconds,
-      },
-    }));
+    state.updateGameStats(game, { totalPlayTime: currentStats.totalPlayTime + seconds });
+    set((s) => ({ globalStats: { ...s.globalStats, totalPlayTime: s.globalStats.totalPlayTime + seconds } }));
   },
 
   updateBestRecord: (game, record) => {
     const state = get();
     const currentBest = state.globalStats.gamesStats[game].bestRecord;
-
-    // 게임별 최고 기록 비교 로직
     let shouldUpdate = false;
-
-    if (currentBest === 0) {
-      // 첫 기록이면 무조건 저장
+    if (currentBest === 0 || !currentBest) {
       shouldUpdate = true;
     } else if (game === 'flip_match') {
-      // Flip Match: 낮을수록 좋음 (시간)
-      shouldUpdate = (record as number) < currentBest;
+      shouldUpdate = (record as number) < (currentBest as number);
     } else {
-      // Sequence, Math Rush, Spatial Memory: 높을수록 좋음 (레벨, 점수)
-      shouldUpdate = (record as number) > currentBest;
+      shouldUpdate = (record as number) > (currentBest as number);
     }
-
     if (shouldUpdate) {
-      state.updateGameStats(game, {
-        bestRecord: record,
-      });
+      state.updateGameStats(game, { bestRecord: record });
     }
   },
 
-  // 전역 통계 조회
-  getTotalGamesPlayed: () => {
-    return get().globalStats.totalGamesPlayed;
-  },
-
-  getTotalPlayTime: () => {
-    return get().globalStats.totalPlayTime;
-  },
+  getTotalGamesPlayed: () => get().globalStats.totalGamesPlayed,
+  getTotalPlayTime: () => get().globalStats.totalPlayTime,
 
   getFavoriteGame: () => {
-    const state = get();
-    const games = Object.entries(state.globalStats.gamesStats) as [GameType, GameStats][];
-
-    if (games.every(([_, stats]) => stats.totalPlays === 0)) {
-      return null;
-    }
-
-    const favorite = games.reduce((prev, current) => {
-      return current[1].totalPlays > prev[1].totalPlays ? current : prev;
-    });
-
-    return favorite[0];
+    const games = Object.entries(get().globalStats.gamesStats) as [GameType, GameStats][];
+    if (games.every(([, stats]) => stats.totalPlays === 0)) return null;
+    return games.reduce((prev, current) => (current[1].totalPlays > prev[1].totalPlays ? current : prev))[0];
   },
 
-  // 게임 초기화
-  resetGame: () => {
-    set({
-      currentGame: null,
-      isPlaying: false,
-      isPaused: false,
-    });
-  },
+  resetGame: () => set({ currentGame: null, isPlaying: false, isPaused: false }),
 }));

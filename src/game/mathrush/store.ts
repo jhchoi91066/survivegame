@@ -26,8 +26,8 @@ const createQuestion = (score: number): Question => {
   let num1: number, num2: number, correctAnswer: number;
   let operation: OperationType;
 
-  if (score <= 6) {
-    // 초반: 한 자릿수 덧셈, 뺄셈
+  if (score <= 4) {
+    // 0-4점: 한 자릿수 덧셈/뺄셈
     operation = Math.random() > 0.5 ? '+' : '-';
     if (operation === '+') {
       num1 = randomInt(1, 9);
@@ -38,37 +38,40 @@ const createQuestion = (score: number): Question => {
       num2 = randomInt(1, num1 - 1);
       correctAnswer = num1 - num2;
     }
-  } else if (score <= 18) {
-    // 중반: 두 자릿수 덧셈/뺄셈, 한 자릿수 곱셈
-    const rand = Math.random();
-    if (rand < 0.4) {
-      operation = '+';
+  } else if (score <= 9) {
+    // 5-9점: 두 자릿수 덧셈/뺄셈
+    operation = Math.random() > 0.5 ? '+' : '-';
+    if (operation === '+') {
       num1 = randomInt(10, 50);
       num2 = randomInt(10, 50);
       correctAnswer = num1 + num2;
-    } else if (rand < 0.8) {
-      operation = '-';
+    } else {
       num1 = randomInt(20, 99);
       num2 = randomInt(10, num1 - 1);
       correctAnswer = num1 - num2;
-    } else {
-      operation = '×';
+    }
+  } else if (score <= 14) {
+    // 10-14점: 한 자릿수 곱셈, 간단한 나눗셈
+    operation = Math.random() > 0.5 ? '×' : '÷';
+    if (operation === '×') {
       num1 = randomInt(2, 9);
       num2 = randomInt(2, 9);
       correctAnswer = num1 * num2;
+    } else {
+      num2 = randomInt(2, 9);
+      correctAnswer = randomInt(2, 9);
+      num1 = num2 * correctAnswer;
     }
   } else {
-    // 후반: 두 자릿수 곱셈, 나눗셈, 음수 포함
-    const rand = Math.random();
-    if (rand < 0.5) {
-      operation = '×';
-      num1 = randomInt(10, 20);
-      num2 = randomInt(10, 20);
+    // 15점 이상: 두 자릿수 곱셈, 복잡한 나눗셈
+    operation = Math.random() > 0.5 ? '×' : '÷';
+    if (operation === '×') {
+      num1 = randomInt(10, 25);
+      num2 = randomInt(10, 25);
       correctAnswer = num1 * num2;
     } else {
-      operation = '÷';
-      num2 = randomInt(2, 10);
-      correctAnswer = randomInt(2, 10);
+      num2 = randomInt(2, 15);
+      correctAnswer = randomInt(2, 15);
       num1 = num2 * correctAnswer;
     }
   }

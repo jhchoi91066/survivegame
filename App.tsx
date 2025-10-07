@@ -12,11 +12,9 @@ import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import FriendsScreen from './src/screens/FriendsScreen';
 import FriendComparisonScreen from './src/screens/FriendComparisonScreen';
 import FlipMatchGame from './src/screens/FlipMatchGame';
-import SequenceGame from './src/screens/SequenceGame';
 import MathRushGame from './src/screens/MathRushGame';
 import SpatialMemoryGame from './src/screens/SpatialMemoryGame';
 import StroopTestGame from './src/screens/StroopTestGame';
-import FindTheOddGame from './src/screens/FindTheOddGame';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { AccessibilityProvider } from './src/contexts/AccessibilityContext';
@@ -32,16 +30,11 @@ export type RootStackParamList = {
   Achievements: undefined;
   Leaderboard: undefined;
   Friends: undefined;
-  FriendComparison: {
-    friendId: string;
-    friendUsername: string;
-  };
+  FriendComparison: { friendId: string; friendUsername: string; };
   FlipMatchGame: undefined;
-  SequenceGame: undefined;
   MathRushGame: undefined;
   SpatialMemoryGame: undefined;
   StroopTestGame: undefined;
-  FindTheOddGame: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -49,7 +42,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function AppNavigator() {
   const { user } = useAuth();
 
-  // Auto-sync on app start (process upload queue)
   useEffect(() => {
     const autoSync = async () => {
       if (user) {
@@ -61,7 +53,6 @@ function AppNavigator() {
         }
       }
     };
-
     autoSync();
   }, [user]);
 
@@ -69,12 +60,7 @@ function AppNavigator() {
     <View style={styles.webContainer}>
       <View style={styles.appContainer}>
         <NavigationContainer>
-          <Stack.Navigator
-            initialRouteName="Menu"
-            screenOptions={{
-              headerShown: false,
-            }}
-          >
+          <Stack.Navigator initialRouteName="Menu" screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Menu" component={MenuScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
@@ -85,11 +71,9 @@ function AppNavigator() {
             <Stack.Screen name="Friends" component={FriendsScreen} />
             <Stack.Screen name="FriendComparison" component={FriendComparisonScreen} />
             <Stack.Screen name="FlipMatchGame" component={FlipMatchGame} />
-            <Stack.Screen name="SequenceGame" component={SequenceGame} />
             <Stack.Screen name="MathRushGame" component={MathRushGame} />
             <Stack.Screen name="SpatialMemoryGame" component={SpatialMemoryGame} />
             <Stack.Screen name="StroopTestGame" component={StroopTestGame} />
-            <Stack.Screen name="FindTheOddGame" component={FindTheOddGame} />
           </Stack.Navigator>
         </NavigationContainer>
       </View>
@@ -101,28 +85,19 @@ const styles = StyleSheet.create({
   webContainer: {
     flex: 1,
     backgroundColor: '#0f172a',
-    ...Platform.select({
-      web: {
-        alignItems: 'center',
-        justifyContent: 'center',
-      },
-      default: {},
-    }),
+    ...Platform.select({ web: { alignItems: 'center', justifyContent: 'center' } }),
   },
   appContainer: {
     ...Platform.select({
       web: {
-        width: 430, // iPhone 14 Pro Max 너비로 고정
-        height: '100vh', // 전체 뷰포트 높이
-        maxHeight: 932, // iPhone 14 Pro Max 최대 높이
+        width: 430,
+        height: '100vh',
+        maxHeight: 932,
         borderRadius: 20,
-        overflow: 'hidden', // 컨테이너 자체는 overflow hidden
+        overflow: 'hidden',
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
       },
-      default: {
-        flex: 1,
-        width: '100%',
-      },
+      default: { flex: 1, width: '100%' },
     }),
   },
 });

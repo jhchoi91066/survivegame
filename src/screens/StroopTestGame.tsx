@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,7 +6,7 @@ import { RootStackParamList } from '../../App';
 import { useStroopStore } from '../game/stroop/store';
 import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
-import { updateStroopRecord } from '../utils/statsManager';
+import { updateStroopRecord, loadGameRecord } from '../utils/statsManager';
 import { useTheme } from '../contexts/ThemeContext';
 
 type StroopGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StroopTestGame'>;
@@ -15,18 +15,11 @@ const StroopTestGame: React.FC = () => {
   const navigation = useNavigation<StroopGameNavigationProp>();
   const { theme } = useTheme();
   const {
-    currentProblem,
-    score,
-    timeRemaining,
-    gameStatus,
-    lives,
-    answerProblem,
-    decrementTime,
-    startGame,
-    resetGame,
+    currentProblem, score, timeRemaining, gameStatus, lives, answerProblem, decrementTime, startGame, resetGame,
   } = useStroopStore();
 
   const { updateBestRecord } = useGameStore();
+  const [isNewRecord, setIsNewRecord] = useState(false);
 
   useEffect(() => {
     if (gameStatus === 'playing') {
@@ -43,6 +36,12 @@ const StroopTestGame: React.FC = () => {
 
   const handleGameFinish = async () => {
     hapticPatterns.gameOver();
+
+    const oldRecord = await loadGameRecord('stroop');
+    if (!oldRecord || !oldRecord.highScore || score > oldRecord.highScore) {
+      setIsNewRecord(true);
+    }
+
     const playTime = 30 - timeRemaining;
     await updateStroopRecord(score, playTime);
     updateBestRecord('stroop', score);
@@ -56,11 +55,13 @@ const StroopTestGame: React.FC = () => {
   };
 
   const handleStart = () => {
+    setIsNewRecord(false);
     hapticPatterns.buttonPress();
     startGame();
   };
 
   const handleRestart = () => {
+    setIsNewRecord(false);
     hapticPatterns.buttonPress();
     resetGame();
     startGame();
@@ -77,9 +78,7 @@ const StroopTestGame: React.FC = () => {
     <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
-          <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← 메뉴</Text>
-          </Pressable>
+          <Pressable onPress={handleBackToMenu} style={styles.backButton}><Text style={styles.backButtonText}>← 메뉴</Text></Pressable>
           <Text style={styles.title}>🎨 Stroop Test</Text>
           <View style={{ width: 60 }} />
         </View>
@@ -88,13 +87,8 @@ const StroopTestGame: React.FC = () => {
           <View style={styles.startContainer}>
             <Text style={styles.startEmoji}>🎨</Text>
             <Text style={styles.startTitle}>Stroop Test</Text>
-            <Text style={styles.startDescription}>
-              글자의 의미가 아닌, 글자의 색깔을 맞추세요!{`\n`}
-              3번 틀리면 게임이 종료됩니다.
-            </Text>
-            <Pressable style={styles.startButton} onPress={handleStart}>
-              <Text style={styles.startButtonText}>시작하기</Text>
-            </Pressable>
+            <Text style={styles.startDescription}>글자의 의미가 아닌, 글자의 색깔을 맞추세요!{`\n`}3번 틀리면 게임이 종료됩니다.</Text>
+            <Pressable style={styles.startButton} onPress={handleStart}><Text style={styles.startButtonText}>시작하기</Text></Pressable>
           </View>
         )}
 
@@ -105,18 +99,10 @@ const StroopTestGame: React.FC = () => {
               <View style={styles.statItem}><Text style={styles.statLabel}>시간</Text><Text style={[styles.statValue, { color: timeRemaining <= 5 ? theme.colors.error : theme.colors.text }]}>{timeRemaining}</Text></View>
               <View style={styles.statItem}><Text style={styles.statLabel}>생명</Text><Text style={styles.statValue}>{'❤️'.repeat(lives)}</Text></View>
             </View>
-
-            <View style={styles.questionContainer}>
-              <Text style={[styles.question, { color: currentProblem.color }]}>
-                {currentProblem.text}
-              </Text>
-            </View>
-
+            <View style={styles.questionContainer}><Text style={[styles.question, { color: currentProblem.color }]}>{currentProblem.text}</Text></View>
             <View style={styles.optionsContainer}>
               {currentProblem.options.map((option) => (
-                <Pressable key={option} style={styles.optionButton} onPress={() => handleAnswer(option)}>
-                  <Text style={styles.optionText}>{option}</Text>
-                </Pressable>
+                <Pressable key={option} style={styles.optionButton} onPress={() => handleAnswer(option)}><Text style={styles.optionText}>{option}</Text></Pressable>
               ))}
             </View>
           </>
@@ -127,6 +113,7 @@ const StroopTestGame: React.FC = () => {
             <View style={styles.modalContent}>
               <Text style={styles.victoryEmoji}>🎯</Text>
               <Text style={styles.modalTitle}>게임 종료!</Text>
+              {isNewRecord && <Text style={styles.newRecord}>🏆 신기록 달성!</Text>}
               <Text style={styles.finalScore}>최종 점수: {score}</Text>
               <Pressable style={styles.nextButton} onPress={handleRestart}><Text style={styles.nextButtonText}>다시 하기</Text></Pressable>
               <Pressable style={styles.menuButton} onPress={handleBackToMenu}><Text style={styles.menuButtonText}>메뉴로</Text></Pressable>
@@ -164,6 +151,7 @@ const getStyles = (theme) => StyleSheet.create({
   modalTitle: { fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginBottom: 16 },
   victoryEmoji: { fontSize: 64, marginBottom: 16 },
   finalScore: { fontSize: 24, color: theme.colors.success, marginBottom: 24, fontWeight: 'bold' },
+  newRecord: { fontSize: 20, fontWeight: 'bold', color: theme.colors.primary, marginBottom: 16 },
   nextButton: { width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, borderRadius: 12, marginBottom: 8, alignItems: 'center' },
   nextButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   menuButton: { width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, borderRadius: 12, alignItems: 'center' },

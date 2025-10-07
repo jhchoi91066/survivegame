@@ -6,12 +6,7 @@ import { hapticPatterns } from '../utils/haptics';
 import { GameType, GameInfo } from '../game/shared/types';
 import { loadGameRecord } from '../utils/statsManager';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withDelay,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Tutorial } from '../components/shared/Tutorial';
@@ -21,9 +16,7 @@ import Toast from '../components/shared/Toast';
 
 type MenuScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
-interface MenuScreenProps {
-  navigation: MenuScreenNavigationProp;
-}
+interface MenuScreenProps { navigation: MenuScreenNavigationProp; }
 
 const { width: windowWidth } = Dimensions.get('window');
 const width = Platform.OS === 'web' ? 430 : windowWidth;
@@ -32,26 +25,10 @@ const isSmallScreen = width < 375;
 const FIRST_VISIT_KEY = '@brain_games_first_visit';
 
 const tutorialSteps = [
-  {
-    title: '환영합니다! 🎉',
-    description: '6가지 두뇌 게임으로 당신의 기억력, 집중력, 계산 능력을 테스트하세요!',
-    emoji: '🎮',
-  },
-  {
-    title: '게임 선택 ⚡',
-    description: '원하는 게임을 탭하여 바로 시작하세요. 각 게임은 고유한 도전 과제를 제공합니다.',
-    emoji: '🎯',
-  },
-  {
-    title: '기록 확인 📊',
-    description: '통계 탭에서 당신의 성장을 확인하고 최고 기록을 경신하세요!',
-    emoji: '📈',
-  },
-  {
-    title: '준비 완료! 🎮',
-    description: '지금 바로 첫 게임을 시작해보세요. 즐거운 시간 되세요!',
-    emoji: '🚀',
-  },
+  { title: '환영합니다! 🎉', description: '4가지 두뇌 게임으로 당신의 기억력, 집중력, 계산 능력을 테스트하세요!', emoji: '🎮' },
+  { title: '게임 선택 ⚡', description: '원하는 게임을 탭하여 바로 시작하세요. 각 게임은 고유한 도전 과제를 제공합니다.', emoji: '🎯' },
+  { title: '기록 확인 📊', description: '통계 탭에서 당신의 성장을 확인하고 최고 기록을 경신하세요!', emoji: '📈' },
+  { title: '준비 완료! 🎮', description: '지금 바로 첫 게임을 시작해보세요. 즐거운 시간 되세요!', emoji: '🚀' },
 ];
 
 const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
@@ -64,9 +41,7 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
   const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadGameData();
-    });
+    const unsubscribe = navigation.addListener('focus', () => { loadGameData(); });
     checkFirstVisit();
     return unsubscribe;
   }, [navigation]);
@@ -74,12 +49,8 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
   const checkFirstVisit = async () => {
     try {
       const visited = await AsyncStorage.getItem(FIRST_VISIT_KEY);
-      if (!visited) {
-        setShowTutorial(true);
-      }
-    } catch (error) {
-      console.error('Failed to check first visit:', error);
-    }
+      if (!visited) setShowTutorial(true);
+    } catch (error) { console.error('Failed to check first visit:', error); }
   };
 
   const handleTutorialComplete = async () => {
@@ -87,30 +58,23 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
       await AsyncStorage.setItem(FIRST_VISIT_KEY, 'true');
       setShowTutorial(false);
       hapticPatterns.buttonPress();
-    } catch (error) {
-      console.error('Failed to save first visit:', error);
-    }
+    } catch (error) { console.error('Failed to save first visit:', error); }
   };
 
   const loadGameData = async () => {
     const records = await Promise.all([
       loadGameRecord('flip_match'),
-      loadGameRecord('sequence'),
       loadGameRecord('math_rush'),
       loadGameRecord('spatial_memory'),
       loadGameRecord('stroop'),
-      loadGameRecord('find_the_odd'),
     ]);
 
     const games: GameInfo[] = [
       { id: 'flip_match', name: 'Flip & Match', emoji: '🎴', description: '카드 뒤집기', bestRecordLabel: 'Best', bestRecordValue: records[0]?.bestTime ? `${records[0].bestTime}초` : '-' },
-      { id: 'sequence', name: 'Sequence', emoji: '🔢', description: '순서 맞추기', bestRecordLabel: 'Best', bestRecordValue: records[1]?.highestLevel ? `Lv.${records[1].highestLevel}` : '-' },
-      { id: 'math_rush', name: 'Math Rush', emoji: '➕', description: '빠른 계산', bestRecordLabel: 'Best', bestRecordValue: records[2]?.highScore ? `${records[2].highScore}점` : '-' },
-      { id: 'spatial_memory', name: 'Spatial Memory', emoji: '🧠', description: '공간 기억', bestRecordLabel: 'Best', bestRecordValue: records[3]?.highestLevel ? `Lv.${records[3].highestLevel}` : '-' },
-      { id: 'stroop', name: 'Stroop Test', emoji: '🎨', description: '색상-단어', bestRecordLabel: 'Best', bestRecordValue: records[4]?.highScore ? `${records[4].highScore}점` : '-' },
-      { id: 'find_the_odd', name: 'Find the Odd', emoji: '👀', description: '다른 하나 찾기', bestRecordLabel: 'Best', bestRecordValue: records[5]?.highScore ? `${records[5].highScore}점` : '-' },
+      { id: 'math_rush', name: 'Math Rush', emoji: '➕', description: '빠른 계산', bestRecordLabel: 'Best', bestRecordValue: records[1]?.highScore ? `${records[1].highScore}점` : '-' },
+      { id: 'spatial_memory', name: 'Spatial Memory', emoji: '🧠', description: '공간 기억', bestRecordLabel: 'Best', bestRecordValue: records[2]?.highestLevel ? `Lv.${records[2].highestLevel}` : '-' },
+      { id: 'stroop', name: 'Stroop Test', emoji: '🎨', description: '색상-단어', bestRecordLabel: 'Best', bestRecordValue: records[3]?.highScore ? `${records[3].highScore}점` : '-' },
     ];
-
     setGameInfos(games);
   };
 
@@ -118,11 +82,9 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
     hapticPatterns.buttonPress();
     switch (gameId) {
       case 'flip_match': navigation.navigate('FlipMatchGame'); break;
-      case 'sequence': navigation.navigate('SequenceGame'); break;
       case 'math_rush': navigation.navigate('MathRushGame'); break;
       case 'spatial_memory': navigation.navigate('SpatialMemoryGame'); break;
       case 'stroop': navigation.navigate('StroopTestGame'); break;
-      case 'find_the_odd': navigation.navigate('FindTheOddGame'); break;
     }
   };
 
@@ -151,11 +113,9 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
   const getGradientColors = (gameId: GameType): [string, string] => {
     switch (gameId) {
       case 'flip_match': return theme.gradients.flipMatch;
-      case 'sequence': return theme.gradients.sequence;
       case 'math_rush': return theme.gradients.mathRush;
       case 'spatial_memory': return ['#8b5cf6', '#6366f1'];
       case 'stroop': return ['#ec4899', '#d946ef'];
-      case 'find_the_odd': return ['#a78bfa', '#7c3aed'];
       default: return theme.gradients.flipMatch;
     }
   };
@@ -227,7 +187,7 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
             </Pressable>
           </View>
 
-          <Text style={styles.version}>v2.1.0</Text>
+          <Text style={styles.version}>v2.2.0</Text>
         </ScrollView>
       </SafeAreaView>
       <Toast message={toastMessage} visible={showToast} onHide={() => setShowToast(false)} duration={3000} />
@@ -235,12 +195,7 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
   );
 };
 
-interface GameCardProps {
-  game: GameInfo;
-  onPress: () => void;
-  gradientColors: [string, string];
-  index: number;
-}
+interface GameCardProps { game: GameInfo; onPress: () => void; gradientColors: [string, string]; index: number; }
 
 const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, index }) => {
   const { theme } = useTheme();
@@ -288,16 +243,8 @@ const getStyles = (theme) => StyleSheet.create({
   iconButton: { width: 40, height: 40, borderRadius: 12, overflow: 'hidden' },
   iconGradient: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   iconText: { fontSize: 18 },
-  gamesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  gameCardWrapper: {
-    width: (width - 48) / 2, // 16px padding on each side, 16px gap
-    marginBottom: 16,
-  },
+  gamesContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 16 },
+  gameCardWrapper: { width: (width - 48) / 2, marginBottom: 16 },
   gameCard: { borderRadius: 20, overflow: 'hidden', shadowColor: theme.colors.shadow, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 10 },
   gameCardPressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
   gameCardGradient: { padding: 12, alignItems: 'center', minHeight: 165, justifyContent: 'space-between' },
