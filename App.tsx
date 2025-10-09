@@ -106,12 +106,11 @@ const styles = StyleSheet.create({
   appContainer: {
     ...Platform.select({
       web: {
-        width: 430, // iPhone 14 Pro Max 너비로 고정
-        height: '100vh', // 전체 뷰포트 높이
-        maxHeight: 932, // iPhone 14 Pro Max 최대 높이
-        borderRadius: 20,
-        overflow: 'hidden', // 컨테이너 자체는 overflow hidden
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+        width: '100vw',
+        height: '100vh',
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        overflow: 'auto',
       },
       default: {
         flex: 1,
