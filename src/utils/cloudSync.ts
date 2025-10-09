@@ -3,16 +3,6 @@ import { User } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { GameType } from '../game/shared/types';
 
-export interface GameRecord {
-  game_type: GameType;
-  score: number;
-  level?: number;
-  time_seconds?: number;
-  moves?: number;
-  difficulty?: string;
-  played_at: string;
-}
-
 export interface CloudSyncResult {
   success: boolean;
   error?: string;
@@ -29,9 +19,23 @@ async function getCurrentUser(): Promise<User | null> {
 }
 
 /**
- * Upload a single game record to Supabase
+ * Upload/sync game statistics to cloud
+ * This upserts (inserts or updates) the game_records table
  */
-export async function uploadGameRecord(record: GameRecord): Promise<CloudSyncResult> {
+export async function uploadGameStats(
+  gameType: GameType,
+  stats: {
+    bestTime?: number;
+    highestLevel?: number;
+    highScore?: number;
+    highestCombo?: number;
+    bestMoves?: number;
+    highestNumber?: number;
+    totalPlays: number;
+    totalPlayTime: number;
+    difficulty?: string;
+  }
+): Promise<CloudSyncResult> {
   try {
     const user = await getCurrentUser();
 
@@ -39,89 +43,35 @@ export async function uploadGameRecord(record: GameRecord): Promise<CloudSyncRes
       return { success: false, error: 'Not authenticated' };
     }
 
+    // Upsert to game_records (update if exists, insert if not)
     const { error } = await supabase
       .from('game_records')
-      .insert({
+      .upsert({
         user_id: user.id,
-        ...record
+        game_type: gameType,
+        difficulty: stats.difficulty || null,
+        best_time: stats.bestTime || null,
+        highest_level: stats.highestLevel || null,
+        high_score: stats.highScore || null,
+        highest_combo: stats.highestCombo || null,
+        best_moves: stats.bestMoves || null,
+        highest_number: stats.highestNumber || null,
+        total_plays: stats.totalPlays,
+        total_play_time: stats.totalPlayTime,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,game_type,difficulty',
       });
 
     if (error) {
-      console.error('Upload error:', error);
+      console.error('Upload stats error:', error);
       return { success: false, error: error.message };
     }
 
-    // Update leaderboard
-    await updateLeaderboard(user.id, record);
-
     return { success: true, recordsUploaded: 1 };
   } catch (error) {
-    console.error('Upload exception:', error);
+    console.error('Upload stats exception:', error);
     return { success: false, error: String(error) };
-  }
-}
-
-/**
- * Update leaderboard with new record
- */
-async function updateLeaderboard(userId: string, record: GameRecord): Promise<void> {
-  try {
-    // Get current leaderboard entry
-    const { data: existing } = await supabase
-      .from('leaderboards')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('game_type', record.game_type)
-      .eq('difficulty', record.difficulty || 'normal')
-      .single();
-
-    const shouldUpdate = !existing || isBetterScore(record, existing);
-
-    if (shouldUpdate) {
-      await supabase
-        .from('leaderboards')
-        .upsert({
-          user_id: userId,
-          game_type: record.game_type,
-          difficulty: record.difficulty || 'normal',
-          best_score: record.score,
-          best_level: record.level,
-          best_time_seconds: record.time_seconds,
-          best_moves: record.moves,
-          last_updated: new Date().toISOString()
-        });
-    }
-  } catch (error) {
-    console.error('Leaderboard update error:', error);
-  }
-}
-
-/**
- * Check if new record is better than existing
- */
-function isBetterScore(newRecord: GameRecord, existing: any): boolean {
-  switch (newRecord.game_type) {
-    case 'flip_match':
-      // Lower time is better
-      return !existing.best_time_seconds ||
-             !!(newRecord.time_seconds && newRecord.time_seconds < existing.best_time_seconds);
-
-    case 'sequence':
-      // Higher level is better
-      return !existing.best_level ||
-             !!(newRecord.level && newRecord.level > existing.best_level);
-
-    case 'math_rush':
-      // Higher score is better
-      return !existing.best_score || newRecord.score > existing.best_score;
-
-    case 'merge_puzzle':
-      // Lower moves is better
-      return !existing.best_moves ||
-             !!(newRecord.moves && newRecord.moves < existing.best_moves);
-
-    default:
-      return false;
   }
 }
 
@@ -140,8 +90,7 @@ export async function downloadGameRecords(): Promise<CloudSyncResult> {
       .from('game_records')
       .select('*')
       .eq('user_id', user.id)
-      .order('played_at', { ascending: false })
-      .limit(1000);
+      .order('updated_at', { ascending: false });
 
     if (error) {
       console.error('Download error:', error);
@@ -159,9 +108,9 @@ export async function downloadGameRecords(): Promise<CloudSyncResult> {
 }
 
 /**
- * Get best records from cloud for specific game
+ * Get cloud record for specific game type
  */
-export async function getBestCloudRecord(
+export async function getCloudRecord(
   gameType: GameType,
   difficulty?: string
 ): Promise<any | null> {
@@ -172,23 +121,30 @@ export async function getBestCloudRecord(
       return null;
     }
 
-    const { data } = await supabase
-      .from('leaderboards')
+    let query = supabase
+      .from('game_records')
       .select('*')
       .eq('user_id', user.id)
-      .eq('game_type', gameType)
-      .eq('difficulty', difficulty || 'normal')
-      .single();
+      .eq('game_type', gameType);
+
+    if (difficulty) {
+      query = query.eq('difficulty', difficulty);
+    } else {
+      query = query.is('difficulty', null);
+    }
+
+    const { data } = await query.single();
 
     return data;
   } catch (error) {
-    console.error('Get best record error:', error);
+    console.error('Get cloud record error:', error);
     return null;
   }
 }
 
 /**
- * Sync local records with cloud (merge strategy)
+ * Sync local game stats with cloud
+ * This merges local and cloud records, keeping the best scores
  */
 export async function syncGameRecords(): Promise<CloudSyncResult> {
   try {
@@ -198,30 +154,47 @@ export async function syncGameRecords(): Promise<CloudSyncResult> {
       return { success: false, error: 'Not authenticated' };
     }
 
-    // Download cloud records
+    // Download cloud records first
     const downloadResult = await downloadGameRecords();
     if (!downloadResult.success) {
       return downloadResult;
     }
 
-    // Get local records from AsyncStorage
-    const localRecordsStr = await AsyncStorage.getItem('game_records');
-    const localRecords = localRecordsStr ? JSON.parse(localRecordsStr) : [];
-
-    // Upload any local records not in cloud
+    // Get local game stats from statsManager's storage
+    const gameTypes: GameType[] = ['flip_match', 'spatial_memory', 'math_rush', 'stroop'];
     let uploadedCount = 0;
-    for (const record of localRecords) {
-      // Simple check: upload all local records (Supabase will handle duplicates)
-      const uploadResult = await uploadGameRecord(record);
-      if (uploadResult.success) {
-        uploadedCount++;
+
+    for (const gameType of gameTypes) {
+      try {
+        // Load local stats from AsyncStorage (where statsManager stores them)
+        const localStatsStr = await AsyncStorage.getItem(`game_stats_${gameType}`);
+        if (!localStatsStr) continue;
+
+        const localStats = JSON.parse(localStatsStr);
+
+        // Get cloud stats for comparison
+        const cloudStats = await getCloudRecord(gameType, localStats.difficulty);
+
+        // Merge: keep best scores between local and cloud
+        const mergedStats = mergeStats(localStats, cloudStats, gameType);
+
+        // Upload merged stats
+        const uploadResult = await uploadGameStats(gameType, mergedStats);
+        if (uploadResult.success) {
+          uploadedCount++;
+
+          // Update local storage with merged stats
+          await AsyncStorage.setItem(`game_stats_${gameType}`, JSON.stringify(mergedStats));
+        }
+      } catch (error) {
+        console.error(`Failed to sync ${gameType}:`, error);
       }
     }
 
     return {
       success: true,
       recordsUploaded: uploadedCount,
-      recordsDownloaded: downloadResult.recordsDownloaded
+      recordsDownloaded: downloadResult.recordsDownloaded,
     };
   } catch (error) {
     console.error('Sync exception:', error);
@@ -230,108 +203,58 @@ export async function syncGameRecords(): Promise<CloudSyncResult> {
 }
 
 /**
- * Resolve conflicts between local and cloud records
- * Strategy: Keep the best score
+ * Merge local and cloud stats, keeping the best values
  */
-export async function resolveConflicts(
-  localRecord: any,
-  cloudRecord: any,
-  gameType: GameType
-): Promise<any> {
+function mergeStats(local: any, cloud: any, gameType: GameType): any {
+  if (!cloud) return local;
+  if (!local) return cloud;
+
+  const merged = { ...local };
+
   switch (gameType) {
     case 'flip_match':
-      // Keep lower time
-      return localRecord.time < cloudRecord.best_time_seconds ? localRecord : cloudRecord;
+      // Keep lower (better) time
+      if (cloud.best_time !== null && (merged.bestTime === undefined || cloud.best_time < merged.bestTime)) {
+        merged.bestTime = cloud.best_time;
+      }
+      // Keep lower (better) moves
+      if (cloud.best_moves !== null && (merged.bestMoves === undefined || cloud.best_moves < merged.bestMoves)) {
+        merged.bestMoves = cloud.best_moves;
+      }
+      break;
 
-    case 'sequence':
-      // Keep higher level
-      return localRecord.level > cloudRecord.best_level ? localRecord : cloudRecord;
+    case 'spatial_memory':
+      // Keep higher (better) level
+      if (cloud.highest_level !== null && (merged.highestLevel === undefined || cloud.highest_level > merged.highestLevel)) {
+        merged.highestLevel = cloud.highest_level;
+      }
+      break;
 
     case 'math_rush':
-      // Keep higher score
-      return localRecord.score > cloudRecord.best_score ? localRecord : cloudRecord;
-
-    case 'merge_puzzle':
-      // Keep lower moves
-      return localRecord.moves < cloudRecord.best_moves ? localRecord : cloudRecord;
-
-    default:
-      return cloudRecord;
-  }
-}
-
-/**
- * Queue record for upload when offline
- */
-export async function queueRecordForUpload(record: GameRecord): Promise<void> {
-  try {
-    const queueStr = await AsyncStorage.getItem('upload_queue');
-    const queue = queueStr ? JSON.parse(queueStr) : [];
-
-    queue.push({
-      ...record,
-      queued_at: new Date().toISOString()
-    });
-
-    await AsyncStorage.setItem('upload_queue', JSON.stringify(queue));
-  } catch (error) {
-    console.error('Queue error:', error);
-  }
-}
-
-/**
- * Process upload queue when online
- */
-export async function processUploadQueue(): Promise<CloudSyncResult> {
-  try {
-    const queueStr = await AsyncStorage.getItem('upload_queue');
-    if (!queueStr) {
-      return { success: true, recordsUploaded: 0 };
-    }
-
-    const queue = JSON.parse(queueStr);
-    let uploadedCount = 0;
-
-    for (const record of queue) {
-      const result = await uploadGameRecord(record);
-      if (result.success) {
-        uploadedCount++;
+    case 'stroop':
+      // Keep higher (better) score
+      if (cloud.high_score !== null && (merged.highScore === undefined || cloud.high_score > merged.highScore)) {
+        merged.highScore = cloud.high_score;
       }
-    }
-
-    // Clear queue after processing
-    await AsyncStorage.removeItem('upload_queue');
-
-    return { success: true, recordsUploaded: uploadedCount };
-  } catch (error) {
-    console.error('Process queue error:', error);
-    return { success: false, error: String(error) };
+      // Keep higher combo
+      if (cloud.highest_combo !== null && (merged.highestCombo === undefined || cloud.highest_combo > merged.highestCombo)) {
+        merged.highestCombo = cloud.highest_combo;
+      }
+      break;
   }
+
+  // Sum total plays and play time
+  merged.totalPlays = (local.totalPlays || 0) + (cloud.total_plays || 0);
+  merged.totalPlayTime = (local.totalPlayTime || 0) + (cloud.total_play_time || 0);
+
+  return merged;
 }
 
 /**
  * Check if user is online
  */
 export function isOnline(): boolean {
-  // In React Native, you'd use NetInfo
-  // For now, assume online
+  // For web, always assume online
+  // For mobile, you'd use NetInfo
   return true;
-}
-
-/**
- * Sync wrapper that handles online/offline
- */
-export async function smartSync(record: GameRecord): Promise<void> {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    // Not logged in, just save locally
-    return;
-  }
-
-  if (isOnline()) {
-    await uploadGameRecord(record);
-  } else {
-    await queueRecordForUpload(record);
-  }
 }

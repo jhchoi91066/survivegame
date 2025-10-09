@@ -12,32 +12,31 @@ const ACHIEVEMENT_STATS_KEY = '@achievement_stats';
 
 // 업적 통계
 export interface AchievementStats {
-  levelsCompleted: number[];
-  totalStars: number;
-  synergiesDiscovered: number;
-  perfectClears: number;
-  chainReactions: number;
-  speedClears: number;
-  resourceEfficientClears: number;
-  noDamageClears: number;
-  specificMethodUsage: { [key: string]: number };
+  gamesPlayed: number;
+  gameScores: { [gameType: string]: number };
+  totalScore: number;
+  speedPlays: number;
+  difficultiesPlayed: { [gameType: string]: string[] };
+  gamesPlayedList: string[];
+  streakDays: number;
+  lastPlayDate?: string;
   // 온라인 통계
   friendCount: number;
+  friendWins: number;
   leaderboardRanks: { [gameType: string]: number };
 }
 
 // 초기 통계
 const DEFAULT_STATS: AchievementStats = {
-  levelsCompleted: [],
-  totalStars: 0,
-  synergiesDiscovered: 0,
-  perfectClears: 0,
-  chainReactions: 0,
-  speedClears: 0,
-  resourceEfficientClears: 0,
-  noDamageClears: 0,
-  specificMethodUsage: {},
+  gamesPlayed: 0,
+  gameScores: {},
+  totalScore: 0,
+  speedPlays: 0,
+  difficultiesPlayed: {},
+  gamesPlayedList: [],
+  streakDays: 0,
   friendCount: 0,
+  friendWins: 0,
   leaderboardRanks: {},
 };
 
@@ -79,7 +78,16 @@ export const loadAchievementStats = async (): Promise<AchievementStats> => {
   try {
     const data = await AsyncStorage.getItem(ACHIEVEMENT_STATS_KEY);
     if (data) {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      // Ensure all required fields exist
+      return {
+        ...DEFAULT_STATS,
+        ...parsed,
+        gameScores: parsed.gameScores || {},
+        difficultiesPlayed: parsed.difficultiesPlayed || {},
+        gamesPlayedList: parsed.gamesPlayedList || [],
+        leaderboardRanks: parsed.leaderboardRanks || {},
+      };
     }
     return DEFAULT_STATS;
   } catch (error) {
@@ -97,45 +105,89 @@ export const saveAchievementStats = async (stats: AchievementStats): Promise<voi
   }
 };
 
-// 레벨 완료 시 통계 업데이트
-export const updateStatsOnLevelComplete = async (
-  levelId: number,
-  stars: number,
-  timeUsed: number,
-  resourcesUsed: number,
-  survivorsUsed: string[],
-  chainReactionCount: number
+// 날짜 차이 계산 (일 단위)
+const getDaysDifference = (date1: string, date2: string): number => {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  d1.setHours(0, 0, 0, 0);
+  d2.setHours(0, 0, 0, 0);
+  const diffTime = Math.abs(d2.getTime() - d1.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+// 게임 플레이 시 통계 업데이트
+export const updateStatsOnGamePlayed = async (
+  gameType: string,
+  score: number,
+  timeSeconds: number,
+  difficulty?: string
 ): Promise<Achievement[]> => {
   const stats = await loadAchievementStats();
   const previousProgress = await loadAchievementProgress();
 
-  // 통계 업데이트
-  if (!stats.levelsCompleted.includes(levelId)) {
-    stats.levelsCompleted.push(levelId);
+  // 게임 플레이 횟수 증가
+  stats.gamesPlayed += 1;
+
+  // 게임별 최고 점수 업데이트
+  if (!stats.gameScores[gameType] || score > stats.gameScores[gameType]) {
+    stats.gameScores[gameType] = score;
   }
 
-  stats.totalStars += stars;
+  // 총점 업데이트
+  stats.totalScore += score;
 
-  if (stars === 3) {
-    stats.perfectClears += 1;
+  // 빠른 플레이 체크 (60초 이내)
+  if (timeSeconds <= 60) {
+    stats.speedPlays += 1;
   }
 
-  if (timeUsed <= 30) {
-    stats.speedClears += 1;
+  // 난이도 플레이 기록
+  if (difficulty) {
+    if (!stats.difficultiesPlayed[gameType]) {
+      stats.difficultiesPlayed[gameType] = [];
+    }
+    if (!stats.difficultiesPlayed[gameType].includes(difficulty)) {
+      stats.difficultiesPlayed[gameType].push(difficulty);
+    }
   }
 
-  if (resourcesUsed === 0) {
-    stats.resourceEfficientClears += 1;
+  // 게임 타입 플레이 기록
+  if (!stats.gamesPlayedList.includes(gameType)) {
+    stats.gamesPlayedList.push(gameType);
   }
 
-  stats.chainReactions += chainReactionCount;
+  // 연속 플레이 일수 업데이트
+  const today = new Date().toISOString().split('T')[0];
+  if (stats.lastPlayDate) {
+    const daysDiff = getDaysDifference(stats.lastPlayDate, today);
+    if (daysDiff === 1) {
+      // 연속 플레이
+      stats.streakDays += 1;
+    } else if (daysDiff > 1) {
+      // 연속 끊김
+      stats.streakDays = 1;
+    }
+    // daysDiff === 0이면 오늘 이미 플레이했으므로 유지
+  } else {
+    // 첫 플레이
+    stats.streakDays = 1;
+  }
+  stats.lastPlayDate = today;
 
   // 통계 저장
   await saveAchievementStats(stats);
 
   // 업적 진행도 재계산
   const updatedProgress: AchievementProgress[] = ACHIEVEMENTS.map(achievement => {
-    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, stats);
+    const statsWithSets = {
+      ...stats,
+      difficultiesPlayed: stats.difficultiesPlayed ? Object.keys(stats.difficultiesPlayed).reduce((acc, key) => {
+        acc[key] = new Set(stats.difficultiesPlayed[key]);
+        return acc;
+      }, {} as { [key: string]: Set<string> }) : {},
+      gamesPlayedSet: new Set(stats.gamesPlayedList || []),
+    };
+    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, statsWithSets);
 
     return {
       achievementId: achievement.id,
@@ -150,61 +202,6 @@ export const updateStatsOnLevelComplete = async (
   await saveAchievementProgress(updatedProgress);
 
   // 새로 해금된 업적 반환
-  return getNewlyUnlockedAchievements(previousProgress, updatedProgress);
-};
-
-// 시너지 발견 시 통계 업데이트
-export const updateStatsOnSynergyDiscovered = async (): Promise<Achievement[]> => {
-  const stats = await loadAchievementStats();
-  const previousProgress = await loadAchievementProgress();
-
-  stats.synergiesDiscovered += 1;
-
-  await saveAchievementStats(stats);
-
-  const updatedProgress: AchievementProgress[] = ACHIEVEMENTS.map(achievement => {
-    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, stats);
-
-    return {
-      achievementId: achievement.id,
-      unlocked,
-      unlockedAt: unlocked ? Date.now() : undefined,
-      progress,
-      currentCount,
-    };
-  });
-
-  await saveAchievementProgress(updatedProgress);
-
-  return getNewlyUnlockedAchievements(previousProgress, updatedProgress);
-};
-
-// 특정 방법 사용 시 통계 업데이트
-export const updateStatsOnMethodUsed = async (methodKey: string): Promise<Achievement[]> => {
-  const stats = await loadAchievementStats();
-  const previousProgress = await loadAchievementProgress();
-
-  if (!stats.specificMethodUsage[methodKey]) {
-    stats.specificMethodUsage[methodKey] = 0;
-  }
-  stats.specificMethodUsage[methodKey] += 1;
-
-  await saveAchievementStats(stats);
-
-  const updatedProgress: AchievementProgress[] = ACHIEVEMENTS.map(achievement => {
-    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, stats);
-
-    return {
-      achievementId: achievement.id,
-      unlocked,
-      unlockedAt: unlocked ? Date.now() : undefined,
-      progress,
-      currentCount,
-    };
-  });
-
-  await saveAchievementProgress(updatedProgress);
-
   return getNewlyUnlockedAchievements(previousProgress, updatedProgress);
 };
 
@@ -224,7 +221,48 @@ export const updateFriendCount = async (friendCount: number): Promise<Achievemen
   await saveAchievementStats(stats);
 
   const updatedProgress: AchievementProgress[] = ACHIEVEMENTS.map(achievement => {
-    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, stats);
+    const statsWithSets = {
+      ...stats,
+      difficultiesPlayed: stats.difficultiesPlayed ? Object.keys(stats.difficultiesPlayed).reduce((acc, key) => {
+        acc[key] = new Set(stats.difficultiesPlayed[key]);
+        return acc;
+      }, {} as { [key: string]: Set<string> }) : {},
+      gamesPlayedSet: new Set(stats.gamesPlayedList || []),
+    };
+    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, statsWithSets);
+
+    return {
+      achievementId: achievement.id,
+      unlocked,
+      unlockedAt: unlocked ? Date.now() : undefined,
+      progress,
+      currentCount,
+    };
+  });
+
+  await saveAchievementProgress(updatedProgress);
+
+  return getNewlyUnlockedAchievements(previousProgress, updatedProgress);
+};
+
+// 친구 승리 업데이트 (온라인)
+export const updateFriendWins = async (winsToAdd: number = 1): Promise<Achievement[]> => {
+  const stats = await loadAchievementStats();
+  const previousProgress = await loadAchievementProgress();
+
+  stats.friendWins += winsToAdd;
+  await saveAchievementStats(stats);
+
+  const updatedProgress: AchievementProgress[] = ACHIEVEMENTS.map(achievement => {
+    const statsWithSets = {
+      ...stats,
+      difficultiesPlayed: stats.difficultiesPlayed ? Object.keys(stats.difficultiesPlayed).reduce((acc, key) => {
+        acc[key] = new Set(stats.difficultiesPlayed[key]);
+        return acc;
+      }, {} as { [key: string]: Set<string> }) : {},
+      gamesPlayedSet: new Set(stats.gamesPlayedList || []),
+    };
+    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, statsWithSets);
 
     return {
       achievementId: achievement.id,
@@ -249,7 +287,15 @@ export const updateLeaderboardRanks = async (ranks: { [gameType: string]: number
   await saveAchievementStats(stats);
 
   const updatedProgress: AchievementProgress[] = ACHIEVEMENTS.map(achievement => {
-    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, stats);
+    const statsWithSets = {
+      ...stats,
+      difficultiesPlayed: stats.difficultiesPlayed ? Object.keys(stats.difficultiesPlayed).reduce((acc, key) => {
+        acc[key] = new Set(stats.difficultiesPlayed[key]);
+        return acc;
+      }, {} as { [key: string]: Set<string> }) : {},
+      gamesPlayedSet: new Set(stats.gamesPlayedList || []),
+    };
+    const { unlocked, progress, currentCount } = checkAchievementProgress(achievement, statsWithSets);
 
     return {
       achievementId: achievement.id,

@@ -26,8 +26,10 @@ interface Theme {
     background: [string, string, string];
     flipMatch: [string, string];
     sequence: [string, string];
+    spatialMemory: [string, string];
     mathRush: [string, string];
     mergePuzzle: [string, string];
+    stroop: [string, string];
   };
 }
 
@@ -54,8 +56,10 @@ const lightTheme: Theme = {
     background: ['#f8fafc', '#e0e7ff', '#f8fafc'],
     flipMatch: ['#6366f1', '#8b5cf6'],
     sequence: ['#06b6d4', '#3b82f6'],
+    spatialMemory: ['#06b6d4', '#3b82f6'],
     mathRush: ['#f59e0b', '#ef4444'],
     mergePuzzle: ['#10b981', '#06b6d4'],
+    stroop: ['#ec4899', '#8b5cf6'],
   },
 };
 
@@ -82,8 +86,10 @@ const darkTheme: Theme = {
     background: ['#0f172a', '#1e1b4b', '#0f172a'],
     flipMatch: ['#6366f1', '#8b5cf6'],
     sequence: ['#06b6d4', '#3b82f6'],
+    spatialMemory: ['#06b6d4', '#3b82f6'],
     mathRush: ['#f59e0b', '#ef4444'],
     mergePuzzle: ['#10b981', '#06b6d4'],
+    stroop: ['#ec4899', '#8b5cf6'],
   },
 };
 

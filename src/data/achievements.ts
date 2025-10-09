@@ -22,22 +22,22 @@ export interface Achievement {
 
 export interface AchievementRequirement {
   type:
-    | 'level_complete'      // 특정 레벨 클리어
-    | 'star_count'          // 별 개수
-    | 'synergy_discover'    // 시너지 발견
-    | 'perfect_clear'       // 완벽한 클리어 (3성)
-    | 'speed_clear'         // 빠른 클리어
-    | 'resource_efficient'  // 자원 효율적 사용
-    | 'chain_reaction'      // 연쇄 반응 트리거
-    | 'no_damage'           // 무피해 클리어
-    | 'all_survivors'       // 모든 생존자 사용
-    | 'specific_method'     // 특정 방법 사용
+    | 'games_played'        // 게임 플레이 횟수
+    | 'game_score'          // 특정 게임 점수
+    | 'total_score'         // 전체 게임 총점
+    | 'perfect_score'       // 만점
+    | 'streak'              // 연속 플레이
+    | 'all_difficulties'    // 모든 난이도 플레이
+    | 'speed_play'          // 빠른 플레이
+    | 'mastery'             // 특정 게임 마스터
     | 'friend_count'        // 친구 수 (온라인)
     | 'leaderboard_rank'    // 리더보드 순위 (온라인)
-    | 'all_games_rank_one'; // 모든 게임 1위 (온라인)
+    | 'all_games_rank_one'  // 모든 게임 1위 (온라인)
+    | 'friend_wins';        // 친구와 비교 승리
 
   value: number | string | string[];
   count?: number; // 필요 횟수
+  gameType?: string; // 특정 게임 타입
 }
 
 export interface AchievementProgress {
@@ -52,204 +52,279 @@ export interface AchievementProgress {
 export const ACHIEVEMENTS: Achievement[] = [
   // === 진행 업적 ===
   {
-    id: 'first_steps',
-    name: '첫 걸음',
-    description: '첫 번째 레벨을 클리어하세요',
+    id: 'first_game',
+    name: '첫 게임',
+    description: '첫 번째 게임을 플레이하세요',
     category: 'progress',
     emoji: '🎯',
     requirement: {
-      type: 'level_complete',
+      type: 'games_played',
       value: 1,
     },
   },
   {
-    id: 'halfway_there',
-    name: '반환점',
-    description: '레벨 5를 클리어하세요',
+    id: 'brain_trainer',
+    name: '두뇌 트레이너',
+    description: '10게임을 플레이하세요',
     category: 'progress',
     emoji: '🏃',
     requirement: {
-      type: 'level_complete',
-      value: 5,
+      type: 'games_played',
+      value: 10,
     },
   },
   {
-    id: 'ten_levels',
-    name: '열 고비',
-    description: '레벨 10을 클리어하세요',
+    id: 'dedicated_player',
+    name: '헌신적인 플레이어',
+    description: '50게임을 플레이하세요',
     category: 'progress',
     emoji: '🏆',
     requirement: {
-      type: 'level_complete',
-      value: 10,
+      type: 'games_played',
+      value: 50,
     },
   },
   {
-    id: 'star_collector',
-    name: '별 수집가',
-    description: '총 10개의 별을 획득하세요',
+    id: 'brain_master',
+    name: '두뇌 마스터',
+    description: '100게임을 플레이하세요',
     category: 'progress',
-    emoji: '⭐',
+    emoji: '🧠',
     requirement: {
-      type: 'star_count',
-      value: 10,
-    },
-  },
-  {
-    id: 'star_master',
-    name: '별의 주인',
-    description: '총 30개의 별을 획득하세요',
-    category: 'progress',
-    emoji: '🌟',
-    requirement: {
-      type: 'star_count',
-      value: 30,
+      type: 'games_played',
+      value: 100,
     },
   },
 
-  // === 스킬 업적 ===
+  // === 스킬 업적 - Flip & Match ===
   {
-    id: 'perfect_first',
-    name: '완벽주의자',
-    description: '첫 3성 클리어를 달성하세요',
+    id: 'memory_novice',
+    name: '기억력 초심자',
+    description: 'Flip & Match에서 레벨 5 달성',
+    category: 'skill',
+    emoji: '🎴',
+    requirement: {
+      type: 'game_score',
+      value: 5,
+      gameType: 'flip_match',
+    },
+  },
+  {
+    id: 'memory_expert',
+    name: '기억력 전문가',
+    description: 'Flip & Match에서 레벨 10 달성',
+    category: 'skill',
+    emoji: '🎴',
+    requirement: {
+      type: 'game_score',
+      value: 10,
+      gameType: 'flip_match',
+    },
+  },
+  {
+    id: 'flip_perfectionist',
+    name: 'Flip & Match 완벽주의자',
+    description: 'Flip & Match 모든 난이도 클리어',
     category: 'skill',
     emoji: '💎',
     requirement: {
-      type: 'perfect_clear',
-      value: 1,
-      count: 1,
-    },
-  },
-  {
-    id: 'speedrunner',
-    name: '스피드러너',
-    description: '30초 이내에 레벨을 클리어하세요',
-    category: 'skill',
-    emoji: '⚡',
-    requirement: {
-      type: 'speed_clear',
-      value: 30,
-    },
-  },
-  {
-    id: 'resource_saver',
-    name: '절약왕',
-    description: '자원을 1개도 사용하지 않고 레벨을 클리어하세요',
-    category: 'skill',
-    emoji: '💰',
-    requirement: {
-      type: 'resource_efficient',
-      value: 0,
-    },
-  },
-  {
-    id: 'chain_master',
-    name: '연쇄 반응 마스터',
-    description: '연쇄 반응을 5회 트리거하세요',
-    category: 'skill',
-    emoji: '💥',
-    requirement: {
-      type: 'chain_reaction',
-      value: 5,
-      count: 5,
+      type: 'all_difficulties',
+      value: 'flip_match',
     },
   },
 
-  // === 시너지 & 컬렉션 업적 ===
+  // === 스킬 업적 - Spatial Memory ===
   {
-    id: 'first_synergy',
-    name: '팀워크 발견',
-    description: '첫 번째 시너지를 발견하세요',
-    category: 'collection',
-    emoji: '🤝',
+    id: 'spatial_beginner',
+    name: '공간 기억 초심자',
+    description: 'Spatial Memory에서 레벨 5 달성',
+    category: 'skill',
+    emoji: '🧠',
     requirement: {
-      type: 'synergy_discover',
-      value: 1,
-      count: 1,
+      type: 'game_score',
+      value: 5,
+      gameType: 'spatial_memory',
     },
   },
   {
-    id: 'synergy_collector',
-    name: '시너지 수집가',
-    description: '모든 시너지를 발견하세요 (5개)',
-    category: 'collection',
+    id: 'spatial_master',
+    name: '공간 기억 마스터',
+    description: 'Spatial Memory에서 레벨 10 달성',
+    category: 'skill',
+    emoji: '🧠',
+    requirement: {
+      type: 'game_score',
+      value: 10,
+      gameType: 'spatial_memory',
+    },
+  },
+  {
+    id: 'spatial_perfectionist',
+    name: 'Spatial Memory 완벽주의자',
+    description: 'Spatial Memory 모든 난이도 클리어',
+    category: 'skill',
+    emoji: '💎',
+    requirement: {
+      type: 'all_difficulties',
+      value: 'spatial_memory',
+    },
+  },
+
+  // === 스킬 업적 - Math Rush ===
+  {
+    id: 'math_student',
+    name: '수학 학생',
+    description: 'Math Rush에서 50점 달성',
+    category: 'skill',
+    emoji: '➕',
+    requirement: {
+      type: 'game_score',
+      value: 50,
+      gameType: 'math_rush',
+    },
+  },
+  {
+    id: 'math_genius',
+    name: '수학 천재',
+    description: 'Math Rush에서 100점 달성',
+    category: 'skill',
+    emoji: '➕',
+    requirement: {
+      type: 'game_score',
+      value: 100,
+      gameType: 'math_rush',
+    },
+  },
+
+  // === 스킬 업적 - Stroop Test ===
+  {
+    id: 'color_rookie',
+    name: '색상 루키',
+    description: 'Stroop Test에서 20점 달성',
+    category: 'skill',
     emoji: '🎨',
     requirement: {
-      type: 'synergy_discover',
-      value: 5,
-      count: 5,
+      type: 'game_score',
+      value: 20,
+      gameType: 'stroop',
+    },
+  },
+  {
+    id: 'stroop_master',
+    name: 'Stroop 마스터',
+    description: 'Stroop Test에서 40점 달성',
+    category: 'skill',
+    emoji: '🎨',
+    requirement: {
+      type: 'game_score',
+      value: 40,
+      gameType: 'stroop',
     },
   },
 
   // === 도전 업적 ===
   {
-    id: 'safe_bomber',
-    name: '안전 폭파 전문가',
-    description: '안전 폭파 시너지를 사용하세요',
+    id: 'quick_thinker',
+    name: '빠른 사고자',
+    description: '1분 이내에 게임 완료 (3회)',
     category: 'challenge',
-    emoji: '🛡️',
+    emoji: '⚡',
     requirement: {
-      type: 'specific_method',
-      value: 'synergy_engineer_doctor',
+      type: 'speed_play',
+      value: 60,
+      count: 3,
     },
   },
   {
-    id: 'firefighter',
-    name: '소방관',
-    description: '불을 10회 진압하세요',
+    id: 'all_rounder',
+    name: '올라운더',
+    description: '모든 게임을 플레이하세요',
     category: 'challenge',
-    emoji: '🚒',
+    emoji: '🌟',
     requirement: {
-      type: 'specific_method',
-      value: 'extinguish_fire',
-      count: 10,
+      type: 'mastery',
+      value: 4, // 4개 게임
     },
   },
   {
-    id: 'engineer_specialist',
-    name: '엔지니어 전문가',
-    description: '엔지니어로만 레벨을 클리어하세요',
+    id: 'dedicated_learner',
+    name: '열정적인 학습자',
+    description: '3일 연속 플레이하세요',
     category: 'challenge',
-    emoji: '👷',
+    emoji: '🔥',
     requirement: {
-      type: 'all_survivors',
-      value: ['engineer'],
+      type: 'streak',
+      value: 3,
+    },
+  },
+  {
+    id: 'consistent_player',
+    name: '꾸준한 플레이어',
+    description: '7일 연속 플레이하세요',
+    category: 'challenge',
+    emoji: '🔥',
+    requirement: {
+      type: 'streak',
+      value: 7,
+    },
+  },
+
+  // === 컬렉션 업적 ===
+  {
+    id: 'game_explorer',
+    name: '게임 탐험가',
+    description: '각 게임을 최소 1회씩 플레이하세요',
+    category: 'collection',
+    emoji: '🗺️',
+    requirement: {
+      type: 'mastery',
+      value: 4,
+    },
+  },
+  {
+    id: 'difficulty_challenger',
+    name: '난이도 도전자',
+    description: 'Easy, Medium, Hard 모두 플레이하세요',
+    category: 'collection',
+    emoji: '🎯',
+    requirement: {
+      type: 'all_difficulties',
+      value: 'all',
     },
   },
 
   // === 히든 업적 ===
   {
-    id: 'no_damage_master',
-    name: '무결점',
+    id: 'perfect_memory',
+    name: '완벽한 기억력',
     description: '???',
     category: 'hidden',
-    emoji: '🌈',
+    emoji: '��',
     isHidden: true,
     requirement: {
-      type: 'no_damage',
-      value: 5,
-      count: 5,
+      type: 'game_score',
+      value: 15,
+      gameType: 'flip_match',
     },
     reward: {
       type: 'hint',
-      value: '히든 레벨 힌트를 획득했습니다!',
+      value: '당신의 기억력은 천재 수준입니다!',
     },
   },
   {
-    id: 'puzzle_genius',
-    name: '퍼즐 천재',
+    id: 'ultimate_brain',
+    name: '궁극의 두뇌',
     description: '???',
     category: 'hidden',
     emoji: '🧩',
     isHidden: true,
     requirement: {
-      type: 'perfect_clear',
-      value: 10,
-      count: 10,
+      type: 'total_score',
+      value: 500,
     },
     reward: {
       type: 'unlock',
-      value: 'special_level',
+      value: '특별한 통계 배지를 획득했습니다!',
     },
   },
 
@@ -257,23 +332,56 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'social_butterfly',
     name: '소셜 버터플라이',
-    description: '친구 10명을 추가하세요',
+    description: '친구 5명을 추가하세요',
     category: 'online',
     emoji: '🦋',
+    requirement: {
+      type: 'friend_count',
+      value: 5,
+    },
+  },
+  {
+    id: 'friend_network',
+    name: '친구 네트워크',
+    description: '친구 10명을 추가하세요',
+    category: 'online',
+    emoji: '👥',
     requirement: {
       type: 'friend_count',
       value: 10,
     },
   },
   {
-    id: 'global_star',
-    name: '글로벌 스타',
+    id: 'competitive_spirit',
+    name: '경쟁의 정신',
+    description: '친구를 5회 이기세요',
+    category: 'online',
+    emoji: '🏅',
+    requirement: {
+      type: 'friend_wins',
+      value: 5,
+    },
+  },
+  {
+    id: 'leaderboard_entry',
+    name: '리더보드 입성',
     description: '리더보드 Top 100에 진입하세요',
     category: 'online',
     emoji: '🌟',
     requirement: {
       type: 'leaderboard_rank',
       value: 100,
+    },
+  },
+  {
+    id: 'top_player',
+    name: '상위 플레이어',
+    description: '리더보드 Top 10에 진입하세요',
+    category: 'online',
+    emoji: '⭐',
+    requirement: {
+      type: 'leaderboard_rank',
+      value: 10,
     },
   },
   {
@@ -293,16 +401,16 @@ export const ACHIEVEMENTS: Achievement[] = [
 export const checkAchievementProgress = (
   achievement: Achievement,
   stats: {
-    levelsCompleted: number[];
-    totalStars: number;
-    synergiesDiscovered: number;
-    perfectClears: number;
-    chainReactions: number;
-    speedClears: number;
-    resourceEfficientClears: number;
-    specificMethodUsage: { [key: string]: number };
+    gamesPlayed: number;
+    gameScores: { [gameType: string]: number };
+    totalScore: number;
+    speedPlays: number;
+    difficultiesPlayed: { [gameType: string]: Set<string> };
+    gamesPlayedSet: Set<string>;
+    streakDays: number;
     // 온라인 통계
     friendCount?: number;
+    friendWins?: number;
     leaderboardRanks?: { [gameType: string]: number };
   }
 ): { unlocked: boolean; progress: number; currentCount: number } => {
@@ -312,66 +420,63 @@ export const checkAchievementProgress = (
   let currentCount = 0;
 
   switch (req.type) {
-    case 'level_complete':
-      unlocked = stats.levelsCompleted.includes(req.value as number);
-      progress = unlocked ? 100 : 0;
-      currentCount = unlocked ? 1 : 0;
+    case 'games_played':
+      currentCount = stats.gamesPlayed;
+      const targetGames = req.value as number;
+      progress = Math.min(100, (currentCount / targetGames) * 100);
+      unlocked = currentCount >= targetGames;
       break;
 
-    case 'star_count':
-      currentCount = stats.totalStars;
-      const targetStars = req.value as number;
-      progress = Math.min(100, (currentCount / targetStars) * 100);
-      unlocked = currentCount >= targetStars;
+    case 'game_score':
+      const gameType = req.gameType!;
+      currentCount = stats.gameScores?.[gameType] || 0;
+      const targetScore = req.value as number;
+      progress = Math.min(100, (currentCount / targetScore) * 100);
+      unlocked = currentCount >= targetScore;
       break;
 
-    case 'synergy_discover':
-      currentCount = stats.synergiesDiscovered;
-      const targetSynergies = req.count || (req.value as number);
-      progress = Math.min(100, (currentCount / targetSynergies) * 100);
-      unlocked = currentCount >= targetSynergies;
+    case 'total_score':
+      currentCount = stats.totalScore;
+      const targetTotal = req.value as number;
+      progress = Math.min(100, (currentCount / targetTotal) * 100);
+      unlocked = currentCount >= targetTotal;
       break;
 
-    case 'perfect_clear':
-      currentCount = stats.perfectClears;
-      const targetPerfect = req.count || (req.value as number);
-      progress = Math.min(100, (currentCount / targetPerfect) * 100);
-      unlocked = currentCount >= targetPerfect;
+    case 'speed_play':
+      currentCount = stats.speedPlays;
+      const targetSpeed = req.count || 1;
+      progress = Math.min(100, (currentCount / targetSpeed) * 100);
+      unlocked = currentCount >= targetSpeed;
       break;
 
-    case 'chain_reaction':
-      currentCount = stats.chainReactions;
-      const targetChain = req.count || (req.value as number);
-      progress = Math.min(100, (currentCount / targetChain) * 100);
-      unlocked = currentCount >= targetChain;
+    case 'all_difficulties':
+      const game = req.value as string;
+      if (game === 'all') {
+        // Check if player has played all difficulties across flip_match and spatial_memory
+        const flipDifficulties = stats.difficultiesPlayed['flip_match']?.size || 0;
+        const spatialDifficulties = stats.difficultiesPlayed['spatial_memory']?.size || 0;
+        currentCount = flipDifficulties + spatialDifficulties;
+        progress = Math.min(100, (currentCount / 6) * 100); // 3 + 3
+        unlocked = flipDifficulties >= 3 && spatialDifficulties >= 3;
+      } else {
+        currentCount = stats.difficultiesPlayed[game]?.size || 0;
+        progress = Math.min(100, (currentCount / 3) * 100);
+        unlocked = currentCount >= 3;
+      }
       break;
 
-    case 'speed_clear':
-      currentCount = stats.speedClears;
-      progress = currentCount > 0 ? 100 : 0;
-      unlocked = currentCount > 0;
+    case 'mastery':
+      currentCount = stats.gamesPlayedSet.size;
+      const targetMastery = req.value as number;
+      progress = Math.min(100, (currentCount / targetMastery) * 100);
+      unlocked = currentCount >= targetMastery;
       break;
 
-    case 'resource_efficient':
-      currentCount = stats.resourceEfficientClears;
-      progress = currentCount > 0 ? 100 : 0;
-      unlocked = currentCount > 0;
-      break;
-
-    case 'specific_method':
-      const methodKey = req.value as string;
-      currentCount = stats.specificMethodUsage[methodKey] || 0;
-      const targetCount = req.count || 1;
-      progress = Math.min(100, (currentCount / targetCount) * 100);
-      unlocked = currentCount >= targetCount;
-      break;
-
-    case 'no_damage':
-      // 특별 처리 필요 (게임 통계에서 가져와야 함)
-      break;
-
-    case 'all_survivors':
-      // 특별 처리 필요
+    case 'streak':
+      currentCount = stats.streakDays;
+      const targetStreak = req.value as number;
+      progress = Math.min(100, (currentCount / targetStreak) * 100);
+      unlocked = currentCount >= targetStreak;
       break;
 
     case 'friend_count':
@@ -379,6 +484,13 @@ export const checkAchievementProgress = (
       const targetFriends = req.value as number;
       progress = Math.min(100, (currentCount / targetFriends) * 100);
       unlocked = currentCount >= targetFriends;
+      break;
+
+    case 'friend_wins':
+      currentCount = stats.friendWins || 0;
+      const targetWins = req.value as number;
+      progress = Math.min(100, (currentCount / targetWins) * 100);
+      unlocked = currentCount >= targetWins;
       break;
 
     case 'leaderboard_rank':
@@ -394,11 +506,11 @@ export const checkAchievementProgress = (
     case 'all_games_rank_one':
       // Check if user is #1 in all games
       const ranks2 = stats.leaderboardRanks || {};
-      const targetGames = req.value as number;
+      const targetGamesCount = req.value as number;
       const rankOnes = Object.values(ranks2).filter(rank => rank === 1).length;
       currentCount = rankOnes;
-      progress = Math.min(100, (rankOnes / targetGames) * 100);
-      unlocked = rankOnes >= targetGames;
+      progress = Math.min(100, (rankOnes / targetGamesCount) * 100);
+      unlocked = rankOnes >= targetGamesCount;
       break;
   }
 

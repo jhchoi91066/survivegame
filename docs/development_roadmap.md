@@ -11,9 +11,9 @@
 
 ### 포함된 게임
 1. **🎴 Flip & Match** - 타일 뒤집기 메모리 게임 ✅
-2. **🔢 Sequence** - 순서대로 터치하기 ✅
+2. **🧠 Spatial Memory** - 공간 기억 게임 ✅
 3. **➕ Math Rush** - 빠른 계산 게임 ✅
-4. **🔢 Merge Puzzle** - 숫자 합치기 퍼즐 (2048 스타일) ✅
+4. **🎨 Stroop Test** - 색상-단어 판단 게임 ✅
 
 ---
 
@@ -391,12 +391,15 @@
 🎮 Brain Games
 
 메인 메뉴:
-├── 🎴 Flip & Match    (Best: XX초) ✅
-├── 🔢 Sequence        (Best: Level XX) ✅
-├── ➕ Math Rush       (Best: XX점) ✅
-├── 🔢 Merge Puzzle    (Best: XX회) ✅
+├── 🎴 Flip & Match      (Best: XX초) ✅
+├── 🧠 Spatial Memory    (Best: Level XX) ✅
+├── ➕ Math Rush         (Best: XX점) ✅
+├── 🎨 Stroop Test       (Best: XX점) ✅
 ├── 📊 통계 (게임별 상세 통계) ✅
-├── 🏆 업적 ✅
+├── 🏆 리더보드 (온라인) ✅
+├── 👥 친구 (온라인) ✅
+├── ⚔️ 대전 (멀티플레이어) ✅
+├── 🎖️ 업적 (30개) ✅
 └── ⚙️ 설정 (다크/라이트 모드) ✅
 ```
 
@@ -680,7 +683,7 @@
 - [x] FriendsScreen에서 친구 클릭 → 비교 화면 이동
 - [x] App.tsx에 FriendComparison 라우트 추가
 
-### 7. 업적 시스템 확장 (1주)
+### 7. 업적 시스템 확장 (1주) ✅
 
 #### 7.1 온라인 전용 업적 ✅
 - [x] "소셜 버터플라이" - 친구 10명 추가
@@ -701,7 +704,29 @@
   - [x] 모든 게임의 순위 자동 계산
   - [x] Pull-to-refresh 시 업적 업데이트
 
-#### 7.2 업적 알림 (선택적)
+#### 7.2 업적 재구성 (브레인 게임 맞춤) ✅
+- [x] 업적 타입 재정의 (게임 플레이 기반)
+  - [x] games_played, game_score, total_score
+  - [x] speed_play, all_difficulties, mastery, streak
+  - [x] friend_wins
+- [x] 업적 목록 재작성 (30개)
+  - [x] 진행 업적 4개 (첫 게임, 10게임, 50게임, 100게임)
+  - [x] 스킬 업적 10개 (게임별 점수 목표)
+  - [x] 도전 업적 4개 (빠른 플레이, 올라운더, 연속 플레이)
+  - [x] 컬렉션 업적 2개 (게임 탐험, 난이도 도전)
+  - [x] 히든 업적 2개 (완벽한 기억력, 궁극의 두뇌)
+  - [x] 온라인 업적 6개 (친구, 리더보드, 챔피언)
+- [x] achievementManager.ts 업데이트
+  - [x] 새로운 통계 구조 (gamesPlayed, gameScores, streakDays 등)
+  - [x] updateStatsOnGamePlayed() 함수 생성
+  - [x] 연속 플레이 일수 추적
+- [x] 모든 게임에 업적 추적 통합
+  - [x] FlipMatchGame
+  - [x] SpatialMemoryGame
+  - [x] MathRushGame
+  - [x] StroopTestGame
+
+#### 7.3 업적 알림 (선택적)
 - [ ] 업적 달성 토스트
 - [ ] 업적 배지 표시
 - [ ] 업적 공유 기능
@@ -1047,13 +1072,29 @@
 - [ ] MenuScreen 미확인 업적 배지
 - [ ] 업적 공유 기능
 
-### 🎮 우선순위 3: 실시간 멀티플레이어 (v4.2)
+### 🎮 우선순위 3: 실시간 멀티플레이어 (v4.2) ✅
 **Phase 10 Priority 5에서 연기된 항목**
 
-- [ ] 매칭 시스템 (친구/랜덤)
-- [ ] Supabase Realtime 설정
-- [ ] Math Rush 1:1 대결
-- [ ] Sequence 경쟁 모드
+- [x] 멀티플레이어 로비 화면 생성
+  - [x] MultiplayerLobbyScreen.tsx
+  - [x] 새 방 만들기 (4개 게임 선택)
+  - [x] 대기 중인 방 목록
+  - [x] 실시간 업데이트 (Supabase Realtime)
+- [x] 멀티플레이어 게임 화면 생성
+  - [x] MultiplayerGameScreen.tsx
+  - [x] 대기실 (플레이어 표시)
+  - [x] 카운트다운 (3, 2, 1)
+  - [x] 게임 시작 후 해당 게임으로 이동
+  - [x] 게임 결과 표시
+- [x] 데이터베이스 설정
+  - [x] multiplayer_rooms 테이블 생성
+  - [x] multiplayer_game_states 테이블 생성
+  - [x] join_multiplayer_room() 함수 생성
+  - [x] RLS 정책 설정
+- [x] Navigation 통합
+  - [x] App.tsx에 MultiplayerLobby, MultiplayerGame 라우트 추가
+  - [x] MenuScreen에 "대전" 버튼 추가 (⚔️ 아이콘)
+  - [x] 로그인 필요 안내
 
 ### 📈 우선순위 4: 데이터 기반 최적화
 - [ ] 실제 사용자 데이터로 인덱스 재평가

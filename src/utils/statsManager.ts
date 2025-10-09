@@ -34,9 +34,11 @@ export const saveGameRecord = async <T extends GameType>(
 ): Promise<void> => {
   try {
     const key = `${RECORDS_KEY}_${game}`;
+    console.log(`💾 Saving to AsyncStorage - Key: ${key}, Record:`, record);
     await AsyncStorage.setItem(key, JSON.stringify(record));
+    console.log(`✅ Successfully saved ${game} record`);
   } catch (error) {
-    console.error(`Failed to save record for ${game}:`, error);
+    console.error(`❌ Failed to save record for ${game}:`, error);
   }
 };
 
@@ -48,11 +50,14 @@ export const loadGameRecord = async <T extends GameType>(
     const key = `${RECORDS_KEY}_${game}`;
     const data = await AsyncStorage.getItem(key);
     if (data) {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      console.log(`📖 Loaded ${game} record:`, parsed);
+      return parsed;
     }
+    console.log(`📖 No record found for ${game}`);
     return null;
   } catch (error) {
-    console.error(`Failed to load record for ${game}:`, error);
+    console.error(`❌ Failed to load record for ${game}:`, error);
     return null;
   }
 };
@@ -64,27 +69,23 @@ export const updateFlipMatchRecord = async (
   playTime: number
 ): Promise<void> => {
   const current = await loadGameRecord('flip_match');
-
   const newRecord = {
     bestTime: !current || time < current.bestTime || current.bestTime === 0 ? time : current.bestTime,
     difficulty: !current || time < current.bestTime || current.bestTime === 0 ? difficulty : current.difficulty,
     totalPlays: (current?.totalPlays || 0) + 1,
     totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
-
   await saveGameRecord('flip_match', newRecord);
 };
 
 // Sequence 기록 업데이트
 export const updateSequenceRecord = async (level: number, playTime: number): Promise<void> => {
   const current = await loadGameRecord('sequence');
-
   const newRecord = {
     highestLevel: !current || level > current.highestLevel ? level : current.highestLevel,
     totalPlays: (current?.totalPlays || 0) + 1,
     totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
-
   await saveGameRecord('sequence', newRecord);
 };
 
@@ -95,14 +96,12 @@ export const updateMathRushRecord = async (
   playTime: number
 ): Promise<void> => {
   const current = await loadGameRecord('math_rush');
-
   const newRecord = {
     highScore: !current || score > current.highScore ? score : current.highScore,
     highestCombo: !current || combo > current.highestCombo ? combo : current.highestCombo,
     totalPlays: (current?.totalPlays || 0) + 1,
     totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
-
   await saveGameRecord('math_rush', newRecord);
 };
 
@@ -113,16 +112,39 @@ export const updateSpatialMemoryRecord = async (
   playTime: number
 ): Promise<void> => {
   const current = await loadGameRecord('spatial_memory');
-
   const newRecord = {
     highestLevel: !current || level > current.highestLevel ? level : current.highestLevel,
     difficulty: !current || level > current.highestLevel ? difficulty : current.difficulty,
     totalPlays: (current?.totalPlays || 0) + 1,
     totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
-
+  console.log('📊 Saving Spatial Memory record:', { current, newRecord });
   await saveGameRecord('spatial_memory', newRecord);
 };
+
+// Stroop Test 기록 업데이트
+export const updateStroopRecord = async (score: number, playTime: number): Promise<void> => {
+  const current = await loadGameRecord('stroop');
+  const newRecord = {
+    highScore: !current || score > current.highScore ? score : current.highScore,
+    totalPlays: (current?.totalPlays || 0) + 1,
+    totalPlayTime: (current?.totalPlayTime || 0) + playTime,
+  };
+  console.log('📊 Saving Stroop Test record:', { current, newRecord });
+  await saveGameRecord('stroop', newRecord);
+};
+
+// N-Back 기록 업데이트
+export const updateNBackRecord = async (level: number, playTime: number): Promise<void> => {
+  const current = await loadGameRecord('n_back');
+  const newRecord = {
+    highestLevel: !current || level > current.highestLevel ? level : current.highestLevel,
+    totalPlays: (current?.totalPlays || 0) + 1,
+    totalPlayTime: (current?.totalPlayTime || 0) + playTime,
+  };
+  await saveGameRecord('n_back', newRecord);
+};
+
 
 // 통계 초기화
 export const clearAllStats = async (): Promise<void> => {
@@ -133,6 +155,8 @@ export const clearAllStats = async (): Promise<void> => {
       `${RECORDS_KEY}_sequence`,
       `${RECORDS_KEY}_math_rush`,
       `${RECORDS_KEY}_spatial_memory`,
+      `${RECORDS_KEY}_stroop`,
+      `${RECORDS_KEY}_n_back`,
     ]);
   } catch (error) {
     console.error('Failed to clear stats:', error);
