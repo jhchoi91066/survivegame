@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useSpatialMemoryStore } from '../game/spatialmemory/store';
@@ -10,7 +10,7 @@ import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { updateSpatialMemoryRecord, loadGameRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
-import { smartSync } from '../utils/cloudSync';
+import { updateStatsOnGamePlayed } from '../utils/achievementManager';
 import { useTheme } from '../contexts/ThemeContext';
 
 type SpatialMemoryGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SpatialMemoryGame'>;
@@ -28,6 +28,18 @@ const SpatialMemoryGame: React.FC = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
   const [startTime, setStartTime] = useState<number>(0);
   const [isNewRecord, setIsNewRecord] = useState(false);
+  const [hasRecordedStats, setHasRecordedStats] = useState(false);
+
+  // 화면이 포커스될 때마다 게임 상태 리셋
+  useFocusEffect(
+    useCallback(() => {
+      resetGame();
+      setShowDifficultyModal(true);
+      setStartTime(0);
+      setIsNewRecord(false);
+      setHasRecordedStats(false);
+    }, [resetGame])
+  );
 
   useEffect(() => {
     if (gameStatus === 'showing' && startTime === 0) {
@@ -36,13 +48,15 @@ const SpatialMemoryGame: React.FC = () => {
   }, [gameStatus]);
 
   useEffect(() => {
-    if (gameStatus === 'gameover') {
+    if (gameStatus === 'gameover' && !hasRecordedStats) {
       handleGameOver();
     }
-  }, [gameStatus]);
+  }, [gameStatus, hasRecordedStats]);
 
   const handleGameOver = async () => {
-    hapticPatterns.error();
+    if (hasRecordedStats) return; // 중복 실행 방지
+
+    hapticPatterns.gameOver();
     const finalLevel = currentLevel - 1;
 
     const oldRecord = await loadGameRecord('spatial_memory');
@@ -50,23 +64,21 @@ const SpatialMemoryGame: React.FC = () => {
       setIsNewRecord(true);
     }
 
-    const playTime = Math.floor((Date.now() - startTime) / 1000);
+    const playTime = startTime > 0 ? Math.floor((Date.now() - startTime) / 1000) : 0;
+    console.log('🧠 Spatial Memory - Saving stats:', { finalLevel, difficulty: settings.difficulty, playTime, startTime, now: Date.now() });
+
     await updateSpatialMemoryRecord(finalLevel, settings.difficulty, playTime);
     updateBestRecord('spatial_memory', finalLevel);
-
-    await smartSync({
-      game_type: 'spatial_memory',
-      score: finalLevel,
-      level: finalLevel,
-      time_seconds: playTime,
-      difficulty: settings.difficulty,
-      played_at: new Date().toISOString(),
-    });
     await incrementGameCount();
+    await updateStatsOnGamePlayed('spatial_memory', finalLevel, playTime, settings.difficulty);
+
+    setHasRecordedStats(true);
   };
 
   const handleStartGame = () => {
     setIsNewRecord(false);
+    setStartTime(0);
+    setHasRecordedStats(false);
     const difficultySettings = {
       easy: { difficulty: 'easy' as Difficulty, flashSpeed: 600, startingLevel: 3 },
       medium: { difficulty: 'medium' as Difficulty, flashSpeed: 500, startingLevel: 3 },
@@ -80,9 +92,11 @@ const SpatialMemoryGame: React.FC = () => {
 
   const handleRestart = () => {
     setIsNewRecord(false);
+    setStartTime(0);
+    setHasRecordedStats(false);
+    setShowDifficultyModal(true);
     resetGame();
     hapticPatterns.buttonPress();
-    setTimeout(() => { startRound(); }, 500);
   };
 
   const handleBackToMenu = () => {

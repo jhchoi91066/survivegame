@@ -34,9 +34,11 @@ export const saveGameRecord = async <T extends GameType>(
 ): Promise<void> => {
   try {
     const key = `${RECORDS_KEY}_${game}`;
+    console.log(`💾 Saving to AsyncStorage - Key: ${key}, Record:`, record);
     await AsyncStorage.setItem(key, JSON.stringify(record));
+    console.log(`✅ Successfully saved ${game} record`);
   } catch (error) {
-    console.error(`Failed to save record for ${game}:`, error);
+    console.error(`❌ Failed to save record for ${game}:`, error);
   }
 };
 
@@ -48,11 +50,14 @@ export const loadGameRecord = async <T extends GameType>(
     const key = `${RECORDS_KEY}_${game}`;
     const data = await AsyncStorage.getItem(key);
     if (data) {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      console.log(`📖 Loaded ${game} record:`, parsed);
+      return parsed;
     }
+    console.log(`📖 No record found for ${game}`);
     return null;
   } catch (error) {
-    console.error(`Failed to load record for ${game}:`, error);
+    console.error(`❌ Failed to load record for ${game}:`, error);
     return null;
   }
 };
@@ -113,6 +118,7 @@ export const updateSpatialMemoryRecord = async (
     totalPlays: (current?.totalPlays || 0) + 1,
     totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
+  console.log('📊 Saving Spatial Memory record:', { current, newRecord });
   await saveGameRecord('spatial_memory', newRecord);
 };
 
@@ -124,6 +130,7 @@ export const updateStroopRecord = async (score: number, playTime: number): Promi
     totalPlays: (current?.totalPlays || 0) + 1,
     totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
+  console.log('📊 Saving Stroop Test record:', { current, newRecord });
   await saveGameRecord('stroop', newRecord);
 };
 

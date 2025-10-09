@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useStroopStore } from '../game/stroop/store';
 import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { updateStroopRecord, loadGameRecord } from '../utils/statsManager';
+import { incrementGameCount } from '../utils/reviewManager';
 import { useTheme } from '../contexts/ThemeContext';
+import { updateStatsOnGamePlayed } from '../utils/achievementManager';
 
 type StroopGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StroopTestGame'>;
 
@@ -20,6 +22,14 @@ const StroopTestGame: React.FC = () => {
 
   const { updateBestRecord } = useGameStore();
   const [isNewRecord, setIsNewRecord] = useState(false);
+
+  // 화면이 포커스될 때마다 게임 상태 리셋
+  useFocusEffect(
+    useCallback(() => {
+      resetGame();
+      setIsNewRecord(false);
+    }, [resetGame])
+  );
 
   useEffect(() => {
     if (gameStatus === 'playing') {
@@ -43,8 +53,11 @@ const StroopTestGame: React.FC = () => {
     }
 
     const playTime = 30 - timeRemaining;
+    console.log('🎨 Stroop Test - Saving stats:', { score, playTime });
     await updateStroopRecord(score, playTime);
     updateBestRecord('stroop', score);
+    await incrementGameCount();
+    await updateStatsOnGamePlayed('stroop', score, playTime, 'normal');
   };
 
   const handleAnswer = (answer: string) => {

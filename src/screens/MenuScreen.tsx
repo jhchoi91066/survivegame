@@ -179,6 +179,12 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
                 <Text style={styles.bottomButtonText}>친구</Text>
               </LinearGradient>
             </Pressable>
+            <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); user ? navigation.navigate('MultiplayerLobby') : navigation.navigate('Login'); }}>
+              <LinearGradient colors={user ? ['#ec4899', '#db2777'] : (theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0'])} style={styles.bottomButtonGradient}>
+                <Text style={styles.bottomButtonIcon}>⚔️</Text>
+                <Text style={styles.bottomButtonText}>대전</Text>
+              </LinearGradient>
+            </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Achievements'); }}>
               <LinearGradient colors={theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0']} style={styles.bottomButtonGradient}>
                 <Text style={styles.bottomButtonIcon}>🎖️</Text>

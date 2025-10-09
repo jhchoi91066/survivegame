@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useMathRushStore } from '../game/mathrush/store';
@@ -8,8 +8,8 @@ import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { updateMathRushRecord, loadGameRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
-import { smartSync } from '../utils/cloudSync';
 import { useTheme } from '../contexts/ThemeContext';
+import { updateStatsOnGamePlayed } from '../utils/achievementManager';
 
 type MathRushGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MathRushGame'>;
 
@@ -22,6 +22,14 @@ const MathRushGame: React.FC = () => {
 
   const { updateBestRecord } = useGameStore();
   const [isNewRecord, setIsNewRecord] = useState(false);
+
+  // 화면이 포커스될 때마다 게임 상태 리셋
+  useFocusEffect(
+    useCallback(() => {
+      resetGame();
+      setIsNewRecord(false);
+    }, [resetGame])
+  );
 
   useEffect(() => {
     if (gameStatus === 'playing') {
@@ -47,10 +55,8 @@ const MathRushGame: React.FC = () => {
     const playTime = 30 - timeRemaining;
     await updateMathRushRecord(score, highestCombo, playTime);
     updateBestRecord('math_rush', score);
-    await smartSync({
-      game_type: 'math_rush', score: score, time_seconds: playTime, difficulty: 'normal', played_at: new Date().toISOString()
-    });
     await incrementGameCount();
+    await updateStatsOnGamePlayed('math_rush', score, playTime, 'normal');
   };
 
   const handleAnswer = (answer: number) => {

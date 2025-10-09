@@ -41,7 +41,7 @@ interface ComparisonData {
   friendUsername: string;
 }
 
-type GameType = 'flip_match' | 'sequence' | 'math_rush' | 'merge_puzzle';
+type GameType = 'flip_match' | 'math_rush' | 'spatial_memory' | 'stroop';
 
 const { width } = Dimensions.get('window');
 
@@ -101,12 +101,12 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
     switch (gameType) {
       case 'flip_match':
         return record.best_time_seconds ? `${record.best_time_seconds}초` : '-';
-      case 'sequence':
+      case 'spatial_memory':
         return record.best_level ? `Lv.${record.best_level}` : '-';
       case 'math_rush':
         return record.best_score ? `${record.best_score}점` : '-';
-      case 'merge_puzzle':
-        return record.best_moves ? `${record.best_moves}회` : '-';
+      case 'stroop':
+        return record.best_score ? `${record.best_score}점` : '-';
       default:
         return '-';
     }
@@ -126,7 +126,7 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
         friendValue = friendRecord.best_time_seconds || Infinity;
         // Lower is better for time
         return myValue < friendValue ? 'me' : myValue > friendValue ? 'friend' : 'tie';
-      case 'sequence':
+      case 'spatial_memory':
         myValue = myRecord.best_level || 0;
         friendValue = friendRecord.best_level || 0;
         // Higher is better for level
@@ -136,11 +136,11 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
         friendValue = friendRecord.best_score || 0;
         // Higher is better for score
         return myValue > friendValue ? 'me' : myValue < friendValue ? 'friend' : 'tie';
-      case 'merge_puzzle':
-        myValue = myRecord.best_moves || Infinity;
-        friendValue = friendRecord.best_moves || Infinity;
-        // Lower is better for moves
-        return myValue < friendValue ? 'me' : myValue > friendValue ? 'friend' : 'tie';
+      case 'stroop':
+        myValue = myRecord.best_score || 0;
+        friendValue = friendRecord.best_score || 0;
+        // Higher is better for score
+        return myValue > friendValue ? 'me' : myValue < friendValue ? 'friend' : 'tie';
       default:
         return 'tie';
     }
@@ -151,9 +151,11 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
       { type: 'flip_match', difficulty: 'easy' },
       { type: 'flip_match', difficulty: 'medium' },
       { type: 'flip_match', difficulty: 'hard' },
-      { type: 'sequence', difficulty: 'normal' },
+      { type: 'spatial_memory', difficulty: 'easy' },
+      { type: 'spatial_memory', difficulty: 'medium' },
+      { type: 'spatial_memory', difficulty: 'hard' },
       { type: 'math_rush', difficulty: 'normal' },
-      { type: 'merge_puzzle', difficulty: 'normal' },
+      { type: 'stroop', difficulty: 'normal' },
     ];
 
     let myWins = 0;
@@ -290,9 +292,9 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
         {/* Game-by-Game Comparison */}
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           {renderGameComparison('flip_match', 'Flip & Match', '🎴', ['easy', 'medium', 'hard'])}
-          {renderGameComparison('sequence', 'Sequence', '🔢', ['normal'])}
+          {renderGameComparison('spatial_memory', 'Spatial Memory', '🧠', ['easy', 'medium', 'hard'])}
           {renderGameComparison('math_rush', 'Math Rush', '➕', ['normal'])}
-          {renderGameComparison('merge_puzzle', 'Merge Puzzle', '🔢', ['normal'])}
+          {renderGameComparison('stroop', 'Stroop Test', '🎨', ['normal'])}
         </ScrollView>
       </SafeAreaView>
     </View>

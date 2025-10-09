@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,16 +20,24 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
-  const { signInWithGoogle, signInWithApple, signInAnonymously } = useAuth();
+  const { signInWithGoogle, signInWithApple, signInAnonymously, user } = useAuth();
   const [loading, setLoading] = useState(false);
+
+  // 로그인 성공 시 자동으로 Menu로 이동
+  useEffect(() => {
+    if (user) {
+      navigation.replace('Menu');
+    }
+  }, [user, navigation]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
       await signInWithGoogle();
+      // 웹에서는 리다이렉트되므로 여기 도달 안 함
+      // 모바일에서는 user가 변경되면 useEffect가 처리
     } catch (error) {
       console.error('Google 로그인 실패:', error);
-    } finally {
       setLoading(false);
     }
   };
@@ -40,7 +48,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
       await signInWithApple();
     } catch (error) {
       console.error('Apple 로그인 실패:', error);
-    } finally {
       setLoading(false);
     }
   };
@@ -51,7 +58,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
       await signInAnonymously();
     } catch (error) {
       console.error('익명 로그인 실패:', error);
-    } finally {
       setLoading(false);
     }
   };

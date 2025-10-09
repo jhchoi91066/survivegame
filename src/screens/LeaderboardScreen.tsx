@@ -40,7 +40,7 @@ interface LeaderboardEntry {
   rank?: number;
 }
 
-type GameType = 'flip_match' | 'sequence' | 'math_rush' | 'merge_puzzle';
+type GameType = 'flip_match' | 'math_rush' | 'spatial_memory' | 'stroop';
 type Difficulty = 'easy' | 'medium' | 'hard' | 'normal';
 
 const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => {
@@ -163,14 +163,14 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
     if (!user) return;
 
     try {
-      const games: GameType[] = ['flip_match', 'sequence', 'math_rush', 'merge_puzzle'];
+      const games: GameType[] = ['flip_match', 'math_rush', 'spatial_memory', 'stroop'];
       const ranks: { [gameType: string]: number } = {};
 
       for (const game of games) {
         // Get the best difficulty for each game
         let difficulty: Difficulty = 'normal';
-        if (game === 'flip_match') {
-          difficulty = 'hard'; // Use hardest difficulty for flip_match
+        if (game === 'flip_match' || game === 'spatial_memory') {
+          difficulty = 'hard'; // Use hardest difficulty for flip_match and spatial_memory
         }
 
         const { data, error } = await supabase
@@ -199,51 +199,51 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
     switch (game) {
       case 'flip_match':
         return 'best_time_seconds';
-      case 'sequence':
+      case 'spatial_memory':
         return 'best_level';
       case 'math_rush':
         return 'best_score';
-      case 'merge_puzzle':
-        return 'best_moves';
+      case 'stroop':
+        return 'best_score';
       default:
         return 'best_score';
     }
   };
 
   const getOrderAscendingForGame = (game: GameType): boolean => {
-    return game === 'flip_match' || game === 'merge_puzzle';
+    return game === 'flip_match';
   };
 
   const getOrderColumn = (): string => {
     switch (selectedGame) {
       case 'flip_match':
         return 'best_time_seconds';
-      case 'sequence':
+      case 'spatial_memory':
         return 'best_level';
       case 'math_rush':
         return 'best_score';
-      case 'merge_puzzle':
-        return 'best_moves';
+      case 'stroop':
+        return 'best_score';
       default:
         return 'best_score';
     }
   };
 
   const getOrderAscending = (): boolean => {
-    // Lower is better for time and moves, higher is better for score and level
-    return selectedGame === 'flip_match' || selectedGame === 'merge_puzzle';
+    // Lower is better for time, higher is better for score and level
+    return selectedGame === 'flip_match';
   };
 
   const formatScore = (entry: LeaderboardEntry): string => {
     switch (selectedGame) {
       case 'flip_match':
         return entry.best_time_seconds ? `${entry.best_time_seconds}초` : '-';
-      case 'sequence':
+      case 'spatial_memory':
         return entry.best_level ? `Lv.${entry.best_level}` : '-';
       case 'math_rush':
         return entry.best_score ? `${entry.best_score}점` : '-';
-      case 'merge_puzzle':
-        return entry.best_moves ? `${entry.best_moves}회` : '-';
+      case 'stroop':
+        return entry.best_score ? `${entry.best_score}점` : '-';
       default:
         return '-';
     }
@@ -273,7 +273,7 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
   };
 
   const getDifficultiesForGame = (game: GameType): Difficulty[] => {
-    if (game === 'flip_match') {
+    if (game === 'flip_match' || game === 'spatial_memory') {
       return ['easy', 'medium', 'hard'];
     }
     return ['normal'];
@@ -311,9 +311,9 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
         >
           {[
             { id: 'flip_match' as GameType, name: 'Flip & Match', emoji: '🎴' },
-            { id: 'sequence' as GameType, name: 'Sequence', emoji: '🔢' },
             { id: 'math_rush' as GameType, name: 'Math Rush', emoji: '➕' },
-            { id: 'merge_puzzle' as GameType, name: 'Merge Puzzle', emoji: '🔢' },
+            { id: 'spatial_memory' as GameType, name: 'Spatial Memory', emoji: '🧠' },
+            { id: 'stroop' as GameType, name: 'Stroop Test', emoji: '🎨' },
           ].map((game) => (
             <Pressable
               key={game.id}

@@ -11,6 +11,8 @@ import AchievementsScreen from './src/screens/AchievementsScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import FriendsScreen from './src/screens/FriendsScreen';
 import FriendComparisonScreen from './src/screens/FriendComparisonScreen';
+import MultiplayerLobbyScreen from './src/screens/MultiplayerLobbyScreen';
+import MultiplayerGameScreen from './src/screens/MultiplayerGameScreen';
 import FlipMatchGame from './src/screens/FlipMatchGame';
 import MathRushGame from './src/screens/MathRushGame';
 import SpatialMemoryGame from './src/screens/SpatialMemoryGame';
@@ -19,7 +21,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { AccessibilityProvider } from './src/contexts/AccessibilityContext';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-import { processUploadQueue } from './src/utils/cloudSync';
+import { syncGameRecords } from './src/utils/cloudSync';
 
 export type RootStackParamList = {
   Menu: undefined;
@@ -31,6 +33,8 @@ export type RootStackParamList = {
   Leaderboard: undefined;
   Friends: undefined;
   FriendComparison: { friendId: string; friendUsername: string; };
+  MultiplayerLobby: undefined;
+  MultiplayerGame: { roomId: string; gameType: string; difficulty?: string; };
   FlipMatchGame: undefined;
   MathRushGame: undefined;
   SpatialMemoryGame: undefined;
@@ -46,8 +50,10 @@ function AppNavigator() {
     const autoSync = async () => {
       if (user) {
         try {
-          await processUploadQueue();
-          console.log('Auto-sync completed');
+          const result = await syncGameRecords();
+          if (result.success) {
+            console.log('Auto-sync completed');
+          }
         } catch (error) {
           console.error('Auto-sync failed:', error);
         }
@@ -70,6 +76,8 @@ function AppNavigator() {
             <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
             <Stack.Screen name="Friends" component={FriendsScreen} />
             <Stack.Screen name="FriendComparison" component={FriendComparisonScreen} />
+            <Stack.Screen name="MultiplayerLobby" component={MultiplayerLobbyScreen} />
+            <Stack.Screen name="MultiplayerGame" component={MultiplayerGameScreen} />
             <Stack.Screen name="FlipMatchGame" component={FlipMatchGame} />
             <Stack.Screen name="MathRushGame" component={MathRushGame} />
             <Stack.Screen name="SpatialMemoryGame" component={SpatialMemoryGame} />

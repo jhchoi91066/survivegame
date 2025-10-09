@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useFlipMatchStore } from '../game/flipmatch/store';
@@ -10,8 +10,8 @@ import { hapticPatterns } from '../utils/haptics';
 import { useGameStore } from '../game/shared/store';
 import { updateFlipMatchRecord, loadGameRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
-import { smartSync } from '../utils/cloudSync';
 import { useTheme } from '../contexts/ThemeContext';
+import { updateStatsOnGamePlayed } from '../utils/achievementManager';
 
 type FlipMatchGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FlipMatchGame'>;
 
@@ -27,6 +27,15 @@ const FlipMatchGame: React.FC = () => {
   const [showDifficultyModal, setShowDifficultyModal] = useState(true);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
   const [isNewRecord, setIsNewRecord] = useState(false);
+
+  // 화면이 포커스될 때마다 게임 상태 리셋
+  useFocusEffect(
+    useCallback(() => {
+      resetGame();
+      setShowDifficultyModal(true);
+      setIsNewRecord(false);
+    }, [resetGame])
+  );
 
   useEffect(() => {
     if (gameStatus === 'playing') {
@@ -53,9 +62,7 @@ const FlipMatchGame: React.FC = () => {
 
       await updateFlipMatchRecord(timeTaken, settings.difficulty, timeTaken);
       updateBestRecord('flip_match', timeTaken);
-      await smartSync({
-        game_type: 'flip_match', score: moves, time_seconds: timeTaken, difficulty: settings.difficulty, played_at: new Date().toISOString()
-      });
+      await updateStatsOnGamePlayed('flip_match', moves, timeTaken, settings.difficulty);
     } else {
       hapticPatterns.error();
     }
