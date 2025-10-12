@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Card as CardType } from '../../game/flipmatch/types';
 import { useTheme } from '../../contexts/ThemeContext';
+import { soundManager } from '../../utils/soundManager';
 
 interface CardProps {
   card: CardType;
@@ -20,7 +21,16 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
 
   useEffect(() => {
     rotation.value = withTiming(card.isFlipped ? 180 : 0, { duration: 300 });
+    if (card.isFlipped && !card.isMatched) {
+      soundManager.playSound('card_flip');
+    }
   }, [card.isFlipped]);
+
+  useEffect(() => {
+    if (card.isMatched) {
+      soundManager.playSound('card_match');
+    }
+  }, [card.isMatched]);
 
   const frontAnimatedStyle = useAnimatedStyle(() => {
     const rotateValue = interpolate(rotation.value, [0, 180], [0, 180]);

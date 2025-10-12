@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSpatialMemoryStore } from '../../game/spatialmemory/store';
 import { GRID_SIZES } from '../../game/spatialmemory/types';
 import { hapticPatterns } from '../../utils/haptics';
+import { soundManager } from '../../utils/soundManager';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const TILE_GAP = 8;
@@ -12,10 +13,20 @@ const TileGrid: React.FC = () => {
   const { tiles, settings, gameStatus, handleTilePress } = useSpatialMemoryStore();
   const { rows, cols } = GRID_SIZES[settings.difficulty];
 
+  // 타일 표시 시 사운드
+  useEffect(() => {
+    if (gameStatus === 'showing') {
+      soundManager.playSound('tile_show');
+    }
+  }, [gameStatus]);
+
   const onTilePress = (tileId: number) => {
     if (gameStatus === 'input') {
       hapticPatterns.buttonPress();
-      handleTilePress(tileId);
+      const result = handleTilePress(tileId);
+      // 정답/오답 사운드는 store에서 직접 처리하는 것이 나을 수 있지만,
+      // 여기서는 간단하게 버튼 클릭 사운드만 재생
+      soundManager.playSound('button_press');
     }
   };
 

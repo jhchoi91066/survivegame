@@ -144,7 +144,7 @@ const GameStatCard: React.FC<GameStatCardProps> = ({ icon, title, stats, delay }
 };
 
 const getStyles = (theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   scrollView: { flex: 1 },
   scrollContent: { padding: 20, paddingTop: 10, paddingBottom: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },

@@ -7,11 +7,14 @@ import { useFlipMatchStore } from '../game/flipmatch/store';
 import { Difficulty } from '../game/flipmatch/types';
 import GameBoard from '../components/flipmatch/GameBoard';
 import { hapticPatterns } from '../utils/haptics';
+import { soundManager } from '../utils/soundManager';
 import { useGameStore } from '../game/shared/store';
 import { updateFlipMatchRecord, loadGameRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
 import { useTheme } from '../contexts/ThemeContext';
 import { updateStatsOnGamePlayed } from '../utils/achievementManager';
+import { Achievement } from '../data/achievements';
+import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
 
 type FlipMatchGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FlipMatchGame'>;
 
@@ -27,6 +30,8 @@ const FlipMatchGame: React.FC = () => {
   const [showDifficultyModal, setShowDifficultyModal] = useState(true);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
   const [isNewRecord, setIsNewRecord] = useState(false);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
 
   // 화면이 포커스될 때마다 게임 상태 리셋
   useFocusEffect(
@@ -53,6 +58,7 @@ const FlipMatchGame: React.FC = () => {
   const handleGameEnd = async () => {
     if (gameStatus === 'won') {
       hapticPatterns.levelComplete();
+      soundManager.playSound('game_win');
       const timeTaken = getTimeLimit() - timeRemaining;
 
       const oldRecord = await loadGameRecord('flip_match');
@@ -62,9 +68,16 @@ const FlipMatchGame: React.FC = () => {
 
       await updateFlipMatchRecord(timeTaken, settings.difficulty, timeTaken);
       updateBestRecord('flip_match', timeTaken);
-      await updateStatsOnGamePlayed('flip_match', moves, timeTaken, settings.difficulty);
+
+      const newAchievements = await updateStatsOnGamePlayed('flip_match', moves, timeTaken, settings.difficulty);
+      if (newAchievements.length > 0) {
+        setUnlockedAchievements(newAchievements);
+        setShowAchievementModal(true);
+        soundManager.playSound('achievement');
+      }
     } else {
       hapticPatterns.error();
+      soundManager.playSound('game_lose');
     }
     await incrementGameCount();
   };
@@ -76,19 +89,25 @@ const FlipMatchGame: React.FC = () => {
 
   const handleStartGame = () => {
     setIsNewRecord(false);
-    initializeGame({ difficulty: selectedDifficulty, theme: 'animals' });
     setShowDifficultyModal(false);
     hapticPatterns.buttonPress();
+    soundManager.playSound('game_start');
+    // 사운드가 재생된 후 게임 초기화 (약간의 지연)
+    setTimeout(() => {
+      initializeGame({ difficulty: selectedDifficulty, theme: 'animals' });
+    }, 100);
   };
 
   const handleRestart = () => {
     setIsNewRecord(false);
     resetGame();
     hapticPatterns.buttonPress();
+    soundManager.playSound('button_press');
   };
 
   const handleBackToMenu = () => {
     hapticPatterns.buttonPress();
+    soundManager.playSound('button_press');
     navigation.goBack();
   };
 
@@ -167,13 +186,19 @@ const FlipMatchGame: React.FC = () => {
             </View>
           </View>
         </Modal>
+
+        <AchievementUnlockModal
+          visible={showAchievementModal}
+          achievements={unlockedAchievements}
+          onClose={() => setShowAchievementModal(false)}
+        />
       </SafeAreaView>
     </View>
   );
 };
 
 const getStyles = (theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   scrollContent: { flexGrow: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   backButton: { padding: 8 },

@@ -1,0 +1,16 @@
+[build]
+  # 빌드 명령어
+  command = "npx expo export --platform web"
+
+  # 빌드 결과물 디렉토리
+  publish = "dist"
+
+[[redirects]]
+  # SPA 라우팅을 위한 리다이렉트
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[build.environment]
+  # Node.js 버전
+  NODE_VERSION = "18"

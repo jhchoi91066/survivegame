@@ -466,6 +466,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    paddingTop: Platform.OS === 'web' ? 40 : 0,
   },
   header: {
     padding: 20,

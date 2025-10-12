@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, SafeAreaView, ScrollView, Dimensions
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { hapticPatterns } from '../utils/haptics';
+import { soundManager } from '../utils/soundManager';
 import { GameType, GameInfo } from '../game/shared/types';
 import { loadGameRecord } from '../utils/statsManager';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,7 +20,7 @@ type MenuScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'M
 interface MenuScreenProps { navigation: MenuScreenNavigationProp; }
 
 const { width: windowWidth } = Dimensions.get('window');
-const width = Platform.OS === 'web' ? 430 : windowWidth;
+const width = windowWidth;
 const isSmallScreen = width < 375;
 
 const FIRST_VISIT_KEY = '@brain_games_first_visit';
@@ -80,6 +81,7 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
 
   const handleGamePress = (gameId: GameType) => {
     hapticPatterns.buttonPress();
+    soundManager.playSound('button_press');
     switch (gameId) {
       case 'flip_match': navigation.navigate('FlipMatchGame'); break;
       case 'math_rush': navigation.navigate('MathRushGame'); break;
@@ -134,21 +136,21 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
               <Text style={styles.subtitle}>두뇌를 깨우는 즐거운 시간</Text>
             </View>
             <View style={styles.headerButtons}>
-              <Pressable style={styles.iconButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate(user ? 'Profile' : 'Login'); }}>
-                <LinearGradient colors={user ? theme.gradients.flipMatch : ['#334155', '#1e293b']} style={styles.iconGradient}>
-                  <Text style={styles.iconText}>{user ? '👤' : '🔐'}</Text>
+              <Pressable style={styles.textButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate(user ? 'Profile' : 'Login'); }}>
+                <LinearGradient colors={user ? theme.gradients.flipMatch : ['#334155', '#1e293b']} style={styles.textButtonGradient}>
+                  <Text style={styles.buttonText}>{user ? 'Profile' : 'Login'}</Text>
                 </LinearGradient>
               </Pressable>
               {user && (
-                <Pressable style={styles.iconButton} onPress={handleManualSync} disabled={isSyncing}>
-                  <LinearGradient colors={isSyncing ? ['#94a3b8', '#64748b'] : ['#10b981', '#059669']} style={styles.iconGradient}>
-                    <Text style={styles.iconText}>{isSyncing ? '⏳' : '🔄'}</Text>
+                <Pressable style={styles.textButton} onPress={handleManualSync} disabled={isSyncing}>
+                  <LinearGradient colors={isSyncing ? ['#94a3b8', '#64748b'] : ['#10b981', '#059669']} style={styles.textButtonGradient}>
+                    <Text style={styles.buttonText}>{isSyncing ? 'Syncing' : 'Sync'}</Text>
                   </LinearGradient>
                 </Pressable>
               )}
-              <Pressable style={styles.iconButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Settings'); }}>
-                <LinearGradient colors={['#334155', '#1e293b']} style={styles.iconGradient}>
-                  <Text style={styles.iconText}>⚙️</Text>
+              <Pressable style={styles.textButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate('Settings'); }}>
+                <LinearGradient colors={['#334155', '#1e293b']} style={styles.textButtonGradient}>
+                  <Text style={styles.buttonText}>Settings</Text>
                 </LinearGradient>
               </Pressable>
             </View>
@@ -239,16 +241,16 @@ const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, inde
 const getStyles = (theme) => StyleSheet.create({
   container: { flex: 1 },
   backgroundGradient: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  safeArea: { flex: 1 },
+  safeArea: { flex: 1, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   scrollContent: { flexGrow: 1, padding: 16, paddingTop: 8 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, marginTop: 8 },
   titleContainer: { flex: 1 },
   title: { fontSize: isSmallScreen ? 30 : 34, fontWeight: '900', color: theme.colors.text, letterSpacing: -1 },
   subtitle: { fontSize: 13, color: theme.colors.textSecondary, marginTop: 6 },
   headerButtons: { flexDirection: 'row', gap: 8 },
-  iconButton: { width: 40, height: 40, borderRadius: 12, overflow: 'hidden' },
-  iconGradient: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
-  iconText: { fontSize: 18 },
+  textButton: { height: 40, borderRadius: 12, overflow: 'hidden' },
+  textButtonGradient: { height: '100%', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   gamesContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 16 },
   gameCardWrapper: { width: (width - 48) / 2, marginBottom: 16 },
   gameCard: { borderRadius: 20, overflow: 'hidden', shadowColor: theme.colors.shadow, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 10 },

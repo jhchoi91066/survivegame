@@ -51,8 +51,11 @@ export async function uploadGameStats(
         game_type: gameType,
         difficulty: stats.difficulty || null,
         best_time: stats.bestTime || null,
+        best_time_seconds: stats.bestTime || null,
         highest_level: stats.highestLevel || null,
+        best_level: stats.highestLevel || null,
         high_score: stats.highScore || null,
+        best_score: stats.highScore || null,
         highest_combo: stats.highestCombo || null,
         best_moves: stats.bestMoves || null,
         highest_number: stats.highestNumber || null,
@@ -167,7 +170,7 @@ export async function syncGameRecords(): Promise<CloudSyncResult> {
     for (const gameType of gameTypes) {
       try {
         // Load local stats from AsyncStorage (where statsManager stores them)
-        const localStatsStr = await AsyncStorage.getItem(`game_stats_${gameType}`);
+        const localStatsStr = await AsyncStorage.getItem(`@brain_games_records_${gameType}`);
         if (!localStatsStr) continue;
 
         const localStats = JSON.parse(localStatsStr);
@@ -184,7 +187,7 @@ export async function syncGameRecords(): Promise<CloudSyncResult> {
           uploadedCount++;
 
           // Update local storage with merged stats
-          await AsyncStorage.setItem(`game_stats_${gameType}`, JSON.stringify(mergedStats));
+          await AsyncStorage.setItem(`@brain_games_records_${gameType}`, JSON.stringify(mergedStats));
         }
       } catch (error) {
         console.error(`Failed to sync ${gameType}:`, error);
@@ -243,9 +246,9 @@ function mergeStats(local: any, cloud: any, gameType: GameType): any {
       break;
   }
 
-  // Sum total plays and play time
-  merged.totalPlays = (local.totalPlays || 0) + (cloud.total_plays || 0);
-  merged.totalPlayTime = (local.totalPlayTime || 0) + (cloud.total_play_time || 0);
+  // Keep higher total plays and play time (in case cloud has more)
+  merged.totalPlays = Math.max(local.totalPlays || 0, cloud.total_plays || 0);
+  merged.totalPlayTime = Math.max(local.totalPlayTime || 0, cloud.total_play_time || 0);
 
   return merged;
 }

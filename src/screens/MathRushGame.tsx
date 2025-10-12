@@ -5,11 +5,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useMathRushStore } from '../game/mathrush/store';
 import { hapticPatterns } from '../utils/haptics';
+import { soundManager } from '../utils/soundManager';
 import { useGameStore } from '../game/shared/store';
 import { updateMathRushRecord, loadGameRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
 import { useTheme } from '../contexts/ThemeContext';
 import { updateStatsOnGamePlayed } from '../utils/achievementManager';
+import { Achievement } from '../data/achievements';
+import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
 
 type MathRushGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MathRushGame'>;
 
@@ -22,6 +25,8 @@ const MathRushGame: React.FC = () => {
 
   const { updateBestRecord } = useGameStore();
   const [isNewRecord, setIsNewRecord] = useState(false);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
 
   // 화면이 포커스될 때마다 게임 상태 리셋
   useFocusEffect(
@@ -44,8 +49,16 @@ const MathRushGame: React.FC = () => {
     }
   }, [gameStatus]);
 
+  // 시간 경고 사운드 (5초 남았을 때)
+  useEffect(() => {
+    if (gameStatus === 'playing' && timeRemaining === 5) {
+      soundManager.playSound('time_warning');
+    }
+  }, [timeRemaining, gameStatus]);
+
   const handleGameFinish = async () => {
     hapticPatterns.gameOver();
+    soundManager.playSound(score > 0 ? 'game_win' : 'game_lose');
 
     const oldRecord = await loadGameRecord('math_rush');
     if (!oldRecord || !oldRecord.highScore || score > oldRecord.highScore) {
@@ -56,31 +69,49 @@ const MathRushGame: React.FC = () => {
     await updateMathRushRecord(score, highestCombo, playTime);
     updateBestRecord('math_rush', score);
     await incrementGameCount();
-    await updateStatsOnGamePlayed('math_rush', score, playTime, 'normal');
+
+    const newAchievements = await updateStatsOnGamePlayed('math_rush', score, playTime, 'normal');
+    if (newAchievements.length > 0) {
+      setUnlockedAchievements(newAchievements);
+      setShowAchievementModal(true);
+      soundManager.playSound('achievement');
+    }
   };
 
   const handleAnswer = (answer: number) => {
     if (!currentQuestion || gameStatus !== 'playing') return;
     const isCorrect = answer === currentQuestion.correctAnswer;
-    if (isCorrect) hapticPatterns.correctAnswer(); else hapticPatterns.wrongAnswer();
+    if (isCorrect) {
+      hapticPatterns.correctAnswer();
+      soundManager.playSound('correct_answer');
+      if (combo > 0 && combo % 5 === 0) {
+        soundManager.playSound('combo'); // 5콤보마다 추가 사운드
+      }
+    } else {
+      hapticPatterns.wrongAnswer();
+      soundManager.playSound('wrong_answer');
+    }
     answerQuestion(answer);
   };
 
   const handleStart = () => {
     setIsNewRecord(false);
     hapticPatterns.buttonPress();
+    soundManager.playSound('game_start');
     startGame();
   };
 
   const handleRestart = () => {
     setIsNewRecord(false);
     hapticPatterns.buttonPress();
+    soundManager.playSound('button_press');
     resetGame();
     startGame();
   };
 
   const handleBackToMenu = () => {
     hapticPatterns.buttonPress();
+    soundManager.playSound('button_press');
     navigation.goBack();
   };
 
@@ -140,13 +171,19 @@ const MathRushGame: React.FC = () => {
             </View>
           </View>
         </Modal>
+
+        <AchievementUnlockModal
+          visible={showAchievementModal}
+          achievements={unlockedAchievements}
+          onClose={() => setShowAchievementModal(false)}
+        />
       </SafeAreaView>
     </View>
   );
 };
 
 const getStyles = (theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   backButton: { padding: 8 },
   backButtonText: { color: theme.colors.textSecondary, fontSize: 16 },

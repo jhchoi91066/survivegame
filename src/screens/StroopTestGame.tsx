@@ -5,11 +5,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useStroopStore } from '../game/stroop/store';
 import { hapticPatterns } from '../utils/haptics';
+import { soundManager } from '../utils/soundManager';
 import { useGameStore } from '../game/shared/store';
 import { updateStroopRecord, loadGameRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
 import { useTheme } from '../contexts/ThemeContext';
 import { updateStatsOnGamePlayed } from '../utils/achievementManager';
+import { Achievement } from '../data/achievements';
+import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
 
 type StroopGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StroopTestGame'>;
 
@@ -22,6 +25,8 @@ const StroopTestGame: React.FC = () => {
 
   const { updateBestRecord } = useGameStore();
   const [isNewRecord, setIsNewRecord] = useState(false);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
 
   // 화면이 포커스될 때마다 게임 상태 리셋
   useFocusEffect(
@@ -46,6 +51,7 @@ const StroopTestGame: React.FC = () => {
 
   const handleGameFinish = async () => {
     hapticPatterns.gameOver();
+    soundManager.playSound(score > 0 ? 'game_win' : 'game_lose');
 
     const oldRecord = await loadGameRecord('stroop');
     if (!oldRecord || !oldRecord.highScore || score > oldRecord.highScore) {
@@ -57,18 +63,31 @@ const StroopTestGame: React.FC = () => {
     await updateStroopRecord(score, playTime);
     updateBestRecord('stroop', score);
     await incrementGameCount();
-    await updateStatsOnGamePlayed('stroop', score, playTime, 'normal');
+
+    const newAchievements = await updateStatsOnGamePlayed('stroop', score, playTime, 'normal');
+    if (newAchievements.length > 0) {
+      setUnlockedAchievements(newAchievements);
+      setShowAchievementModal(true);
+      soundManager.playSound('achievement');
+    }
   };
 
   const handleAnswer = (answer: string) => {
     if (gameStatus !== 'playing') return;
     const isCorrect = answer === currentProblem?.correctAnswer;
-    isCorrect ? hapticPatterns.correctAnswer() : hapticPatterns.wrongAnswer();
+    if (isCorrect) {
+      hapticPatterns.correctAnswer();
+      soundManager.playSound('correct_answer');
+    } else {
+      hapticPatterns.wrongAnswer();
+      soundManager.playSound('wrong_answer');
+    }
     answerProblem(answer);
   };
 
   const handleStart = () => {
     setIsNewRecord(false);
+    soundManager.playSound('game_start');
     hapticPatterns.buttonPress();
     startGame();
   };
@@ -133,13 +152,19 @@ const StroopTestGame: React.FC = () => {
             </View>
           </View>
         </Modal>
+
+        <AchievementUnlockModal
+          visible={showAchievementModal}
+          achievements={unlockedAchievements}
+          onClose={() => setShowAchievementModal(false)}
+        />
       </SafeAreaView>
     </View>
   );
 };
 
 const getStyles = (theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   backButton: { padding: 8 },
   backButtonText: { color: theme.colors.textSecondary, fontSize: 16 },

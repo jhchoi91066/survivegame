@@ -7,11 +7,14 @@ import { useSpatialMemoryStore } from '../game/spatialmemory/store';
 import { Difficulty } from '../game/spatialmemory/types';
 import TileGrid from '../components/spatialmemory/TileGrid';
 import { hapticPatterns } from '../utils/haptics';
+import { soundManager } from '../utils/soundManager';
 import { useGameStore } from '../game/shared/store';
 import { updateSpatialMemoryRecord, loadGameRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
 import { updateStatsOnGamePlayed } from '../utils/achievementManager';
 import { useTheme } from '../contexts/ThemeContext';
+import { Achievement } from '../data/achievements';
+import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
 
 type SpatialMemoryGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SpatialMemoryGame'>;
 
@@ -29,6 +32,8 @@ const SpatialMemoryGame: React.FC = () => {
   const [startTime, setStartTime] = useState<number>(0);
   const [isNewRecord, setIsNewRecord] = useState(false);
   const [hasRecordedStats, setHasRecordedStats] = useState(false);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
 
   // 화면이 포커스될 때마다 게임 상태 리셋
   useFocusEffect(
@@ -57,6 +62,7 @@ const SpatialMemoryGame: React.FC = () => {
     if (hasRecordedStats) return; // 중복 실행 방지
 
     hapticPatterns.gameOver();
+    soundManager.playSound(currentLevel > 1 ? 'game_win' : 'game_lose');
     const finalLevel = currentLevel - 1;
 
     const oldRecord = await loadGameRecord('spatial_memory');
@@ -70,7 +76,13 @@ const SpatialMemoryGame: React.FC = () => {
     await updateSpatialMemoryRecord(finalLevel, settings.difficulty, playTime);
     updateBestRecord('spatial_memory', finalLevel);
     await incrementGameCount();
-    await updateStatsOnGamePlayed('spatial_memory', finalLevel, playTime, settings.difficulty);
+
+    const newAchievements = await updateStatsOnGamePlayed('spatial_memory', finalLevel, playTime, settings.difficulty);
+    if (newAchievements.length > 0) {
+      setUnlockedAchievements(newAchievements);
+      soundManager.playSound('achievement');
+      setShowAchievementModal(true);
+    }
 
     setHasRecordedStats(true);
   };
@@ -173,13 +185,19 @@ const SpatialMemoryGame: React.FC = () => {
             </View>
           </View>
         </Modal>
+
+        <AchievementUnlockModal
+          visible={showAchievementModal}
+          achievements={unlockedAchievements}
+          onClose={() => setShowAchievementModal(false)}
+        />
       </SafeAreaView>
     </View>
   );
 };
 
 const getStyles = (theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   backButton: { padding: 8 },
   backButtonText: { color: theme.colors.textSecondary, fontSize: 16 },

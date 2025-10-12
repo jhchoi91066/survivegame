@@ -309,6 +309,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f172a',
+    paddingTop: Platform.OS === 'web' ? 40 : 0,
   },
   header: {
     flexDirection: 'row',

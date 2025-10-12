@@ -117,15 +117,17 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
         const allReady = players.length >= 2;
         setOpponentReady(allReady);
 
+        const newStatus = data[0].status || 'waiting';
+
         setGameState({
-          status: data[0].status || 'waiting',
+          status: newStatus,
           players,
           startTime: data[0].start_time,
         });
 
-        // 모두 준비되면 카운트다운 시작
-        if (allReady && gameState.status === 'waiting') {
-          updateGameStatus('countdown');
+        // 모두 준비되면 카운트다운 시작 (현재 상태가 waiting인 경우만)
+        if (allReady && newStatus === 'waiting') {
+          await updateGameStatus('countdown');
         }
       }
     } catch (error) {
@@ -338,6 +340,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f172a',
+    paddingTop: Platform.OS === 'web' ? 40 : 0,
   },
   gradient: {
     ...StyleSheet.absoluteFillObject,

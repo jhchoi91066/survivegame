@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, SafeAreaView, Switch, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { soundManager } from '../utils/soundManager';
 import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -25,13 +26,21 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const { theme, themeMode, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [musicEnabled, setMusicEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
 
   // Online settings
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [leaderboardParticipate, setLeaderboardParticipate] = useState(true);
   const [friendRequestsEnabled, setFriendRequestsEnabled] = useState(true);
+
+  // Load sound settings on mount
+  useEffect(() => {
+    const loadSoundSettings = async () => {
+      const settings = soundManager.getSettings();
+      setSoundEnabled(settings.soundEnabled);
+    };
+    loadSoundSettings();
+  }, []);
 
   const handleResetTutorial = async () => {
     try {
@@ -169,6 +178,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  const handleToggleSound = async (value: boolean) => {
+    setSoundEnabled(value);
+    await soundManager.setEnabled(value);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (value) {
+      soundManager.playSound('button_press'); // 테스트 사운드
+    }
+  };
+
   const dynamicStyles = {
     container: {
       ...styles.container,
@@ -253,25 +271,27 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
           <Text style={dynamicStyles.sectionTitle}>사운드</Text>
 
           <View style={dynamicStyles.setting}>
-            <Text style={dynamicStyles.settingLabel}>효과음</Text>
+            <View>
+              <Text style={dynamicStyles.settingLabel}>효과음</Text>
+              <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
+                {soundEnabled ? '게임 사운드 효과 활성화' : '게임 사운드 효과 비활성화'}
+              </Text>
+            </View>
             <Switch
               value={soundEnabled}
-              onValueChange={setSoundEnabled}
+              onValueChange={handleToggleSound}
               trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
+              thumbColor={soundEnabled ? '#ffffff' : '#f4f3f4'}
             />
           </View>
 
           <View style={dynamicStyles.setting}>
-            <Text style={dynamicStyles.settingLabel}>배경 음악</Text>
-            <Switch
-              value={musicEnabled}
-              onValueChange={setMusicEnabled}
-              trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
-            />
-          </View>
-
-          <View style={dynamicStyles.setting}>
-            <Text style={dynamicStyles.settingLabel}>진동</Text>
+            <View>
+              <Text style={dynamicStyles.settingLabel}>진동</Text>
+              <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
+                {vibrationEnabled ? '햅틱 피드백 활성화' : '햅틱 피드백 비활성화'}
+              </Text>
+            </View>
             <Switch
               value={vibrationEnabled}
               onValueChange={setVibrationEnabled}
@@ -389,6 +409,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: Platform.OS === 'web' ? 40 : 0,
   },
   header: {
     flexDirection: 'row',

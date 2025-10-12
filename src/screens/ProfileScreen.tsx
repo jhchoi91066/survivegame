@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
@@ -127,57 +128,87 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const handleSignOut = async () => {
-    Alert.alert(
-      '로그아웃',
-      '정말 로그아웃하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '로그아웃',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut();
-              navigation.navigate('Menu');
-            } catch (error) {
-              Alert.alert('오류', '로그아웃 중 문제가 발생했습니다.');
-            }
+    if (Platform.OS === 'web') {
+      if (window.confirm('정말 로그아웃하시겠습니까?')) {
+        try {
+          await signOut();
+          navigation.navigate('Menu');
+        } catch (error) {
+          window.alert('로그아웃 중 문제가 발생했습니다.');
+        }
+      }
+    } else {
+      Alert.alert(
+        '로그아웃',
+        '정말 로그아웃하시겠습니까?',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '로그아웃',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await signOut();
+                navigation.navigate('Menu');
+              } catch (error) {
+                Alert.alert('오류', '로그아웃 중 문제가 발생했습니다.');
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleDeleteAccount = async () => {
-    Alert.alert(
-      '계정 삭제',
-      '정말 계정을 삭제하시겠습니까? 모든 데이터가 영구적으로 삭제됩니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // 프로필 삭제 (CASCADE로 연관 데이터도 삭제됨)
-              const { error } = await supabase
-                .from('profiles')
-                .delete()
-                .eq('id', user?.id);
+    if (Platform.OS === 'web') {
+      if (window.confirm('정말 계정을 삭제하시겠습니까? 모든 데이터가 영구적으로 삭제됩니다.')) {
+        try {
+          const { error } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', user?.id);
 
-              if (error) throw error;
+          if (error) throw error;
 
-              await signOut();
-              navigation.navigate('Menu');
-              Alert.alert('완료', '계정이 삭제되었습니다.');
-            } catch (error) {
-              console.error('계정 삭제 오류:', error);
-              Alert.alert('오류', '계정을 삭제할 수 없습니다.');
-            }
+          await signOut();
+          navigation.navigate('Menu');
+          window.alert('계정이 삭제되었습니다.');
+        } catch (error) {
+          console.error('계정 삭제 오류:', error);
+          window.alert('계정을 삭제할 수 없습니다.');
+        }
+      }
+    } else {
+      Alert.alert(
+        '계정 삭제',
+        '정말 계정을 삭제하시겠습니까? 모든 데이터가 영구적으로 삭제됩니다.',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '삭제',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const { error } = await supabase
+                  .from('profiles')
+                  .delete()
+                  .eq('id', user?.id);
+
+                if (error) throw error;
+
+                await signOut();
+                navigation.navigate('Menu');
+                Alert.alert('완료', '계정이 삭제되었습니다.');
+              } catch (error) {
+                console.error('계정 삭제 오류:', error);
+                Alert.alert('오류', '계정을 삭제할 수 없습니다.');
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   if (loading) {
