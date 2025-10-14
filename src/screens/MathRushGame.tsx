@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, Platform } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -13,12 +13,15 @@ import { useTheme } from '../contexts/ThemeContext';
 import { updateStatsOnGamePlayed } from '../utils/achievementManager';
 import { Achievement } from '../data/achievements';
 import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
+import { uploadGameStats } from '../utils/cloudSync';
+import { useAuth } from '../contexts/AuthContext';
 
 type MathRushGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MathRushGame'>;
 
 const MathRushGame: React.FC = () => {
   const navigation = useNavigation<MathRushGameNavigationProp>();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const {
     currentQuestion, score, combo, highestCombo, timeRemaining, gameStatus, lives, answerQuestion, decrementTime, startGame, resetGame,
   } = useMathRushStore();
@@ -69,6 +72,19 @@ const MathRushGame: React.FC = () => {
     await updateMathRushRecord(score, highestCombo, playTime);
     updateBestRecord('math_rush', score);
     await incrementGameCount();
+
+    // 클라우드 동기화 (로그인 상태일 때만)
+    if (user) {
+      const record = await loadGameRecord('math_rush');
+      if (record) {
+        await uploadGameStats('math_rush', {
+          highScore: record.highScore,
+          highestCombo: record.highestCombo,
+          totalPlays: record.totalPlays,
+          totalPlayTime: record.totalPlayTime,
+        });
+      }
+    }
 
     const newAchievements = await updateStatsOnGamePlayed('math_rush', score, playTime, 'normal');
     if (newAchievements.length > 0) {

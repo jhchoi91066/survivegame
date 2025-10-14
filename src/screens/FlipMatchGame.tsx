@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, ScrollView, Platform } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -15,12 +15,15 @@ import { useTheme } from '../contexts/ThemeContext';
 import { updateStatsOnGamePlayed } from '../utils/achievementManager';
 import { Achievement } from '../data/achievements';
 import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
+import { uploadGameStats } from '../utils/cloudSync';
+import { useAuth } from '../contexts/AuthContext';
 
 type FlipMatchGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FlipMatchGame'>;
 
 const FlipMatchGame: React.FC = () => {
   const navigation = useNavigation<FlipMatchGameNavigationProp>();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const {
     gameStatus, moves, matchedPairs, totalPairs, timeRemaining, initializeGame, resetGame, decrementTime, settings,
   } = useFlipMatchStore();
@@ -68,6 +71,19 @@ const FlipMatchGame: React.FC = () => {
 
       await updateFlipMatchRecord(timeTaken, settings.difficulty, timeTaken);
       updateBestRecord('flip_match', timeTaken);
+
+      // 클라우드 동기화 (로그인 상태일 때만)
+      if (user) {
+        const record = await loadGameRecord('flip_match');
+        if (record) {
+          await uploadGameStats('flip_match', {
+            bestTime: record.bestTime,
+            totalPlays: record.totalPlays,
+            totalPlayTime: record.totalPlayTime,
+            difficulty: settings.difficulty,
+          });
+        }
+      }
 
       const newAchievements = await updateStatsOnGamePlayed('flip_match', moves, timeTaken, settings.difficulty);
       if (newAchievements.length > 0) {

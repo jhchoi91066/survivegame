@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, Platform } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -13,12 +13,15 @@ import { useTheme } from '../contexts/ThemeContext';
 import { updateStatsOnGamePlayed } from '../utils/achievementManager';
 import { Achievement } from '../data/achievements';
 import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
+import { uploadGameStats } from '../utils/cloudSync';
+import { useAuth } from '../contexts/AuthContext';
 
 type StroopGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StroopTestGame'>;
 
 const StroopTestGame: React.FC = () => {
   const navigation = useNavigation<StroopGameNavigationProp>();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const {
     currentProblem, score, timeRemaining, gameStatus, lives, answerProblem, decrementTime, startGame, resetGame,
   } = useStroopStore();
@@ -63,6 +66,18 @@ const StroopTestGame: React.FC = () => {
     await updateStroopRecord(score, playTime);
     updateBestRecord('stroop', score);
     await incrementGameCount();
+
+    // 클라우드 동기화 (로그인 상태일 때만)
+    if (user) {
+      const record = await loadGameRecord('stroop');
+      if (record) {
+        await uploadGameStats('stroop', {
+          highScore: record.highScore,
+          totalPlays: record.totalPlays,
+          totalPlayTime: record.totalPlayTime,
+        });
+      }
+    }
 
     const newAchievements = await updateStatsOnGamePlayed('stroop', score, playTime, 'normal');
     if (newAchievements.length > 0) {

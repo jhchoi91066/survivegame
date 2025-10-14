@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, Platform } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -15,12 +15,15 @@ import { updateStatsOnGamePlayed } from '../utils/achievementManager';
 import { useTheme } from '../contexts/ThemeContext';
 import { Achievement } from '../data/achievements';
 import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
+import { uploadGameStats } from '../utils/cloudSync';
+import { useAuth } from '../contexts/AuthContext';
 
 type SpatialMemoryGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SpatialMemoryGame'>;
 
 const SpatialMemoryGame: React.FC = () => {
   const navigation = useNavigation<SpatialMemoryGameNavigationProp>();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const {
     gameStatus, currentLevel, initializeGame, startRound, resetGame, settings,
   } = useSpatialMemoryStore();
@@ -76,6 +79,19 @@ const SpatialMemoryGame: React.FC = () => {
     await updateSpatialMemoryRecord(finalLevel, settings.difficulty, playTime);
     updateBestRecord('spatial_memory', finalLevel);
     await incrementGameCount();
+
+    // 클라우드 동기화 (로그인 상태일 때만)
+    if (user) {
+      const record = await loadGameRecord('spatial_memory');
+      if (record) {
+        await uploadGameStats('spatial_memory', {
+          highestLevel: record.highestLevel,
+          totalPlays: record.totalPlays,
+          totalPlayTime: record.totalPlayTime,
+          difficulty: settings.difficulty,
+        });
+      }
+    }
 
     const newAchievements = await updateStatsOnGamePlayed('spatial_memory', finalLevel, playTime, settings.difficulty);
     if (newAchievements.length > 0) {
