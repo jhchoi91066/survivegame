@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, Platform } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useMathRushStore } from '../game/mathrush/store';
@@ -15,13 +15,30 @@ import { Achievement } from '../data/achievements';
 import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
 import { uploadGameStats } from '../utils/cloudSync';
 import { useAuth } from '../contexts/AuthContext';
+import { PauseMenu } from '../components/shared/PauseMenu';
+import { FeedbackOverlay } from '../components/shared/FeedbackOverlay';
+import { MultiplayerProvider, useMultiplayer } from '../contexts/MultiplayerContext';
 
 type MathRushGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MathRushGame'>;
 
+// Wrapper component that provides multiplayer context
 const MathRushGame: React.FC = () => {
+  const route = useRoute<any>();
+  const multiplayerRoomId = route.params?.multiplayerRoomId;
+
+  return (
+    <MultiplayerProvider roomId={multiplayerRoomId}>
+      <MathRushGameContent />
+    </MultiplayerProvider>
+  );
+};
+
+// Main game component with multiplayer support
+const MathRushGameContent: React.FC = () => {
   const navigation = useNavigation<MathRushGameNavigationProp>();
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
     currentQuestion, score, combo, highestCombo, timeRemaining, gameStatus, lives, answerQuestion, decrementTime, startGame, resetGame,
   } = useMathRushStore();
@@ -30,6 +47,8 @@ const MathRushGame: React.FC = () => {
   const [isNewRecord, setIsNewRecord] = useState(false);
   const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<'correct' | 'wrong' | null>(null);
 
   // 화면이 포커스될 때마다 게임 상태 리셋
   useFocusEffect(
@@ -40,17 +59,24 @@ const MathRushGame: React.FC = () => {
   );
 
   useEffect(() => {
-    if (gameStatus === 'playing') {
+    if (gameStatus === 'playing' && !isPaused) {
       const interval = setInterval(() => { decrementTime(); }, 1000);
       return () => clearInterval(interval);
     }
-  }, [gameStatus]);
+  }, [gameStatus, isPaused]);
 
   useEffect(() => {
     if (gameStatus === 'finished') {
       handleGameFinish();
     }
   }, [gameStatus]);
+
+  // Update multiplayer score when score changes
+  useEffect(() => {
+    if (isMultiplayer && gameStatus === 'playing' && score > 0) {
+      updateMyScore(score);
+    }
+  }, [isMultiplayer, score, gameStatus]);
 
   // 시간 경고 사운드 (5초 남았을 때)
   useEffect(() => {
@@ -92,11 +118,21 @@ const MathRushGame: React.FC = () => {
       setShowAchievementModal(true);
       soundManager.playSound('achievement');
     }
+
+    // Finish multiplayer game
+    if (isMultiplayer) {
+      await finishGame();
+    }
   };
 
   const handleAnswer = (answer: number) => {
-    if (!currentQuestion || gameStatus !== 'playing') return;
+    if (!currentQuestion || gameStatus !== 'playing' || isPaused) return;
     const isCorrect = answer === currentQuestion.correctAnswer;
+
+    // 피드백 표시
+    setFeedbackType(isCorrect ? 'correct' : 'wrong');
+    setTimeout(() => setFeedbackType(null), 1100);
+
     if (isCorrect) {
       hapticPatterns.correctAnswer();
       soundManager.playSound('correct_answer');
@@ -108,6 +144,12 @@ const MathRushGame: React.FC = () => {
       soundManager.playSound('wrong_answer');
     }
     answerQuestion(answer);
+  };
+
+  const togglePause = () => {
+    setIsPaused(!isPaused);
+    hapticPatterns.buttonPress();
+    soundManager.playSound('button_press');
   };
 
   const handleStart = () => {
@@ -145,7 +187,13 @@ const MathRushGame: React.FC = () => {
         <View style={styles.header}>
           <Pressable onPress={handleBackToMenu} style={styles.backButton}><Text style={styles.backButtonText}>← 메뉴</Text></Pressable>
           <Text style={styles.title}>➕ Math Rush</Text>
-          <View style={{ width: 60 }} />
+          <Pressable
+            onPress={togglePause}
+            style={styles.pauseButton}
+            disabled={gameStatus !== 'playing'}
+          >
+            <Text style={styles.pauseButtonText}>{isPaused ? '▶️' : '⏸'}</Text>
+          </Pressable>
         </View>
 
         {gameStatus === 'ready' && (
@@ -163,6 +211,17 @@ const MathRushGame: React.FC = () => {
               <View style={styles.statItem}><Text style={styles.statLabel}>점수</Text><Text style={styles.statValue}>{score}</Text></View>
               <View style={styles.statItem}><Text style={styles.statLabel}>시간</Text><Text style={[styles.statValue, { color: getTimerColor() }]}>{timeRemaining}</Text></View>
               <View style={styles.statItem}><Text style={styles.statLabel}>생명</Text><Text style={styles.statValue}>{'❤️'.repeat(lives)}</Text></View>
+              {isMultiplayer && (
+                <View
+                  style={styles.statItem}
+                  accessible={true}
+                  accessibilityRole="text"
+                  accessibilityLabel={`상대방 점수: ${opponentScore}점`}
+                >
+                  <Text style={styles.statLabel}>상대</Text>
+                  <Text style={styles.statValue}>{opponentScore}</Text>
+                </View>
+              )}
             </View>
             {combo >= 5 && <View style={styles.comboContainer}><Text style={styles.comboText}>🔥 {combo} COMBO!</Text></View>}
             <View style={styles.questionContainer}><Text style={styles.question}>{currentQuestion.num1} {currentQuestion.operation} {currentQuestion.num2} = ?</Text></View>
@@ -193,17 +252,39 @@ const MathRushGame: React.FC = () => {
           achievements={unlockedAchievements}
           onClose={() => setShowAchievementModal(false)}
         />
+
+        <PauseMenu
+          visible={isPaused && gameStatus === 'playing'}
+          gameStats={[
+            { label: '점수', value: score },
+            { label: '시간', value: `${timeRemaining}초` },
+            { label: '콤보', value: combo },
+          ]}
+          onResume={togglePause}
+          onRestart={() => {
+            setIsPaused(false);
+            handleRestart();
+          }}
+          onQuit={handleBackToMenu}
+        />
+
+        <FeedbackOverlay
+          type={feedbackType}
+          onComplete={() => setFeedbackType(null)}
+        />
       </SafeAreaView>
     </View>
   );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   backButton: { padding: 8 },
   backButtonText: { color: theme.colors.textSecondary, fontSize: 16 },
   title: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text },
+  pauseButton: { padding: 8 },
+  pauseButtonText: { fontSize: 20, color: theme.colors.text },
   startContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   startEmoji: { fontSize: 80, marginBottom: 24 },
   startTitle: { fontSize: 36, fontWeight: 'bold', color: theme.colors.text, marginBottom: 16 },

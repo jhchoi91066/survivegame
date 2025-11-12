@@ -3,12 +3,14 @@ import { Pressable, Text, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
+  withSpring,
+  withSequence,
   interpolate,
 } from 'react-native-reanimated';
 import { Card as CardType } from '../../game/flipmatch/types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { soundManager } from '../../utils/soundManager';
+import { SPRING_CONFIGS } from '../../animations/gameAnimations';
 
 interface CardProps {
   card: CardType;
@@ -18,9 +20,10 @@ interface CardProps {
 const Card: React.FC<CardProps> = ({ card, onPress }) => {
   const { theme } = useTheme();
   const rotation = useSharedValue(0);
+  const scale = useSharedValue(1);
 
   useEffect(() => {
-    rotation.value = withTiming(card.isFlipped ? 180 : 0, { duration: 300 });
+    rotation.value = withSpring(card.isFlipped ? 180 : 0, SPRING_CONFIGS.gentle);
     if (card.isFlipped && !card.isMatched) {
       soundManager.playSound('card_flip');
     }
@@ -28,18 +31,50 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
 
   useEffect(() => {
     if (card.isMatched) {
+      // 매칭 성공 시 펄스 애니메이션
+      scale.value = withSequence(
+        withSpring(1.1, SPRING_CONFIGS.bouncy),
+        withSpring(1, SPRING_CONFIGS.gentle)
+      );
       soundManager.playSound('card_match');
     }
   }, [card.isMatched]);
 
+  const handlePress = () => {
+    if (!card.isFlipped && !card.isMatched) {
+      // 탭 시 스케일 효과
+      scale.value = withSequence(
+        withSpring(0.95, SPRING_CONFIGS.stiff),
+        withSpring(1, SPRING_CONFIGS.stiff)
+      );
+    }
+    onPress();
+  };
+
   const frontAnimatedStyle = useAnimatedStyle(() => {
     const rotateValue = interpolate(rotation.value, [0, 180], [0, 180]);
-    return { transform: [{ rotateY: `${rotateValue}deg` }] };
+    const opacity = interpolate(rotation.value, [0, 90, 180], [1, 0, 0]);
+    return {
+      transform: [
+        { perspective: 1000 },
+        { rotateY: `${rotateValue}deg` },
+        { scale: scale.value },
+      ],
+      opacity,
+    };
   });
 
   const backAnimatedStyle = useAnimatedStyle(() => {
     const rotateValue = interpolate(rotation.value, [0, 180], [180, 360]);
-    return { transform: [{ rotateY: `${rotateValue}deg` }] };
+    const opacity = interpolate(rotation.value, [0, 90, 180], [0, 0, 1]);
+    return {
+      transform: [
+        { perspective: 1000 },
+        { rotateY: `${rotateValue}deg` },
+        { scale: scale.value },
+      ],
+      opacity,
+    };
   });
 
   const cardMatchedStyle = card.isMatched && {
@@ -49,7 +84,7 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       disabled={card.isFlipped || card.isMatched}
       style={styles.container}
     >

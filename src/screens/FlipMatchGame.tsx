@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, ScrollView, Platform } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useFlipMatchStore } from '../game/flipmatch/store';
@@ -17,13 +17,30 @@ import { Achievement } from '../data/achievements';
 import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
 import { uploadGameStats } from '../utils/cloudSync';
 import { useAuth } from '../contexts/AuthContext';
+import { PauseMenu } from '../components/shared/PauseMenu';
+import { MultiplayerProvider, useMultiplayer } from '../contexts/MultiplayerContext';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
 
 type FlipMatchGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FlipMatchGame'>;
 
+// Wrapper component that provides multiplayer context
 const FlipMatchGame: React.FC = () => {
+  const route = useRoute<any>();
+  const multiplayerRoomId = route.params?.multiplayerRoomId;
+
+  return (
+    <MultiplayerProvider roomId={multiplayerRoomId}>
+      <FlipMatchGameContent />
+    </MultiplayerProvider>
+  );
+};
+
+// Main game component with multiplayer support
+const FlipMatchGameContent: React.FC = () => {
   const navigation = useNavigation<FlipMatchGameNavigationProp>();
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
     gameStatus, moves, matchedPairs, totalPairs, timeRemaining, initializeGame, resetGame, decrementTime, settings,
   } = useFlipMatchStore();
@@ -35,6 +52,23 @@ const FlipMatchGame: React.FC = () => {
   const [isNewRecord, setIsNewRecord] = useState(false);
   const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Animation values for score updates
+  const opponentScoreScale = useSharedValue(1);
+  const opponentScoreAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: opponentScoreScale.value }],
+  }));
+
+  // Animate opponent score when it changes
+  useEffect(() => {
+    if (isMultiplayer && opponentScore > 0) {
+      opponentScoreScale.value = withSequence(
+        withSpring(1.3, { damping: 10, stiffness: 200 }),
+        withSpring(1, { damping: 12 })
+      );
+    }
+  }, [opponentScore, isMultiplayer]);
 
   // 화면이 포커스될 때마다 게임 상태 리셋
   useFocusEffect(
@@ -46,17 +80,26 @@ const FlipMatchGame: React.FC = () => {
   );
 
   useEffect(() => {
-    if (gameStatus === 'playing') {
+    if (gameStatus === 'playing' && !isPaused) {
       const interval = setInterval(() => { decrementTime(); }, 1000);
       return () => clearInterval(interval);
     }
-  }, [gameStatus]);
+  }, [gameStatus, isPaused]);
 
   useEffect(() => {
     if (gameStatus === 'won' || gameStatus === 'lost') {
       handleGameEnd();
     }
   }, [gameStatus]);
+
+  // Update multiplayer score when pairs are matched
+  useEffect(() => {
+    if (isMultiplayer && gameStatus === 'playing' && matchedPairs > 0) {
+      // Calculate score: pairs matched * 100 - moves * 5
+      const score = matchedPairs * 100 - moves * 5;
+      updateMyScore(score);
+    }
+  }, [isMultiplayer, matchedPairs, moves, gameStatus]);
 
   const handleGameEnd = async () => {
     if (gameStatus === 'won') {
@@ -91,9 +134,19 @@ const FlipMatchGame: React.FC = () => {
         setShowAchievementModal(true);
         soundManager.playSound('achievement');
       }
+
+      // Finish multiplayer game
+      if (isMultiplayer) {
+        await finishGame();
+      }
     } else {
-      hapticPatterns.error();
+      hapticPatterns.errorAction();
       soundManager.playSound('game_lose');
+
+      // Also finish multiplayer game on loss
+      if (isMultiplayer) {
+        await finishGame();
+      }
     }
     await incrementGameCount();
   };
@@ -127,6 +180,12 @@ const FlipMatchGame: React.FC = () => {
     navigation.goBack();
   };
 
+  const togglePause = () => {
+    setIsPaused(!isPaused);
+    hapticPatterns.buttonPress();
+    soundManager.playSound('button_press');
+  };
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -142,7 +201,18 @@ const FlipMatchGame: React.FC = () => {
           <View style={styles.header}>
             <Pressable onPress={handleBackToMenu} style={styles.backButton}><Text style={styles.backButtonText}>← 메뉴</Text></Pressable>
             <Text style={styles.title}>🎴 Flip & Match</Text>
-            <Pressable onPress={handleRestart} style={styles.restartButton}><Text style={styles.restartButtonText}>🔄</Text></Pressable>
+            <View style={styles.headerRight}>
+              <Pressable
+                onPress={togglePause}
+                style={styles.pauseButton}
+                disabled={gameStatus !== 'playing'}
+              >
+                <Text style={styles.pauseButtonText}>{isPaused ? '▶️' : '⏸'}</Text>
+              </Pressable>
+              <Pressable onPress={handleRestart} style={styles.restartButton}>
+                <Text style={styles.restartButtonText}>🔄</Text>
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.stats}>
@@ -152,6 +222,17 @@ const FlipMatchGame: React.FC = () => {
             </View>
             <View style={styles.statItem}><Text style={styles.statLabel}>이동</Text><Text style={styles.statValue}>{moves}</Text></View>
             <View style={styles.statItem}><Text style={styles.statLabel}>진행</Text><Text style={styles.statValue}>{matchedPairs}/{totalPairs}</Text></View>
+            {isMultiplayer && (
+              <View
+                style={styles.statItem}
+                accessible={true}
+                accessibilityRole="text"
+                accessibilityLabel={`상대방 점수: ${opponentScore}점`}
+              >
+                <Text style={styles.statLabel}>상대 점수</Text>
+                <Animated.Text style={[styles.statValue, opponentScoreAnimatedStyle]}>{opponentScore}</Animated.Text>
+              </View>
+            )}
           </View>
 
           {gameStatus === 'preview' && <View style={styles.previewOverlay}><Text style={styles.previewText}>🧠 카드를 기억하세요!</Text></View>}
@@ -208,18 +289,36 @@ const FlipMatchGame: React.FC = () => {
           achievements={unlockedAchievements}
           onClose={() => setShowAchievementModal(false)}
         />
+
+        <PauseMenu
+          visible={isPaused && gameStatus === 'playing'}
+          gameStats={[
+            { label: '남은 시간', value: formatTime(timeRemaining) },
+            { label: '이동', value: moves },
+            { label: '진행', value: `${matchedPairs}/${totalPairs}` },
+          ]}
+          onResume={togglePause}
+          onRestart={() => {
+            setIsPaused(false);
+            handleRestart();
+          }}
+          onQuit={handleBackToMenu}
+        />
       </SafeAreaView>
     </View>
   );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   scrollContent: { flexGrow: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   backButton: { padding: 8 },
   backButtonText: { color: theme.colors.textSecondary, fontSize: 16 },
   title: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pauseButton: { padding: 8 },
+  pauseButtonText: { fontSize: 20, color: theme.colors.text },
   restartButton: { padding: 8 },
   restartButtonText: { fontSize: 24, color: theme.colors.text },
   stats: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface, marginHorizontal: 16, borderRadius: 12, marginBottom: 16 },

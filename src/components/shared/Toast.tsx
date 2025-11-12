@@ -90,8 +90,14 @@ const Toast: React.FC<ToastProps> = ({
         { backgroundColor: getBackgroundColor() },
         animatedStyle,
       ]}
+      accessible={true}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+      accessibilityLabel={message}
     >
-      <Text style={styles.icon}>{getIcon()}</Text>
+      <Text style={styles.icon} accessibilityElementsHidden={true}>
+        {getIcon()}
+      </Text>
       <Text style={styles.message}>{message}</Text>
     </Animated.View>
   );

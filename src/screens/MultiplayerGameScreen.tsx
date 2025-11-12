@@ -8,7 +8,15 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Share,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -17,6 +25,14 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import { hapticPatterns } from '../utils/haptics';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePresence } from '../hooks/usePresence';
+import {
+  saveReconnectData,
+  getReconnectData,
+  attemptReconnect,
+  clearReconnectData,
+} from '../utils/reconnection';
+import Toast from '../components/shared/Toast';
 
 type MultiplayerGameNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -34,6 +50,7 @@ interface Player {
   username: string;
   score: number;
   finished: boolean;
+  connection_status: string;
 }
 
 interface GameState {
@@ -51,20 +68,64 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
     players: [],
   });
   const [countdown, setCountdown] = useState(3);
-  const [myScore, setMyScore] = useState(0);
   const [opponentReady, setOpponentReady] = useState(false);
+  const [isRoomCreator, setIsRoomCreator] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'info' | 'success' | 'warning' | 'error' }>({ visible: false, message: '', type: 'info' });
+  const [waitingTime, setWaitingTime] = useState(0);
+  const [waitingTimeoutReached, setWaitingTimeoutReached] = useState(false);
 
+  // Animation values for countdown
+  const countdownScale = useSharedValue(1);
+  const countdownOpacity = useSharedValue(1);
+
+  // Animated styles
+  const countdownAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: countdownScale.value }],
+    opacity: countdownOpacity.value,
+  }));
+
+  // Presence tracking with disconnect/reconnect notifications
+  const { reconnectToken } = usePresence({
+    roomId,
+    onPlayerDisconnected: (userId) => {
+      setToast({
+        visible: true,
+        message: '상대방 연결 끊김 - 60초 내 재연결 대기 중',
+        type: 'warning',
+      });
+    },
+    onPlayerReconnected: (userId) => {
+      setToast({
+        visible: true,
+        message: '상대방이 재연결되었습니다!',
+        type: 'success',
+      });
+      hapticPatterns.levelComplete();
+    },
+  });
+
+  // Initial setup and reconnection attempt
   useEffect(() => {
     if (!user) {
       navigation.goBack();
       return;
     }
 
+    // Check if this is the room creator
+    checkIfRoomCreator();
+
+    // Try to reconnect if coming back from disconnect
+    tryReconnect();
+
+    // Save reconnection data
+    saveReconnectData(roomId, user.id, reconnectToken);
+
+    // Load initial game state
     loadGameState();
 
-    // 실시간 게임 상태 구독
+    // Subscribe to game state changes (filtered by room)
     const subscription = supabase
-      .channel(`multiplayer_game_${roomId}`)
+      .channel(`game_room_${roomId}_${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -79,22 +140,147 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
       )
       .subscribe();
 
+    // Subscribe to room changes for synchronized countdown
+    const roomSubscription = supabase
+      .channel(`room_${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'multiplayer_rooms',
+          filter: `id=eq.${roomId}`,
+        },
+        (payload) => {
+          handleRoomUpdate(payload.new);
+        }
+      )
+      .subscribe();
+
+    // Cleanup
     return () => {
       subscription.unsubscribe();
-      leaveRoom();
+      roomSubscription.unsubscribe();
+      clearReconnectData();
     };
-  }, [user, roomId]);
+  }, [user, roomId, reconnectToken]);
 
+  // Waiting time counter and timeout (120 seconds)
   useEffect(() => {
-    if (gameState.status === 'countdown') {
-      if (countdown > 0) {
-        const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-        return () => clearTimeout(timer);
+    if (gameState.status === 'waiting' && !opponentReady) {
+      const interval = setInterval(() => {
+        setWaitingTime((prev) => {
+          const newTime = prev + 1;
+
+          // Warning at 60 seconds
+          if (newTime === 60) {
+            setToast({
+              visible: true,
+              message: '상대방을 기다리는 중... (1분 경과)',
+              type: 'warning',
+            });
+          }
+
+          // Timeout at 120 seconds
+          if (newTime >= 120) {
+            setWaitingTimeoutReached(true);
+            setToast({
+              visible: true,
+              message: '상대방이 참가하지 않아 방을 나갑니다',
+              type: 'error',
+            });
+            hapticPatterns.wrongAnswer();
+
+            // Leave room and go back after showing toast
+            setTimeout(async () => {
+              await leaveRoom();
+              navigation.goBack();
+            }, 2000);
+          }
+
+          return newTime;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      // Reset waiting time when opponent joins or game starts
+      setWaitingTime(0);
+    }
+  }, [gameState.status, opponentReady]);
+
+  // Countdown timer with animation
+  useEffect(() => {
+    if (gameState.status === 'countdown' && countdown > 0) {
+      // Trigger animation on each countdown change
+      countdownScale.value = withSequence(
+        withSpring(0.5, { damping: 10, stiffness: 200 }),
+        withSpring(1.3, { damping: 8, stiffness: 100 }),
+        withSpring(1, { damping: 12 })
+      );
+      hapticPatterns.buttonPress();
+
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (gameState.status === 'countdown' && countdown === 0) {
+      // Final "GO!" animation
+      countdownOpacity.value = withTiming(0, { duration: 300 });
+      // Countdown finished, start game
+      startGame();
+    }
+  }, [gameState.status, countdown]);
+
+  const checkIfRoomCreator = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('multiplayer_rooms')
+        .select('created_by')
+        .eq('id', roomId)
+        .single();
+
+      if (error) throw error;
+      setIsRoomCreator(data.created_by === user?.id);
+    } catch (error) {
+      console.error('Failed to check room creator:', error);
+    }
+  };
+
+  const tryReconnect = async () => {
+    const reconnectData = await getReconnectData();
+    if (reconnectData && reconnectData.roomId === roomId) {
+      const success = await attemptReconnect(reconnectData);
+      if (success) {
+        setToast({
+          visible: true,
+          message: '게임에 다시 연결되었습니다!',
+          type: 'success',
+        });
+        hapticPatterns.correctAnswer();
+      }
+    }
+  };
+
+  const handleRoomUpdate = (roomData: any) => {
+    // Handle synchronized countdown
+    if (roomData.status === 'countdown' && roomData.game_started_at) {
+      const startTime = new Date(roomData.game_started_at).getTime();
+      const now = Date.now();
+      const remainingMs = startTime - now;
+
+      if (remainingMs > 0) {
+        setGameState((prev) => ({ ...prev, status: 'countdown' }));
+        setCountdown(Math.ceil(remainingMs / 1000));
+
+        // Schedule game start
+        setTimeout(() => {
+          startGame();
+        }, remainingMs);
       } else {
+        // Already past start time, start immediately
         startGame();
       }
     }
-  }, [gameState.status, countdown]);
+  };
 
   const loadGameState = async () => {
     try {
@@ -112,6 +298,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
           username: state.username || 'Player',
           score: state.score || 0,
           finished: state.finished || false,
+          connection_status: state.connection_status || 'connected',
         }));
 
         const allReady = players.length >= 2;
@@ -125,9 +312,9 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
           startTime: data[0].start_time,
         });
 
-        // 모두 준비되면 카운트다운 시작 (현재 상태가 waiting인 경우만)
-        if (allReady && newStatus === 'waiting') {
-          await updateGameStatus('countdown');
+        // If all ready and still waiting, room creator triggers countdown
+        if (allReady && newStatus === 'waiting' && isRoomCreator) {
+          startCountdown();
         }
       }
     } catch (error) {
@@ -135,16 +322,22 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
     }
   };
 
-  const updateGameStatus = async (status: string) => {
+  const startCountdown = async () => {
+    if (!isRoomCreator) return; // Only room creator can start countdown
+
     try {
-      await supabase.from('multiplayer_game_states').upsert({
-        room_id: roomId,
-        user_id: user?.id,
-        status: status,
-        username: user?.user_metadata?.username || 'Player',
-      });
+      // Set countdown start time in database (3 seconds from now)
+      const startTime = new Date(Date.now() + 3000).toISOString();
+
+      await supabase
+        .from('multiplayer_rooms')
+        .update({
+          status: 'countdown',
+          game_started_at: startTime,
+        })
+        .eq('id', roomId);
     } catch (error) {
-      console.error('Failed to update game status:', error);
+      console.error('Failed to start countdown:', error);
     }
   };
 
@@ -152,22 +345,39 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
     try {
       hapticPatterns.levelComplete();
 
-      // 게임 시작 상태 업데이트
-      await updateGameStatus('playing');
+      // Update room status to playing
+      if (isRoomCreator) {
+        await supabase
+          .from('multiplayer_rooms')
+          .update({ status: 'playing' })
+          .eq('id', roomId);
+      }
 
-      // 실제 게임 타입에 따라 게임 시작
+      // Navigate to game with multiplayer context
       switch (gameType) {
         case 'flip_match':
-          navigation.replace('FlipMatchGame');
+          navigation.replace('FlipMatchGame', {
+            multiplayerRoomId: roomId,
+            difficulty: difficulty,
+          });
           break;
         case 'spatial_memory':
-          navigation.replace('SpatialMemoryGame');
+          navigation.replace('SpatialMemoryGame', {
+            multiplayerRoomId: roomId,
+            difficulty: difficulty,
+          });
           break;
         case 'math_rush':
-          navigation.replace('MathRushGame');
+          navigation.replace('MathRushGame', {
+            multiplayerRoomId: roomId,
+            difficulty: difficulty,
+          });
           break;
         case 'stroop':
-          navigation.replace('StroopTestGame');
+          navigation.replace('StroopTestGame', {
+            multiplayerRoomId: roomId,
+            difficulty: difficulty,
+          });
           break;
       }
     } catch (error) {
@@ -177,34 +387,36 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
 
   const leaveRoom = async () => {
     try {
-      // 방에서 나가기
+      // Mark as disconnected in presence
+      await supabase
+        .from('player_presence')
+        .update({ status: 'disconnected' })
+        .eq('user_id', user?.id)
+        .eq('room_id', roomId);
+
+      // Delete game state
       await supabase
         .from('multiplayer_game_states')
         .delete()
         .eq('room_id', roomId)
         .eq('user_id', user?.id);
 
-      // 방 삭제 (방장인 경우)
-      await supabase.from('multiplayer_rooms').delete().eq('id', roomId).eq('created_by', user?.id);
+      // Delete room if creator
+      if (isRoomCreator) {
+        await supabase.from('multiplayer_rooms').delete().eq('id', roomId);
+      }
     } catch (error) {
       console.error('Failed to leave room:', error);
     }
   };
 
-  const handleReady = async () => {
-    hapticPatterns.buttonPress();
-    await updateGameStatus('ready');
-  };
-
   const handleLeave = () => {
     if (Platform.OS === 'web') {
-      // 웹에서는 window.confirm 사용
       if (window.confirm('정말로 방을 나가시겠습니까?')) {
         leaveRoom();
         navigation.goBack();
       }
     } else {
-      // 모바일에서는 Alert 사용
       Alert.alert('방 나가기', '정말로 나가시겠습니까?', [
         { text: '취소', style: 'cancel' },
         {
@@ -219,47 +431,140 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
     }
   };
 
+  const handleShareRoomCode = async () => {
+    try {
+      hapticPatterns.buttonPress();
+      const shortRoomId = roomId.slice(0, 8);
+
+      if (Platform.OS === 'web') {
+        // Web: Copy to clipboard
+        await navigator.clipboard.writeText(roomId);
+        setToast({
+          visible: true,
+          message: `방 코드 복사됨: ${shortRoomId}...`,
+          type: 'success',
+        });
+      } else {
+        // Mobile: Use Share API
+        await Share.share({
+          message: `Brain Games 멀티플레이어 방에 참가하세요!\n방 ID: ${roomId}\n게임: ${getGameName(gameType)}`,
+          title: 'Brain Games 방 코드',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to share room code:', error);
+      setToast({
+        visible: true,
+        message: '방 코드 공유 실패',
+        type: 'error',
+      });
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} style={styles.gradient} />
 
       <View style={styles.content}>
-        {/* 헤더 */}
+        {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={handleLeave} style={styles.leaveButton}>
+          <Pressable
+            onPress={handleLeave}
+            style={styles.leaveButton}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="게임 나가기"
+            accessibilityHint="멀티플레이어 게임에서 나가고 로비로 돌아갑니다"
+          >
             <Text style={styles.leaveText}>← 나가기</Text>
           </Pressable>
-          <Text style={styles.gameTitle}>
-            {getGameEmoji(gameType)} {getGameName(gameType)}
+          <Text style={styles.gameTitle} accessibilityRole="header">
+            <Text accessibilityElementsHidden={true}>{getGameEmoji(gameType)} </Text>
+            {getGameName(gameType)}
           </Text>
           <View style={styles.placeholder} />
         </View>
 
-        {/* 상태별 화면 */}
+        {/* Waiting for players */}
         {gameState.status === 'waiting' && (
           <View style={styles.waitingContainer}>
             <Text style={styles.waitingEmoji}>⏳</Text>
             <Text style={styles.waitingTitle}>상대방을 기다리는 중...</Text>
             <Text style={styles.waitingSubtitle}>곧 게임이 시작됩니다</Text>
+            {!opponentReady && waitingTime > 0 && (
+              <Text
+                style={[
+                  styles.waitingTimer,
+                  waitingTime >= 90 && styles.waitingTimerWarning,
+                ]}
+                accessible={true}
+                accessibilityRole="timer"
+                accessibilityLabel={`대기 시간: ${waitingTime}초`}
+              >
+                대기 시간: {waitingTime}초 / 120초
+              </Text>
+            )}
 
-            {/* 플레이어 목록 */}
+            {/* Room Code Share Button */}
+            {!opponentReady && (
+              <Pressable
+                onPress={handleShareRoomCode}
+                style={styles.shareButton}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="방 코드 공유하기"
+                accessibilityHint="친구에게 방 코드를 공유하여 초대합니다"
+              >
+                <LinearGradient
+                  colors={['#10b981', '#059669']}
+                  style={styles.shareButtonGradient}
+                >
+                  <Text style={styles.shareButtonText}>📋 방 코드 공유</Text>
+                  <Text style={styles.shareButtonSubtext}>
+                    {roomId.slice(0, 8)}...
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+            )}
+
+            {/* Players list with connection status */}
             <View style={styles.playersList}>
-              {gameState.players.map((player, index) => (
-                <View key={player.id} style={styles.playerCard}>
+              {gameState.players.map((player) => (
+                <View
+                  key={player.id}
+                  style={styles.playerCard}
+                  accessible={true}
+                  accessibilityRole="summary"
+                  accessibilityLabel={`플레이어: ${player.username}`}
+                  accessibilityValue={{
+                    text:
+                      player.connection_status === 'disconnected'
+                        ? '연결 끊김'
+                        : player.id === user?.id
+                        ? '준비됨'
+                        : opponentReady
+                        ? '준비됨'
+                        : '대기 중',
+                  }}
+                >
                   <LinearGradient
                     colors={
-                      player.id === user?.id
-                        ? ['#3b82f6', '#2563eb']
-                        : ['#1e293b', '#0f172a']
+                      player.id === user?.id ? ['#3b82f6', '#2563eb'] : ['#1e293b', '#0f172a']
                     }
                     style={styles.playerCardGradient}
                   >
-                    <Text style={styles.playerEmoji}>
+                    <Text style={styles.playerEmoji} accessibilityElementsHidden={true}>
                       {player.id === user?.id ? '👤' : '🎮'}
                     </Text>
                     <Text style={styles.playerName}>{player.username}</Text>
                     <Text style={styles.playerStatus}>
-                      {player.id === user?.id ? '준비됨' : opponentReady ? '준비됨' : '대기 중'}
+                      {player.connection_status === 'disconnected'
+                        ? '연결 끊김'
+                        : player.id === user?.id
+                        ? '준비됨'
+                        : opponentReady
+                        ? '준비됨'
+                        : '대기 중'}
                     </Text>
                   </LinearGradient>
                 </View>
@@ -267,18 +572,50 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
             </View>
 
             {!opponentReady && (
-              <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
+              <>
+                {/* Helpful tips */}
+                <View style={styles.tipsContainer}>
+                  <Text style={styles.tipsTitle}>💡 게임 팁</Text>
+                  <Text style={styles.tipsText}>
+                    {getGameTip(gameType)}
+                  </Text>
+                </View>
+
+                <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
+
+                {/* Cancel button */}
+                <Pressable
+                  onPress={handleLeave}
+                  style={styles.cancelButton}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="대기 취소"
+                  accessibilityHint="대기를 취소하고 로비로 돌아갑니다"
+                >
+                  <Text style={styles.cancelButtonText}>대기 취소</Text>
+                </Pressable>
+              </>
             )}
           </View>
         )}
 
+        {/* Synchronized countdown */}
         {gameState.status === 'countdown' && (
-          <View style={styles.countdownContainer}>
-            <Text style={styles.countdownNumber}>{countdown}</Text>
+          <View
+            style={styles.countdownContainer}
+            accessible={true}
+            accessibilityRole="timer"
+            accessibilityLiveRegion="polite"
+            accessibilityLabel={`게임 시작까지 ${countdown}초`}
+          >
+            <Animated.Text style={[styles.countdownNumber, countdownAnimatedStyle]} accessibilityElementsHidden={true}>
+              {countdown > 0 ? countdown : 'GO!'}
+            </Animated.Text>
             <Text style={styles.countdownText}>게임 시작!</Text>
           </View>
         )}
 
+        {/* Game in progress */}
         {gameState.status === 'playing' && (
           <View style={styles.playingContainer}>
             <Text style={styles.playingText}>게임 진행 중...</Text>
@@ -286,31 +623,89 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
           </View>
         )}
 
+        {/* Game finished */}
         {gameState.status === 'finished' && (
           <View style={styles.finishedContainer}>
-            <Text style={styles.finishedEmoji}>🏆</Text>
-            <Text style={styles.finishedTitle}>게임 종료!</Text>
+            {(() => {
+              const sortedPlayers = [...gameState.players].sort((a, b) => b.score - a.score);
+              const winner = sortedPlayers[0];
+              const isWinner = winner?.id === user?.id;
 
-            {/* 결과 */}
-            <View style={styles.results}>
-              {gameState.players
-                .sort((a, b) => b.score - a.score)
-                .map((player, index) => (
-                  <View key={player.id} style={styles.resultCard}>
-                    <Text style={styles.resultRank}>#{index + 1}</Text>
-                    <Text style={styles.resultName}>{player.username}</Text>
-                    <Text style={styles.resultScore}>{player.score}점</Text>
+              return (
+                <>
+                  <Text style={styles.finishedEmoji}>{isWinner ? '🎉' : '😊'}</Text>
+                  <Text style={styles.finishedTitle}>
+                    {isWinner ? '승리!' : '패배'}
+                  </Text>
+
+                  {isWinner && (
+                    <Text style={styles.winnerSubtitle}>축하합니다! 상대를 이겼습니다!</Text>
+                  )}
+
+                  {/* Winner highlight */}
+                  <View style={styles.winnerCard}>
+                    <Text style={styles.winnerBadge}>👑 우승자</Text>
+                    <Text style={styles.winnerName}>{winner?.username}</Text>
+                    <Text style={styles.winnerScore}>{winner?.score}점</Text>
                   </View>
-                ))}
-            </View>
 
-            <Pressable onPress={() => navigation.navigate('MultiplayerLobby')} style={styles.backToLobbyButton}>
-              <LinearGradient colors={['#3b82f6', '#2563eb']} style={styles.backToLobbyGradient}>
-                <Text style={styles.backToLobbyText}>로비로 돌아가기</Text>
-              </LinearGradient>
-            </Pressable>
+                  {/* Results */}
+                  <View style={styles.results}>
+                    <Text style={styles.resultsTitle}>최종 결과</Text>
+                    {sortedPlayers.map((player, index) => (
+                      <View
+                        key={player.id}
+                        style={[
+                          styles.resultCard,
+                          index === 0 && styles.resultCardWinner,
+                          player.id === user?.id && styles.resultCardYou
+                        ]}
+                        accessible={true}
+                        accessibilityRole="summary"
+                        accessibilityLabel={`${index + 1}위: ${player.username}, ${player.score}점`}
+                      >
+                        <Text style={[styles.resultRank, index === 0 && styles.resultRankWinner]}>
+                          {index === 0 ? '🥇' : '🥈'}
+                        </Text>
+                        <View style={styles.resultInfo}>
+                          <Text style={[styles.resultName, index === 0 && styles.resultNameWinner]}>
+                            {player.username}
+                            {player.id === user?.id && ' (나)'}
+                          </Text>
+                          <Text style={styles.resultRankText}>#{index + 1}</Text>
+                        </View>
+                        <Text style={[styles.resultScore, index === 0 && styles.resultScoreWinner]}>
+                          {player.score}점
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <Pressable
+                    onPress={() => navigation.navigate('MultiplayerLobby')}
+                    style={styles.backToLobbyButton}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="로비로 돌아가기"
+                    accessibilityHint="멀티플레이어 로비로 이동하여 새 게임을 시작합니다"
+                  >
+                    <LinearGradient colors={['#3b82f6', '#2563eb']} style={styles.backToLobbyGradient}>
+                      <Text style={styles.backToLobbyText}>로비로 돌아가기</Text>
+                    </LinearGradient>
+                  </Pressable>
+                </>
+              );
+            })()}
           </View>
         )}
+
+        {/* Toast notifications */}
+        <Toast
+          visible={toast.visible}
+          message={toast.message}
+          type={toast.type}
+          onHide={() => setToast({ visible: false, message: '', type: 'info' })}
+        />
       </View>
     </SafeAreaView>
   );
@@ -336,6 +731,16 @@ const getGameName = (gameType: string): string => {
   return names[gameType] || gameType;
 };
 
+const getGameTip = (gameType: string): string => {
+  const tips: { [key: string]: string } = {
+    flip_match: '같은 그림을 빠르게 찾아 매칭하세요. 패턴을 기억하면 더 빠르게 찾을 수 있습니다!',
+    spatial_memory: '타일의 위치를 정확히 기억하세요. 집중력이 승부를 결정합니다!',
+    math_rush: '빠르고 정확하게 계산하세요. 침착함이 승리의 열쇠입니다!',
+    stroop: '글자가 아닌 색상에 집중하세요. 직관을 믿으면 더 빠릅니다!',
+  };
+  return tips[gameType] || '최선을 다하세요!';
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -356,6 +761,10 @@ const styles = StyleSheet.create({
   },
   leaveButton: {
     padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   leaveText: {
     fontSize: 16,
@@ -391,6 +800,44 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     marginBottom: 32,
   },
+  waitingTimer: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3b82f6',
+    marginBottom: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#1e293b',
+    borderRadius: 12,
+  },
+  waitingTimerWarning: {
+    color: '#f59e0b',
+  },
+  shareButton: {
+    width: '100%',
+    maxWidth: 280,
+    height: 56,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 24,
+  },
+  shareButtonGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  shareButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  shareButtonSubtext: {
+    fontSize: 12,
+    color: '#d1fae5',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
   playersList: {
     width: '100%',
     gap: 12,
@@ -418,8 +865,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#cbd5e1',
   },
+  tipsContainer: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+  },
+  tipsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#60a5fa',
+    marginBottom: 8,
+  },
+  tipsText: {
+    fontSize: 14,
+    color: '#cbd5e1',
+    lineHeight: 20,
+  },
   loader: {
     marginTop: 16,
+  },
+  cancelButton: {
+    minWidth: 44,
+    minHeight: 44,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    marginTop: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: '#ef4444',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ef4444',
   },
   countdownContainer: {
     flex: 1,
@@ -462,12 +944,53 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
+    marginBottom: 16,
+  },
+  winnerSubtitle: {
+    fontSize: 16,
+    color: '#10b981',
+    marginBottom: 24,
+    fontWeight: '600',
+  },
+  winnerCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderWidth: 2,
+    borderColor: '#10b981',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
     marginBottom: 32,
+  },
+  winnerBadge: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#10b981',
+    marginBottom: 12,
+  },
+  winnerName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  winnerScore: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#10b981',
   },
   results: {
     width: '100%',
     gap: 12,
     marginBottom: 32,
+  },
+  resultsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#94a3b8',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   resultCard: {
     flexDirection: 'row',
@@ -476,22 +999,48 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
   },
+  resultCardWinner: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderWidth: 2,
+    borderColor: '#10b981',
+  },
+  resultCardYou: {
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+  },
   resultRank: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#3b82f6',
+    fontSize: 32,
     marginRight: 16,
     width: 40,
   },
-  resultName: {
+  resultRankWinner: {
+    fontSize: 36,
+  },
+  resultInfo: {
     flex: 1,
+  },
+  resultName: {
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
+    marginBottom: 4,
+  },
+  resultNameWinner: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#10b981',
+  },
+  resultRankText: {
+    fontSize: 14,
+    color: '#94a3b8',
   },
   resultScore: {
     fontSize: 20,
     fontWeight: '700',
+    color: '#10b981',
+  },
+  resultScoreWinner: {
+    fontSize: 24,
     color: '#10b981',
   },
   backToLobbyButton: {

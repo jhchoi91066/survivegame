@@ -66,20 +66,20 @@
 
 | 파일명 | 검색 키워드 (영어) |
 |--------|-------------------|
-| button.mp3 | "button click", "UI click", "pop" |
-| start.mp3 | "game start", "begin", "ready" |
-| win.mp3 | "victory", "success", "win fanfare" |
+| button.mp3 | "button click", "UI click", "pop" | x
+| start.mp3 | "game start", "begin", "ready" | x
+| win.mp3 | "victory", "success", "win fanfare" | x
 | lose.mp3 | "game over", "fail", "wrong buzzer" |
-| achievement.mp3 | "achievement", "unlock", "reward chime" |
-| flip.mp3 | "card flip", "paper flip", "swish" |
+| achievement.mp3 | "achievement", "unlock", "reward chime" | x
+| flip.mp3 | "card flip", "paper flip", "swish" | x
 | match.mp3 | "match", "correct ding", "success chime" |
-| show.mp3 | "pop", "appear", "blip" |
-| correct.mp3 | "correct", "right answer", "ding" |
-| wrong.mp3 | "wrong", "error", "buzzer" |
+| show.mp3 | "pop", "appear", "blip" | x
+| correct.mp3 | "correct", "right answer", "ding" | x
+| wrong.mp3 | "wrong", "error", "buzzer" | x
 | combo.mp3 | "power up", "level up", "sparkle" |
 | warning.mp3 | "warning", "alert", "beep" |
 | merge.mp3 | "merge", "combine", "whoosh" |
-| move.mp3 | "slide", "move", "swipe" |
+| move.mp3 | "slide", "move", "swipe" | x
 
 ---
 

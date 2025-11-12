@@ -59,15 +59,16 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
 
     loadRooms();
 
-    // 실시간 업데이트 구독
+    // 실시간 업데이트 구독 (waiting 방만 필터링)
     const subscription = supabase
-      .channel('multiplayer_rooms')
+      .channel('lobby_rooms')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'multiplayer_rooms',
+          filter: 'status=eq.waiting',
         },
         () => {
           loadRooms();
@@ -137,6 +138,14 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
 
       if (error) throw error;
 
+      // 방 생성자도 join_multiplayer_room 함수를 호출해야 game_state가 생성됨
+      const { error: joinError } = await supabase.rpc('join_multiplayer_room', {
+        p_room_id: data.id,
+        p_user_id: user.id,
+      });
+
+      if (joinError) throw joinError;
+
       // 방 생성 후 멀티플레이어 게임 화면으로 이동
       navigation.navigate('MultiplayerGame', {
         roomId: data.id,
@@ -157,7 +166,7 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
     try {
       hapticPatterns.buttonPress();
 
-      // 방 참가 (current_players 증가)
+      // 방 참가 (current_players 증가, presence tracking 시작)
       const { error } = await supabase.rpc('join_multiplayer_room', {
         p_room_id: roomId,
         p_user_id: user.id,
@@ -188,9 +197,14 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
       onPress={() => createRoom(gameType, difficulty)}
       disabled={creating}
       style={({ pressed }) => [styles.gameButton, pressed && styles.buttonPressed]}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={`${name} 게임 방 만들기`}
+      accessibilityHint={difficulty ? `난이도: ${difficulty}` : '버튼을 눌러 새 방을 생성합니다'}
+      accessibilityState={{ disabled: creating }}
     >
       <LinearGradient colors={colors} style={styles.gameButtonGradient}>
-        <Text style={styles.gameEmoji}>{emoji}</Text>
+        <Text style={styles.gameEmoji} accessibilityElementsHidden={true}>{emoji}</Text>
         <Text style={styles.gameName}>{name}</Text>
         {difficulty && <Text style={styles.gameDifficulty}>{difficulty}</Text>}
       </LinearGradient>
@@ -199,6 +213,16 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 로딩 오버레이 */}
+      {creating && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.loadingText}>방을 생성하는 중...</Text>
+          </View>
+        </View>
+      )}
+
       {/* 헤더 */}
       <View style={styles.header}>
         <Pressable
@@ -207,12 +231,23 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
             hapticPatterns.buttonPress();
             navigation.goBack();
           }}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로 가기"
+          accessibilityHint="이전 화면으로 돌아갑니다"
         >
           <Text style={styles.backButtonText}>← 뒤로</Text>
         </Pressable>
-        <Text style={styles.title}>멀티플레이어</Text>
-        <Pressable style={styles.refreshButton} onPress={loadRooms}>
-          <Text style={styles.refreshText}>🔄</Text>
+        <Text style={styles.title} accessibilityRole="header">멀티플레이어</Text>
+        <Pressable
+          style={styles.refreshButton}
+          onPress={loadRooms}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="방 목록 새로고침"
+          accessibilityHint="대기 중인 방 목록을 다시 불러옵니다"
+        >
+          <Text style={styles.refreshText} accessibilityElementsHidden={true}>🔄</Text>
         </Pressable>
       </View>
 
@@ -250,6 +285,10 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
                 key={room.id}
                 onPress={() => joinRoom(room.id, room.game_type, room.difficulty)}
                 style={({ pressed }) => [styles.roomCard, pressed && styles.buttonPressed]}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={`${getGameName(room.game_type)} 방 참가하기`}
+                accessibilityHint={`방장: ${room.creator_profile.username}, 플레이어 ${room.current_players}명 중 ${room.max_players}명${room.difficulty ? `, 난이도: ${room.difficulty}` : ''}`}
               >
                 <LinearGradient
                   colors={
@@ -261,7 +300,8 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
                 >
                   <View style={styles.roomInfo}>
                     <Text style={styles.roomGame}>
-                      {getGameEmoji(room.game_type)} {getGameName(room.game_type)}
+                      <Text accessibilityElementsHidden={true}>{getGameEmoji(room.game_type)} </Text>
+                      {getGameName(room.game_type)}
                     </Text>
                     {room.difficulty && (
                       <Text style={styles.roomDifficulty}>{room.difficulty}</Text>
@@ -274,7 +314,7 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
                     <Text style={styles.playersText}>
                       {room.current_players}/{room.max_players}
                     </Text>
-                    <Text style={styles.playersIcon}>👥</Text>
+                    <Text style={styles.playersIcon} accessibilityElementsHidden={true}>👥</Text>
                   </View>
                 </LinearGradient>
               </Pressable>
@@ -322,6 +362,10 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backButtonText: {
     fontSize: 16,
@@ -335,6 +379,10 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   refreshText: {
     fontSize: 20,
@@ -445,6 +493,25 @@ const styles = StyleSheet.create({
   },
   playersIcon: {
     fontSize: 20,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingCard: {
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 

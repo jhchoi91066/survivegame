@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, Platform } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useSpatialMemoryStore } from '../game/spatialmemory/store';
@@ -17,13 +17,27 @@ import { Achievement } from '../data/achievements';
 import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
 import { uploadGameStats } from '../utils/cloudSync';
 import { useAuth } from '../contexts/AuthContext';
+import { MultiplayerProvider, useMultiplayer } from '../contexts/MultiplayerContext';
 
 type SpatialMemoryGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SpatialMemoryGame'>;
 
+// Wrapper component for multiplayer support
 const SpatialMemoryGame: React.FC = () => {
+  const route = useRoute<any>();
+  const multiplayerRoomId = route.params?.multiplayerRoomId;
+
+  return (
+    <MultiplayerProvider roomId={multiplayerRoomId}>
+      <SpatialMemoryGameContent />
+    </MultiplayerProvider>
+  );
+};
+
+const SpatialMemoryGameContent: React.FC = () => {
   const navigation = useNavigation<SpatialMemoryGameNavigationProp>();
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
     gameStatus, currentLevel, initializeGame, startRound, resetGame, settings,
   } = useSpatialMemoryStore();
@@ -55,6 +69,14 @@ const SpatialMemoryGame: React.FC = () => {
     }
   }, [gameStatus]);
 
+  // Update multiplayer score when level changes
+  useEffect(() => {
+    if (isMultiplayer && gameStatus === 'input' && currentLevel > 0) {
+      const score = (currentLevel - 1) * 100;
+      updateMyScore(score);
+    }
+  }, [isMultiplayer, currentLevel, gameStatus]);
+
   useEffect(() => {
     if (gameStatus === 'gameover' && !hasRecordedStats) {
       handleGameOver();
@@ -67,6 +89,11 @@ const SpatialMemoryGame: React.FC = () => {
     hapticPatterns.gameOver();
     soundManager.playSound(currentLevel > 1 ? 'game_win' : 'game_lose');
     const finalLevel = currentLevel - 1;
+
+    // Finish multiplayer game
+    if (isMultiplayer) {
+      await finishGame();
+    }
 
     const oldRecord = await loadGameRecord('spatial_memory');
     if (!oldRecord || !oldRecord.highestLevel || finalLevel > oldRecord.highestLevel) {
@@ -161,7 +188,14 @@ const SpatialMemoryGame: React.FC = () => {
             <Text style={styles.statLabel}>상태</Text>
             <Text style={[styles.statValue, styles.statusText, gameStatus === 'wrong' && styles.wrongText, gameStatus === 'correct' && styles.correctText]}>{getStatusText()}</Text>
           </View>
-          <View style={styles.statItem}><Text style={styles.statLabel}>난이도</Text><Text style={styles.statValue}>{settings.difficulty === 'easy' ? '쉬움' : settings.difficulty === 'medium' ? '보통' : '어려움'}</Text></View>
+          {isMultiplayer ? (
+            <View style={styles.statItem} accessible={true} accessibilityRole="text" accessibilityLabel={`상대방 점수: ${opponentScore}점`}>
+              <Text style={styles.statLabel}>상대 점수</Text>
+              <Text style={styles.statValue}>{opponentScore}</Text>
+            </View>
+          ) : (
+            <View style={styles.statItem}><Text style={styles.statLabel}>난이도</Text><Text style={styles.statValue}>{settings.difficulty === 'easy' ? '쉬움' : settings.difficulty === 'medium' ? '보통' : '어려움'}</Text></View>
+          )}
         </View>
 
         {gameStatus !== 'ready' && <TileGrid />}

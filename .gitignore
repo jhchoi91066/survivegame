@@ -44,6 +44,7 @@ yarn-error.*
 # MCP configuration (contains tokens)
 .mcp.json
 .env.local
+.claude/
 
 # OAuth configuration files with sensitive data
 docs/STEP_BY_STEP_GOOGLE_OAUTH.md

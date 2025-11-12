@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, Platform } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useStroopStore } from '../game/stroop/store';
@@ -15,13 +15,27 @@ import { Achievement } from '../data/achievements';
 import AchievementUnlockModal from '../components/shared/AchievementUnlockModal';
 import { uploadGameStats } from '../utils/cloudSync';
 import { useAuth } from '../contexts/AuthContext';
+import { MultiplayerProvider, useMultiplayer } from '../contexts/MultiplayerContext';
 
 type StroopGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StroopTestGame'>;
 
+// Wrapper component for multiplayer support
 const StroopTestGame: React.FC = () => {
+  const route = useRoute<any>();
+  const multiplayerRoomId = route.params?.multiplayerRoomId;
+
+  return (
+    <MultiplayerProvider roomId={multiplayerRoomId}>
+      <StroopTestGameContent />
+    </MultiplayerProvider>
+  );
+};
+
+const StroopTestGameContent: React.FC = () => {
   const navigation = useNavigation<StroopGameNavigationProp>();
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
     currentProblem, score, timeRemaining, gameStatus, lives, answerProblem, decrementTime, startGame, resetGame,
   } = useStroopStore();
@@ -46,6 +60,13 @@ const StroopTestGame: React.FC = () => {
     }
   }, [gameStatus]);
 
+  // Update multiplayer score
+  useEffect(() => {
+    if (isMultiplayer && gameStatus === 'playing' && score > 0) {
+      updateMyScore(score);
+    }
+  }, [isMultiplayer, score, gameStatus]);
+
   useEffect(() => {
     if (gameStatus === 'finished') {
       handleGameFinish();
@@ -55,6 +76,11 @@ const StroopTestGame: React.FC = () => {
   const handleGameFinish = async () => {
     hapticPatterns.gameOver();
     soundManager.playSound(score > 0 ? 'game_win' : 'game_lose');
+
+    // Finish multiplayer game
+    if (isMultiplayer) {
+      await finishGame();
+    }
 
     const oldRecord = await loadGameRecord('stroop');
     if (!oldRecord || !oldRecord.highScore || score > oldRecord.highScore) {
@@ -144,7 +170,14 @@ const StroopTestGame: React.FC = () => {
             <View style={styles.stats}>
               <View style={styles.statItem}><Text style={styles.statLabel}>점수</Text><Text style={styles.statValue}>{score}</Text></View>
               <View style={styles.statItem}><Text style={styles.statLabel}>시간</Text><Text style={[styles.statValue, { color: timeRemaining <= 5 ? theme.colors.error : theme.colors.text }]}>{timeRemaining}</Text></View>
-              <View style={styles.statItem}><Text style={styles.statLabel}>생명</Text><Text style={styles.statValue}>{'❤️'.repeat(lives)}</Text></View>
+              {isMultiplayer ? (
+                <View style={styles.statItem} accessible={true} accessibilityRole="text" accessibilityLabel={`상대방 점수: ${opponentScore}점`}>
+                  <Text style={styles.statLabel}>상대 점수</Text>
+                  <Text style={styles.statValue}>{opponentScore}</Text>
+                </View>
+              ) : (
+                <View style={styles.statItem}><Text style={styles.statLabel}>생명</Text><Text style={styles.statValue}>{'❤️'.repeat(lives)}</Text></View>
+              )}
             </View>
             <View style={styles.questionContainer}><Text style={[styles.question, { color: currentProblem.color }]}>{currentProblem.text}</Text></View>
             <View style={styles.optionsContainer}>
