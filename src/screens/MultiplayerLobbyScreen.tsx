@@ -131,18 +131,30 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
           difficulty: difficulty,
           status: 'waiting',
           max_players: 2,
-          current_players: 1,
+          current_players: 0, // join_multiplayer_room이 1씩 증가시키므로 0으로 시작
         })
         .select()
         .single();
 
       if (error) throw error;
 
+      console.log('[DEBUG] Room created with current_players:', data.current_players);
+
       // 방 생성자도 join_multiplayer_room 함수를 호출해야 game_state가 생성됨
+      console.log('[DEBUG] Calling join_multiplayer_room for room creator:', data.id, user.id);
       const { error: joinError } = await supabase.rpc('join_multiplayer_room', {
         p_room_id: data.id,
         p_user_id: user.id,
       });
+      console.log('[DEBUG] join_multiplayer_room result:', joinError ? `ERROR: ${joinError.message}` : 'SUCCESS');
+
+      // 방 생성 후 current_players 확인
+      const { data: roomCheck } = await supabase
+        .from('multiplayer_rooms')
+        .select('current_players')
+        .eq('id', data.id)
+        .single();
+      console.log('[DEBUG] After join, current_players:', roomCheck?.current_players);
 
       if (joinError) throw joinError;
 
@@ -167,10 +179,12 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
       hapticPatterns.buttonPress();
 
       // 방 참가 (current_players 증가, presence tracking 시작)
+      console.log('[DEBUG] Calling join_multiplayer_room for joiner:', roomId, user.id);
       const { error } = await supabase.rpc('join_multiplayer_room', {
         p_room_id: roomId,
         p_user_id: user.id,
       });
+      console.log('[DEBUG] join_multiplayer_room result:', error ? 'ERROR' : 'SUCCESS');
 
       if (error) throw error;
 
