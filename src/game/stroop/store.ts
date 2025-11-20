@@ -27,7 +27,7 @@ const createProblem = (): StroopProblem => {
     colorName = COLOR_NAMES[Math.floor(Math.random() * COLOR_NAMES.length)];
   }
 
-  const color = COLORS[colorName];
+  const color = COLORS[colorName as keyof typeof COLORS];
   const correctAnswer = colorName;
 
   const options = new Set<string>([correctAnswer]);

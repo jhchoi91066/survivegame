@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Achievement } from '../../data/achievements';
 import { hapticPatterns } from '../../utils/haptics';
+import { GlassView } from './GlassView';
 
 interface AchievementUnlockModalProps {
   visible: boolean;
@@ -55,15 +56,15 @@ const AchievementUnlockModal: React.FC<AchievementUnlockModalProps> = ({
               <Text style={styles.title}>🎉 업적 달성! 🎉</Text>
 
               {achievements.map((achievement, index) => (
-                <View key={achievement.id} style={styles.achievementCard}>
+                <GlassView key={achievement.id} style={styles.achievementCard} intensity={20} tint="light">
                   <View style={styles.iconContainer}>
-                    <Text style={styles.icon}>{achievement.icon}</Text>
+                    <Text style={styles.icon}>{achievement.emoji}</Text>
                   </View>
                   <View style={styles.textContainer}>
                     <Text style={styles.achievementName}>{achievement.name}</Text>
                     <Text style={styles.achievementDesc}>{achievement.description}</Text>
                   </View>
-                </View>
+                </GlassView>
               ))}
 
               <Pressable
@@ -126,13 +127,13 @@ const styles = StyleSheet.create({
   achievementCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     width: '100%',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    overflow: 'hidden',
   },
   iconContainer: {
     width: 56,

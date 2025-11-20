@@ -107,7 +107,7 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRooms(data || []);
+      setRooms((data as any) || []);
     } catch (error) {
       console.error('Failed to load rooms:', error);
       Alert.alert('오류', '방 목록을 불러오는데 실패했습니다.');
@@ -217,7 +217,7 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
       accessibilityHint={difficulty ? `난이도: ${difficulty}` : '버튼을 눌러 새 방을 생성합니다'}
       accessibilityState={{ disabled: creating }}
     >
-      <LinearGradient colors={colors} style={styles.gameButtonGradient}>
+      <LinearGradient colors={colors as any} style={styles.gameButtonGradient}>
         <Text style={styles.gameEmoji} accessibilityElementsHidden={true}>{emoji}</Text>
         <Text style={styles.gameName}>{name}</Text>
         {difficulty && <Text style={styles.gameDifficulty}>{difficulty}</Text>}

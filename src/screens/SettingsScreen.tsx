@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, Switch, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, SafeAreaView, Switch, Alert, Platform, ScrollView } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,6 +10,8 @@ import { soundManager } from '../utils/soundManager';
 import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GlassView } from '../components/shared/GlassView';
 import {
   Moon,
   Sun,
@@ -20,7 +22,6 @@ import {
   User,
   Info,
   ArrowLeft,
-  Vibrate,
   Download,
   Trash2
 } from 'lucide-react-native';
@@ -113,17 +114,31 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
       // Save to file
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       const filename = `brain-games-data-${timestamp}.json`;
-      const fileUri = FileSystem.documentDirectory + filename;
 
-      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(userData, null, 2));
-
-      // Share the file
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(fileUri);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
+      if (Platform.OS === 'web') {
+        // Web handling for download
+        const blob = new Blob([JSON.stringify(userData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
         Alert.alert('완료', `데이터가 다운로드되었습니다: ${filename}`);
+      } else {
+        // Native handling
+        const fs = FileSystem as any;
+        const fileUri = (fs.documentDirectory || fs.cacheDirectory) + filename;
+        await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(userData, null, 2));
+
+        // Share the file
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(fileUri);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          Alert.alert('완료', `데이터가 다운로드되었습니다: ${filename}`);
+        }
       }
     } catch (error: any) {
       console.error('Download data error:', error);
@@ -201,251 +216,213 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
     }
   };
 
-  const dynamicStyles = {
-    container: {
-      ...styles.container,
-      backgroundColor: theme.colors.background,
-    },
-    header: {
-      ...styles.header,
-      backgroundColor: theme.colors.surface,
-      borderBottomColor: theme.colors.border,
-    },
-    backButtonText: {
-      ...styles.backButtonText,
-      color: theme.colors.primary,
-    },
-    title: {
-      ...styles.title,
-      color: theme.colors.text,
-    },
-    section: {
-      ...styles.section,
-      backgroundColor: theme.colors.surface,
-    },
-    sectionTitle: {
-      ...styles.sectionTitle,
-      color: theme.colors.text,
-    },
-    setting: {
-      ...styles.setting,
-      borderBottomColor: theme.colors.border,
-    },
-    settingLabel: {
-      ...styles.settingLabel,
-      color: theme.colors.textSecondary,
-    },
-    button: {
-      ...styles.button,
-      backgroundColor: theme.colors.surfaceSecondary,
-    },
-    buttonText: {
-      ...styles.buttonText,
-      color: theme.colors.primary,
-    },
-    infoText: {
-      ...styles.infoText,
-      color: theme.colors.textTertiary,
-    },
-  };
-
   return (
-    <SafeAreaView style={dynamicStyles.container}>
-      <View style={dynamicStyles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color={theme.colors.text} />
-        </Pressable>
-        <Text style={dynamicStyles.title}>설정</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <View style={styles.content}>
-        {/* Appearance Settings */}
-        <View style={dynamicStyles.section}>
-          <View style={styles.sectionHeader}>
-            {themeMode === 'dark' ? <Moon size={20} color={theme.colors.primary} /> : <Sun size={20} color={theme.colors.primary} />}
-            <Text style={dynamicStyles.sectionTitle}>외관</Text>
-          </View>
-
-          <View style={dynamicStyles.setting}>
-            <View>
-              <Text style={dynamicStyles.settingLabel}>다크 모드</Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
-                {themeMode === 'dark' ? '어두운 테마 사용 중' : '밝은 테마 사용 중'}
-              </Text>
-            </View>
-            <Switch
-              value={themeMode === 'dark'}
-              onValueChange={toggleTheme}
-              trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
-              thumbColor={themeMode === 'dark' ? '#ffffff' : '#f4f3f4'}
-            />
-          </View>
-        </View>
-
-        {/* Sound Settings */}
-        <View style={dynamicStyles.section}>
-          <View style={styles.sectionHeader}>
-            {soundEnabled ? <Volume2 size={20} color={theme.colors.primary} /> : <VolumeX size={20} color={theme.colors.primary} />}
-            <Text style={dynamicStyles.sectionTitle}>사운드</Text>
-          </View>
-
-          <View style={dynamicStyles.setting}>
-            <View>
-              <Text style={dynamicStyles.settingLabel}>효과음</Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
-                {soundEnabled ? '게임 사운드 효과 활성화' : '게임 사운드 효과 비활성화'}
-              </Text>
-            </View>
-            <Switch
-              value={soundEnabled}
-              onValueChange={handleToggleSound}
-              trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
-              thumbColor={soundEnabled ? '#ffffff' : '#f4f3f4'}
-            />
-          </View>
-
-          <View style={dynamicStyles.setting}>
-            <View>
-              <Text style={dynamicStyles.settingLabel}>진동</Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
-                {vibrationEnabled ? '햅틱 피드백 활성화' : '햅틱 피드백 비활성화'}
-              </Text>
-            </View>
-            <Switch
-              value={vibrationEnabled}
-              onValueChange={setVibrationEnabled}
-              trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
-            />
-          </View>
-        </View>
-
-        {/* Game Settings */}
-        <View style={dynamicStyles.section}>
-          <View style={styles.sectionHeader}>
-            <Gamepad2 size={20} color={theme.colors.primary} />
-            <Text style={dynamicStyles.sectionTitle}>게임</Text>
-          </View>
-
-          <Pressable style={dynamicStyles.button} onPress={handleResetTutorial}>
-            <Text style={dynamicStyles.buttonText}>튜토리얼 다시 보기</Text>
+    <View style={styles.container}>
+      <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+            <GlassView style={styles.backButtonGlass} intensity={20}>
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </GlassView>
           </Pressable>
-
-          <Pressable style={dynamicStyles.button} onPress={handleResetProgress}>
-            <Text style={dynamicStyles.buttonText}>진행도 초기화</Text>
-          </Pressable>
+          <Text style={[styles.title, { color: theme.colors.text }]}>설정</Text>
+          <View style={styles.placeholder} />
         </View>
 
-        {/* Online Settings */}
-        {user && (
-          <View style={dynamicStyles.section}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Appearance Settings */}
+          <GlassView style={styles.section} intensity={20}>
             <View style={styles.sectionHeader}>
-              <Globe size={20} color={theme.colors.primary} />
-              <Text style={dynamicStyles.sectionTitle}>온라인 설정</Text>
+              {themeMode === 'dark' ? <Moon size={20} color={theme.colors.primary} /> : <Sun size={20} color={theme.colors.primary} />}
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>외관</Text>
             </View>
 
-            <View style={dynamicStyles.setting}>
-              <View style={{ flex: 1 }}>
-                <Text style={dynamicStyles.settingLabel}>자동 동기화</Text>
+            <View style={[styles.setting, { borderBottomColor: theme.colors.border }]}>
+              <View>
+                <Text style={[styles.settingLabel, { color: theme.colors.text }]}>다크 모드</Text>
                 <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
-                  게임 기록을 자동으로 클라우드에 저장
+                  {themeMode === 'dark' ? '어두운 테마 사용 중' : '밝은 테마 사용 중'}
                 </Text>
               </View>
               <Switch
-                value={autoSyncEnabled}
-                onValueChange={handleToggleAutoSync}
+                value={themeMode === 'dark'}
+                onValueChange={toggleTheme}
                 trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
+                thumbColor={themeMode === 'dark' ? '#ffffff' : '#f4f3f4'}
               />
             </View>
+          </GlassView>
 
-            <View style={dynamicStyles.setting}>
-              <View style={{ flex: 1 }}>
-                <Text style={dynamicStyles.settingLabel}>리더보드 참여</Text>
-                <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
-                  내 기록을 리더보드에 표시
-                </Text>
-              </View>
-              <Switch
-                value={leaderboardParticipate}
-                onValueChange={handleToggleLeaderboard}
-                trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
-              />
-            </View>
-
-            <View style={dynamicStyles.setting}>
-              <View style={{ flex: 1 }}>
-                <Text style={dynamicStyles.settingLabel}>친구 요청 수신</Text>
-                <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
-                  다른 사용자의 친구 요청 허용
-                </Text>
-              </View>
-              <Switch
-                value={friendRequestsEnabled}
-                onValueChange={handleToggleFriendRequests}
-                trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Account Management */}
-        {user && (
-          <View style={dynamicStyles.section}>
+          {/* Sound Settings */}
+          <GlassView style={styles.section} intensity={20}>
             <View style={styles.sectionHeader}>
-              <User size={20} color={theme.colors.primary} />
-              <Text style={dynamicStyles.sectionTitle}>계정 관리</Text>
+              {soundEnabled ? <Volume2 size={20} color={theme.colors.primary} /> : <VolumeX size={20} color={theme.colors.primary} />}
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>사운드</Text>
             </View>
 
-            <Pressable
-              style={dynamicStyles.button}
-              onPress={handleDownloadData}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <Download size={18} color={theme.colors.primary} />
-                <Text style={dynamicStyles.buttonText}>
-                  내 데이터 다운로드
+            <View style={[styles.setting, { borderBottomColor: theme.colors.border }]}>
+              <View>
+                <Text style={[styles.settingLabel, { color: theme.colors.text }]}>효과음</Text>
+                <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
+                  {soundEnabled ? '게임 사운드 효과 활성화' : '게임 사운드 효과 비활성화'}
                 </Text>
               </View>
+              <Switch
+                value={soundEnabled}
+                onValueChange={handleToggleSound}
+                trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
+                thumbColor={soundEnabled ? '#ffffff' : '#f4f3f4'}
+              />
+            </View>
+
+            <View style={[styles.setting, { borderBottomColor: 'transparent' }]}>
+              <View>
+                <Text style={[styles.settingLabel, { color: theme.colors.text }]}>진동</Text>
+                <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
+                  {vibrationEnabled ? '햅틱 피드백 활성화' : '햅틱 피드백 비활성화'}
+                </Text>
+              </View>
+              <Switch
+                value={vibrationEnabled}
+                onValueChange={setVibrationEnabled}
+                trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
+              />
+            </View>
+          </GlassView>
+
+          {/* Game Settings */}
+          <GlassView style={styles.section} intensity={20}>
+            <View style={styles.sectionHeader}>
+              <Gamepad2 size={20} color={theme.colors.primary} />
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>게임</Text>
+            </View>
+
+            <Pressable style={styles.button} onPress={handleResetTutorial}>
+              <GlassView style={styles.buttonGlass} intensity={30}>
+                <Text style={[styles.buttonText, { color: theme.colors.text }]}>튜토리얼 다시 보기</Text>
+              </GlassView>
             </Pressable>
 
-            <Text style={[dynamicStyles.infoText, { marginTop: 8, marginBottom: 16 }]}>
-              GDPR 규정에 따라 모든 개인정보를 JSON 파일로 다운로드할 수 있습니다
-            </Text>
-
-            <Pressable
-              style={[dynamicStyles.button, { backgroundColor: '#ef4444' }]}
-              onPress={handleDeleteAccount}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <Trash2 size={18} color="#ffffff" />
-                <Text style={[dynamicStyles.buttonText, { color: '#ffffff' }]}>
-                  계정 삭제
-                </Text>
-              </View>
+            <Pressable style={styles.button} onPress={handleResetProgress}>
+              <GlassView style={styles.buttonGlass} intensity={30}>
+                <Text style={[styles.buttonText, { color: theme.colors.text }]}>진행도 초기화</Text>
+              </GlassView>
             </Pressable>
+          </GlassView>
 
-            <Text style={[dynamicStyles.infoText, { marginTop: 8 }]}>
-              계정 삭제 시 모든 데이터가 영구적으로 삭제됩니다
-            </Text>
-          </View>
-        )}
+          {/* Online Settings */}
+          {user && (
+            <GlassView style={styles.section} intensity={20}>
+              <View style={styles.sectionHeader}>
+                <Globe size={20} color={theme.colors.primary} />
+                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>온라인 설정</Text>
+              </View>
 
-        {/* About */}
-        <View style={dynamicStyles.section}>
-          <View style={styles.sectionHeader}>
-            <Info size={20} color={theme.colors.primary} />
-            <Text style={dynamicStyles.sectionTitle}>정보</Text>
-          </View>
-          <Text style={dynamicStyles.infoText}>버전: 3.0.0</Text>
-          <Text style={dynamicStyles.infoText}>개발: React Native + Expo</Text>
-        </View>
-      </View>
-    </SafeAreaView>
+              <View style={[styles.setting, { borderBottomColor: theme.colors.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.settingLabel, { color: theme.colors.text }]}>자동 동기화</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
+                    게임 기록을 자동으로 클라우드에 저장
+                  </Text>
+                </View>
+                <Switch
+                  value={autoSyncEnabled}
+                  onValueChange={handleToggleAutoSync}
+                  trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
+                />
+              </View>
+
+              <View style={[styles.setting, { borderBottomColor: theme.colors.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.settingLabel, { color: theme.colors.text }]}>리더보드 참여</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
+                    내 기록을 리더보드에 표시
+                  </Text>
+                </View>
+                <Switch
+                  value={leaderboardParticipate}
+                  onValueChange={handleToggleLeaderboard}
+                  trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
+                />
+              </View>
+
+              <View style={[styles.setting, { borderBottomColor: 'transparent' }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.settingLabel, { color: theme.colors.text }]}>친구 요청 수신</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textTertiary }]}>
+                    다른 사용자의 친구 요청 허용
+                  </Text>
+                </View>
+                <Switch
+                  value={friendRequestsEnabled}
+                  onValueChange={handleToggleFriendRequests}
+                  trackColor={{ false: '#cbd5e1', true: theme.colors.primary }}
+                />
+              </View>
+            </GlassView>
+          )}
+
+          {/* Account Management */}
+          {user && (
+            <GlassView style={styles.section} intensity={20}>
+              <View style={styles.sectionHeader}>
+                <User size={20} color={theme.colors.primary} />
+                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>계정 관리</Text>
+              </View>
+
+              <Pressable style={styles.button} onPress={handleDownloadData}>
+                <GlassView style={styles.buttonGlass} intensity={30}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <Download size={18} color={theme.colors.primary} />
+                    <Text style={[styles.buttonText, { color: theme.colors.text }]}>
+                      내 데이터 다운로드
+                    </Text>
+                  </View>
+                </GlassView>
+              </Pressable>
+
+              <Text style={[styles.infoText, { marginTop: 8, marginBottom: 16, color: theme.colors.textTertiary }]}>
+                GDPR 규정에 따라 모든 개인정보를 JSON 파일로 다운로드할 수 있습니다
+              </Text>
+
+              <Pressable style={styles.button} onPress={handleDeleteAccount}>
+                <GlassView style={[styles.buttonGlass, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]} intensity={30}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <Trash2 size={18} color="#ef4444" />
+                    <Text style={[styles.buttonText, { color: '#ef4444' }]}>
+                      계정 삭제
+                    </Text>
+                  </View>
+                </GlassView>
+              </Pressable>
+
+              <Text style={[styles.infoText, { marginTop: 8, color: theme.colors.textTertiary }]}>
+                계정 삭제 시 모든 데이터가 영구적으로 삭제됩니다
+              </Text>
+            </GlassView>
+          )}
+
+          {/* About */}
+          <GlassView style={styles.section} intensity={20}>
+            <View style={styles.sectionHeader}>
+              <Info size={20} color={theme.colors.primary} />
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>정보</Text>
+            </View>
+            <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>버전: 3.0.0</Text>
+            <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>개발: React Native + Expo</Text>
+          </GlassView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  safeArea: {
     flex: 1,
     paddingTop: Platform.OS === 'web' ? 40 : 0,
   },
@@ -454,15 +431,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    paddingTop: 60,
-    borderBottomWidth: 1,
+    paddingTop: 20,
   },
   backButton: {
-    padding: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  backButtonGlass: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
   },
   title: {
     fontSize: 20,
@@ -473,16 +453,12 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    paddingBottom: 40,
   },
   section: {
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -503,24 +479,30 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 16,
+    fontWeight: '600',
   },
   settingDescription: {
     fontSize: 12,
     marginTop: 4,
   },
   button: {
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 8,
+    overflow: 'hidden',
+  },
+  buttonGlass: {
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     fontSize: 16,
-    textAlign: 'center',
     fontWeight: '600',
   },
   infoText: {
-    fontSize: 14,
-    marginBottom: 8,
+    fontSize: 13,
+    marginBottom: 4,
   },
 });
 

@@ -24,6 +24,8 @@ import {
   Timer,
   Award
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GlassView } from '../components/shared/GlassView';
 import { RootStackParamList } from '../../App';
 import { useMathRushStore } from '../game/mathrush/store';
 import { hapticPatterns } from '../utils/haptics';
@@ -260,10 +262,13 @@ const MathRushGameContent: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
           <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-            <ArrowLeft size={24} color={theme.colors.textSecondary} />
+            <GlassView style={styles.iconButtonGlass} intensity={20}>
+              <ArrowLeft size={24} color={theme.colors.textSecondary} />
+            </GlassView>
           </Pressable>
           <View style={styles.titleContainer}>
             <Calculator size={24} color={theme.colors.text} style={{ marginRight: 8 }} />
@@ -274,29 +279,33 @@ const MathRushGameContent: React.FC = () => {
             style={styles.pauseButton}
             disabled={gameStatus !== 'playing'}
           >
-            {isPaused ? (
-              <Play size={24} color={theme.colors.text} />
-            ) : (
-              <Pause size={24} color={theme.colors.text} />
-            )}
+            <GlassView style={styles.iconButtonGlass} intensity={20}>
+              {isPaused ? (
+                <Play size={24} color={theme.colors.text} />
+              ) : (
+                <Pause size={24} color={theme.colors.text} />
+              )}
+            </GlassView>
           </Pressable>
         </View>
 
         {gameStatus === 'ready' && (
           <View style={styles.startContainer}>
-            <Calculator size={80} color={theme.colors.primary} style={{ marginBottom: 24 }} />
-            <Text style={styles.startTitle}>Math Rush</Text>
-            <Text style={styles.startDescription}>30초 안에 최대한 많은 문제를 푸세요!{`\n`}3번 틀리면 게임이 종료됩니다.</Text>
-            <Pressable style={styles.startButton} onPress={handleStart}>
-              <Play size={24} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.startButtonText}>시작하기</Text>
-            </Pressable>
+            <GlassView style={styles.startGlass} intensity={30}>
+              <Calculator size={80} color={theme.colors.primary} style={{ marginBottom: 24 }} />
+              <Text style={styles.startTitle}>Math Rush</Text>
+              <Text style={styles.startDescription}>30초 안에 최대한 많은 문제를 푸세요!{`\n`}3번 틀리면 게임이 종료됩니다.</Text>
+              <Pressable style={styles.startButton} onPress={handleStart}>
+                <Play size={24} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.startButtonText}>시작하기</Text>
+              </Pressable>
+            </GlassView>
           </View>
         )}
 
         {gameStatus === 'playing' && currentQuestion && (
           <>
-            <View style={styles.stats}>
+            <GlassView style={styles.stats} intensity={20}>
               <View style={styles.statItem}>
                 <Award size={20} color={theme.colors.textSecondary} style={{ marginBottom: 4 }} />
                 <Animated.Text style={[styles.statValue, scoreAnimatedStyle]}>{score}</Animated.Text>
@@ -320,19 +329,25 @@ const MathRushGameContent: React.FC = () => {
                   <Text style={styles.statValue}>{opponentScore}</Text>
                 </View>
               )}
-            </View>
+            </GlassView>
             {combo >= 5 && (
               <View style={styles.comboContainer}>
                 <Flame size={24} color={theme.colors.warning} style={{ marginRight: 8 }} />
                 <Text style={styles.comboText}>{combo} COMBO!</Text>
               </View>
             )}
-            <Animated.View style={[styles.questionContainer, questionAnimatedStyle]}>
-              <Text style={styles.question}>{currentQuestion.num1} {currentQuestion.operation} {currentQuestion.num2} = ?</Text>
+            <Animated.View style={[styles.questionContainerWrapper, questionAnimatedStyle]}>
+              <GlassView style={styles.questionContainer} intensity={30}>
+                <Text style={styles.question}>{currentQuestion.num1} {currentQuestion.operation} {currentQuestion.num2} = ?</Text>
+              </GlassView>
             </Animated.View>
             <View style={styles.optionsContainer}>
               {currentQuestion.options.map((option, index) => (
-                <Pressable key={index} style={styles.optionButton} onPress={() => handleAnswer(option)}><Text style={styles.optionText}>{option}</Text></Pressable>
+                <Pressable key={index} style={styles.optionButton} onPress={() => handleAnswer(option)}>
+                  <GlassView style={styles.optionGlass} intensity={20} tint="light">
+                    <Text style={styles.optionText}>{option}</Text>
+                  </GlassView>
+                </Pressable>
               ))}
             </View>
           </>
@@ -340,7 +355,7 @@ const MathRushGameContent: React.FC = () => {
 
         <Modal visible={gameStatus === 'finished'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <GlassView style={styles.modalContent} intensity={30} tint="dark">
               <Target size={64} color={theme.colors.primary} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>게임 종료!</Text>
               {isNewRecord && (
@@ -359,7 +374,7 @@ const MathRushGameContent: React.FC = () => {
                 <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.menuButtonText}>메뉴로</Text>
               </Pressable>
-            </View>
+            </GlassView>
           </View>
         </Modal>
 
@@ -396,40 +411,44 @@ const MathRushGameContent: React.FC = () => {
 const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  backButton: { padding: 8 },
+  backButton: { borderRadius: 12, overflow: 'hidden' },
+  iconButtonGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   backButtonText: { color: theme.colors.textSecondary, fontSize: 16 },
   titleContainer: { flexDirection: 'row', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text },
-  pauseButton: { padding: 8 },
+  pauseButton: { borderRadius: 12, overflow: 'hidden' },
   pauseButtonText: { fontSize: 20, color: theme.colors.text },
-  startContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  startContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
+  startGlass: { padding: 32, borderRadius: 24, alignItems: 'center', width: '100%', maxWidth: 400 },
   startEmoji: { fontSize: 80, marginBottom: 24 },
   startTitle: { fontSize: 36, fontWeight: 'bold', color: theme.colors.text, marginBottom: 16 },
   startDescription: { fontSize: 16, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 32, lineHeight: 24 },
-  startButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 48, borderRadius: 12 },
+  startButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 48, borderRadius: 16 },
   startButtonText: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-  stats: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, backgroundColor: theme.colors.surface, marginHorizontal: 16, borderRadius: 12, marginBottom: 16 },
+  stats: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 16, marginHorizontal: 16, borderRadius: 20, marginBottom: 16 },
   statItem: { alignItems: 'center', minWidth: 60 },
   statLabel: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4 },
   statValue: { fontSize: 20, fontWeight: 'bold', color: theme.colors.text },
   comboContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   comboText: { fontSize: 24, fontWeight: 'bold', color: theme.colors.warning },
-  questionContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', marginHorizontal: 16, backgroundColor: theme.colors.surface, borderRadius: 16, marginBottom: 24 },
+  questionContainerWrapper: { marginHorizontal: 16, marginBottom: 24 },
+  questionContainer: { alignItems: 'center', justifyContent: 'center', padding: 32, borderRadius: 24 },
   question: { fontSize: 48, fontWeight: 'bold', color: theme.colors.text },
   optionsContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', paddingHorizontal: 16, gap: 12, paddingBottom: 16 },
-  optionButton: { width: '45%', backgroundColor: theme.colors.primary, paddingVertical: 24, borderRadius: 12, alignItems: 'center' },
+  optionButton: { width: '45%', borderRadius: 16, overflow: 'hidden' },
+  optionGlass: { paddingVertical: 24, alignItems: 'center', backgroundColor: 'rgba(99, 102, 241, 0.3)' },
   optionText: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
-  modalOverlay: { flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center' },
-  modalContent: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 32, width: '80%', maxWidth: 400, alignItems: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { borderRadius: 24, padding: 32, width: '85%', maxWidth: 400, alignItems: 'center' },
   modalTitle: { fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginBottom: 16 },
   victoryEmoji: { fontSize: 64, marginBottom: 16 },
   finalScore: { fontSize: 20, color: theme.colors.success, marginBottom: 8, fontWeight: 'bold' },
   finalCombo: { fontSize: 16, color: theme.colors.textSecondary, marginBottom: 24 },
   newRecordContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   newRecord: { fontSize: 20, fontWeight: 'bold', color: theme.colors.primary },
-  nextButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, borderRadius: 12, marginBottom: 8, alignItems: 'center' },
+  nextButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, borderRadius: 16, marginBottom: 8, alignItems: 'center' },
   nextButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  menuButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+  menuButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, borderRadius: 16, alignItems: 'center' },
   menuButtonText: { fontSize: 16, fontWeight: '600', color: theme.colors.text },
 });
 

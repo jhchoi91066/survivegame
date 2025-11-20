@@ -4,6 +4,7 @@ import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 import { Play, RotateCcw, ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { hapticPatterns } from '../../utils/haptics';
+import { GlassView } from './GlassView';
 
 interface GameStat {
   label: string;
@@ -51,54 +52,56 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
       >
         <Animated.View
           entering={ZoomIn.springify().damping(15)}
-          style={[styles.content, { backgroundColor: theme.colors.surface }]}
+          style={styles.contentContainer}
         >
-          <Text style={[styles.title, { color: theme.colors.text }]}>일시정지</Text>
+          <GlassView style={styles.content} intensity={30} tint="dark">
+            <Text style={[styles.title, { color: theme.colors.text }]}>일시정지</Text>
 
-          <View style={[styles.statsContainer, { backgroundColor: theme.colors.backgroundSecondary }]}>
-            {gameStats.map((stat, index) => (
-              <View key={index} style={styles.statRow}>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-                  {stat.label}
-                </Text>
-                <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                  {stat.value}
-                </Text>
+            <View style={[styles.statsContainer, { backgroundColor: 'rgba(0,0,0,0.2)' }]}>
+              {gameStats.map((stat, index) => (
+                <View key={index} style={styles.statRow}>
+                  <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                    {stat.label}
+                  </Text>
+                  <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                    {stat.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            <Pressable
+              style={[styles.resumeButton, { backgroundColor: theme.colors.success }]}
+              onPress={handleResume}
+            >
+              <View style={styles.buttonContent}>
+                <Text style={styles.resumeButtonText}>계속하기</Text>
+                <Play size={20} color="#fff" style={{ marginLeft: 8 }} />
               </View>
-            ))}
-          </View>
+            </Pressable>
 
-          <Pressable
-            style={[styles.resumeButton, { backgroundColor: theme.colors.success }]}
-            onPress={handleResume}
-          >
-            <View style={styles.buttonContent}>
-              <Text style={styles.resumeButtonText}>계속하기</Text>
-              <Play size={20} color="#fff" style={{ marginLeft: 8 }} />
-            </View>
-          </Pressable>
+            <Pressable
+              style={[styles.restartButton, { backgroundColor: theme.colors.primary }]}
+              onPress={handleRestart}
+            >
+              <View style={styles.buttonContent}>
+                <Text style={styles.restartButtonText}>다시 시작</Text>
+                <RotateCcw size={18} color="#fff" style={{ marginLeft: 8 }} />
+              </View>
+            </Pressable>
 
-          <Pressable
-            style={[styles.restartButton, { backgroundColor: theme.colors.primary }]}
-            onPress={handleRestart}
-          >
-            <View style={styles.buttonContent}>
-              <Text style={styles.restartButtonText}>다시 시작</Text>
-              <RotateCcw size={18} color="#fff" style={{ marginLeft: 8 }} />
-            </View>
-          </Pressable>
-
-          <Pressable
-            style={[styles.quitButton, { backgroundColor: theme.colors.surfaceSecondary }]}
-            onPress={handleQuit}
-          >
-            <View style={styles.buttonContent}>
-              <Text style={[styles.quitButtonText, { color: theme.colors.text }]}>
-                메뉴로
-              </Text>
-              <ArrowLeft size={18} color={theme.colors.text} style={{ marginLeft: 8 }} />
-            </View>
-          </Pressable>
+            <Pressable
+              style={[styles.quitButton, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+              onPress={handleQuit}
+            >
+              <View style={styles.buttonContent}>
+                <Text style={[styles.quitButtonText, { color: theme.colors.text }]}>
+                  메뉴로
+                </Text>
+                <ArrowLeft size={18} color={theme.colors.text} style={{ marginLeft: 8 }} />
+              </View>
+            </Pressable>
+          </GlassView>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -108,21 +111,25 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: {
-    borderRadius: 24,
-    padding: 32,
+  contentContainer: {
     width: '85%',
     maxWidth: 400,
-    alignItems: 'center',
+    borderRadius: 24,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
+  },
+  content: {
+    padding: 32,
+    alignItems: 'center',
+    width: '100%',
   },
   title: {
     fontSize: 32,
@@ -152,7 +159,7 @@ const styles = StyleSheet.create({
   resumeButton: {
     width: '100%',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
     marginBottom: 12,
   },
@@ -169,7 +176,7 @@ const styles = StyleSheet.create({
   restartButton: {
     width: '100%',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
     marginBottom: 12,
   },
@@ -181,7 +188,7 @@ const styles = StyleSheet.create({
   quitButton: {
     width: '100%',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
   },
   quitButtonText: {

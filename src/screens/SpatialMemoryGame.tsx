@@ -15,6 +15,8 @@ import {
   Activity,
   Layers
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GlassView } from '../components/shared/GlassView';
 import { RootStackParamList } from '../../App';
 import { useSpatialMemoryStore } from '../game/spatialmemory/store';
 import { Difficulty } from '../game/spatialmemory/types';
@@ -212,21 +214,26 @@ const SpatialMemoryGameContent: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
           <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-            <ArrowLeft size={24} color={theme.colors.textSecondary} />
+            <GlassView style={styles.iconButtonGlass} intensity={20}>
+              <ArrowLeft size={24} color={theme.colors.textSecondary} />
+            </GlassView>
           </Pressable>
           <View style={styles.titleContainer}>
             <Brain size={24} color={theme.colors.text} style={{ marginRight: 8 }} />
             <Text style={styles.title}>Spatial Memory</Text>
           </View>
           <Pressable onPress={handleRestart} style={styles.restartButton}>
-            <RotateCcw size={24} color={theme.colors.text} />
+            <GlassView style={styles.iconButtonGlass} intensity={20}>
+              <RotateCcw size={24} color={theme.colors.text} />
+            </GlassView>
           </Pressable>
         </View>
 
-        <View style={styles.stats}>
+        <GlassView style={styles.stats} intensity={20}>
           <View style={styles.statItem}>
             <Layers size={20} color={theme.colors.textSecondary} style={{ marginBottom: 4 }} />
             <Text style={styles.statValue}>{currentLevel}</Text>
@@ -251,13 +258,13 @@ const SpatialMemoryGameContent: React.FC = () => {
               <Text style={styles.statValue}>{settings.difficulty === 'easy' ? '쉬움' : settings.difficulty === 'medium' ? '보통' : '어려움'}</Text>
             </View>
           )}
-        </View>
+        </GlassView>
 
         {gameStatus !== 'ready' && <TileGrid />}
 
         <Modal visible={showDifficultyModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <GlassView style={styles.modalContent} intensity={30} tint="dark">
               <Grid3x3 size={48} color={theme.colors.primary} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>난이도 선택</Text>
               <Text style={styles.modalDescription}>깜빡이는 타일의 순서를 기억하세요!{`\n`}레벨이 올라갈수록 더 많은 타일이 깜빡입니다.</Text>
@@ -281,13 +288,13 @@ const SpatialMemoryGameContent: React.FC = () => {
                 <Play size={20} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={styles.startButtonText}>게임 시작</Text>
               </Pressable>
-            </View>
+            </GlassView>
           </View>
         </Modal>
 
         <Modal visible={gameStatus === 'gameover'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <GlassView style={styles.modalContent} intensity={30} tint="dark">
               <Brain size={64} color={theme.colors.primary} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>게임 오버!</Text>
               {isNewRecord && (
@@ -306,7 +313,7 @@ const SpatialMemoryGameContent: React.FC = () => {
                 <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.menuButtonText}>메뉴로</Text>
               </Pressable>
-            </View>
+            </GlassView>
           </View>
         </Modal>
 
@@ -323,13 +330,14 @@ const SpatialMemoryGameContent: React.FC = () => {
 const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  backButton: { padding: 8 },
+  backButton: { borderRadius: 12, overflow: 'hidden' },
+  iconButtonGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   backButtonText: { color: theme.colors.textSecondary, fontSize: 16 },
   titleContainer: { flexDirection: 'row', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text },
-  restartButton: { padding: 8 },
+  restartButton: { borderRadius: 12, overflow: 'hidden' },
   restartButtonText: { fontSize: 24, color: theme.colors.text },
-  stats: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface, marginHorizontal: 16, borderRadius: 12, marginBottom: 16 },
+  stats: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 16, marginHorizontal: 16, borderRadius: 20, marginBottom: 16 },
   statItem: { alignItems: 'center' },
   statLabel: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4 },
   statValue: { fontSize: 20, fontWeight: 'bold', color: theme.colors.text },
@@ -337,22 +345,22 @@ const getStyles = (theme: any) => StyleSheet.create({
   statusText: { fontSize: 16 },
   wrongText: { color: theme.colors.error },
   correctText: { color: theme.colors.success },
-  modalOverlay: { flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center' },
-  modalContent: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 32, width: '80%', maxWidth: 400, alignItems: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { borderRadius: 24, padding: 32, width: '85%', maxWidth: 400, alignItems: 'center' },
   modalTitle: { fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginBottom: 12 },
   modalDescription: { fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  difficultyButton: { width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginBottom: 12, alignItems: 'center' },
+  difficultyButton: { width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginBottom: 12, alignItems: 'center' },
   difficultyButtonSelected: { backgroundColor: theme.colors.primary },
   difficultyButtonText: { fontSize: 18, fontWeight: '600', color: theme.colors.text },
   difficultySubText: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 4 },
-  startButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginTop: 12, alignItems: 'center' },
+  startButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginTop: 12, alignItems: 'center' },
   startButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   gameOverEmoji: { fontSize: 64, marginBottom: 16 },
   finalScore: { fontSize: 32, fontWeight: 'bold', color: theme.colors.primary, marginBottom: 8 },
   victoryStats: { fontSize: 16, color: theme.colors.textSecondary, marginBottom: 24, textAlign: 'center' },
   newRecordContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   newRecord: { fontSize: 20, fontWeight: 'bold', color: theme.colors.primary },
-  menuButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginTop: 8, alignItems: 'center' },
+  menuButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginTop: 8, alignItems: 'center' },
   menuButtonText: { fontSize: 16, fontWeight: '600', color: theme.colors.text },
 });
 

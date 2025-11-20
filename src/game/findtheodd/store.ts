@@ -16,21 +16,29 @@ const createProblem = (difficulty: Difficulty): OddOneOutProblem => {
   const totalItems = gridSize * gridSize;
   const oddItemIndex = Math.floor(Math.random() * totalItems);
 
-  const baseShape: ShapeType = ['circle', 'square', 'triangle'][Math.floor(Math.random() * 3)];
+  const shapes: ShapeType[] = ['circle', 'square', 'triangle'];
+  const baseShape = shapes[Math.floor(Math.random() * shapes.length)];
+
+  const diffType = difficulty.level % 3; // Now 3 types of diff: color, rotation, shape
+
+  let oddShape = baseShape;
+  if (diffType === 0) {
+    const otherShapes = shapes.filter(s => s !== baseShape);
+    oddShape = otherShapes[Math.floor(Math.random() * otherShapes.length)];
+  }
+
   const baseColorVal = Math.floor(Math.random() * (255 - difficulty.colorDifference));
   const baseColor = `rgb(${baseColorVal}, ${baseColorVal}, ${baseColorVal})`;
   const oddColor = `rgb(${baseColorVal + difficulty.colorDifference}, ${baseColorVal + difficulty.colorDifference}, ${baseColorVal + difficulty.colorDifference})`;
   const baseRotation = Math.floor(Math.random() * 360);
   const oddRotation = baseRotation + difficulty.angleDifference;
 
-  const diffType = difficulty.level % 3; // Now 3 types of diff: color, rotation, shape
-
   for (let i = 0; i < totalItems; i++) {
     const isOdd = i === oddItemIndex;
     items.push({
       id: `item-${i}`,
-      shape: baseShape,
-      color: isOdd && (diffType === 1 || diffType === 0) ? oddColor : baseColor,
+      shape: isOdd && diffType === 0 ? oddShape : baseShape,
+      color: isOdd && diffType === 1 ? oddColor : baseColor,
       rotation: isOdd && diffType === 2 ? oddRotation : baseRotation,
     });
   }
@@ -79,7 +87,7 @@ export const useFindTheOddStore = create<GameStore>((set, get) => ({
         newDifficulty.angleDifference = Math.max(5, newDifficulty.angleDifference - 5);
         newDifficulty.sizeDifference = Math.max(0.05, newDifficulty.sizeDifference - 0.05);
       }
-      
+
       set({
         score: score + 100 + (combo * 10),
         combo: combo + 1,

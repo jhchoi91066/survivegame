@@ -1,5 +1,5 @@
 // 문제 타입
-export type OperationType = '+' | '-' | '×';
+export type OperationType = '+' | '-' | '×' | '÷';
 
 // 문제 인터페이스
 export interface Question {

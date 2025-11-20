@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Achievement, AchievementProgress } from '../../data/achievements';
+import { useTheme } from '../../contexts/ThemeContext';
+import { GlassView } from './GlassView';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
+import { Lock, Check, Trophy, Target, Zap, Medal, Layers } from 'lucide-react-native';
 
 interface AchievementCardProps {
   achievement: Achievement;
@@ -8,29 +13,94 @@ interface AchievementCardProps {
 }
 
 const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, progress }) => {
+  const { theme } = useTheme();
   const isLocked = !progress.unlocked && achievement.isHidden;
+  const styles = getStyles(theme);
+
+  // Animation values
+  const scale = useSharedValue(0.95);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withSpring(1);
+    opacity.value = withTiming(1, { duration: 500 });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'progress': return Target;
+      case 'skill': return Zap;
+      case 'challenge': return Medal;
+      case 'collection': return Layers;
+      default: return Trophy;
+    }
+  };
+
+  const CategoryIcon = getCategoryIcon(achievement.category);
 
   return (
-    <View style={[styles.card, progress.unlocked && styles.cardUnlocked]}>
-      {/* 이모지 */}
-      <View style={[styles.emojiContainer, progress.unlocked && styles.emojiContainerUnlocked]}>
-        <Text style={styles.emoji}>{isLocked ? '🔒' : achievement.emoji}</Text>
-      </View>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <GlassView
+        style={styles.glass}
+        intensity={progress.unlocked ? 30 : 15}
+        tint={progress.unlocked ? 'light' : 'dark'}
+      >
+        {/* Header / Icon */}
+        <View style={styles.header}>
+          <View style={[
+            styles.iconContainer,
+            progress.unlocked ? styles.iconUnlocked : styles.iconLocked
+          ]}>
+            {isLocked ? (
+              <Lock size={24} color={theme.colors.textTertiary} />
+            ) : (
+              <Text style={styles.emoji}>{achievement.emoji}</Text>
+            )}
+          </View>
+          <View style={styles.headerText}>
+            <Text style={[
+              styles.title,
+              progress.unlocked && styles.titleUnlocked
+            ]}>
+              {isLocked ? '???' : achievement.name}
+            </Text>
+            <View style={styles.categoryBadge}>
+              <CategoryIcon size={10} color={theme.colors.textSecondary} style={{ marginRight: 4 }} />
+              <Text style={styles.categoryText}>{getCategoryName(achievement.category)}</Text>
+            </View>
+          </View>
+          {progress.unlocked && (
+            <View style={styles.checkBadge}>
+              <LinearGradient
+                colors={theme.gradients.success}
+                style={styles.checkGradient}
+              >
+                <Check size={12} color="#fff" />
+              </LinearGradient>
+            </View>
+          )}
+        </View>
 
-      {/* 정보 */}
-      <View style={styles.infoContainer}>
-        <Text style={[styles.name, progress.unlocked && styles.nameUnlocked]}>
-          {isLocked ? '???' : achievement.name}
-        </Text>
+        {/* Description */}
         <Text style={styles.description}>
           {isLocked ? '숨겨진 업적을 달성하세요' : achievement.description}
         </Text>
 
-        {/* 진행도 바 */}
+        {/* Progress Bar */}
         {!progress.unlocked && !isLocked && (
           <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${progress.progress}%` }]} />
+            <View style={styles.progressBarBg}>
+              <LinearGradient
+                colors={theme.gradients.primary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressBarFill, { width: `${Math.min(progress.progress, 100)}%` }]}
+              />
             </View>
             <Text style={styles.progressText}>
               {Math.round(progress.progress)}%
@@ -41,156 +111,124 @@ const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, progress
           </View>
         )}
 
-        {/* 달성 표시 */}
-        {progress.unlocked && (
-          <View style={styles.unlockedBadge}>
-            <Text style={styles.unlockedText}>✓ 달성</Text>
-            {progress.unlockedAt && (
-              <Text style={styles.unlockedDate}>
-                {new Date(progress.unlockedAt).toLocaleDateString('ko-KR')}
-              </Text>
-            )}
-          </View>
+        {/* Unlocked Date */}
+        {progress.unlocked && progress.unlockedAt && (
+          <Text style={styles.unlockedDate}>
+            {new Date(progress.unlockedAt).toLocaleDateString('ko-KR')} 달성
+          </Text>
         )}
-      </View>
-
-      {/* 카테고리 배지 */}
-      <View style={[styles.categoryBadge, getCategoryColor(achievement.category)]}>
-        <Text style={styles.categoryText}>{getCategoryName(achievement.category)}</Text>
-      </View>
-    </View>
+      </GlassView>
+    </Animated.View>
   );
 };
 
 const getCategoryName = (category: string): string => {
   switch (category) {
-    case 'progress':
-      return '진행';
-    case 'skill':
-      return '스킬';
-    case 'challenge':
-      return '도전';
-    case 'collection':
-      return '수집';
-    case 'hidden':
-      return '히든';
-    default:
-      return '';
+    case 'progress': return '진행';
+    case 'skill': return '스킬';
+    case 'challenge': return '도전';
+    case 'collection': return '수집';
+    case 'hidden': return '히든';
+    default: return '기타';
   }
 };
 
-const getCategoryColor = (category: string): { backgroundColor: string } => {
-  switch (category) {
-    case 'progress':
-      return { backgroundColor: '#3b82f6' };
-    case 'skill':
-      return { backgroundColor: '#8b5cf6' };
-    case 'challenge':
-      return { backgroundColor: '#ef4444' };
-    case 'collection':
-      return { backgroundColor: '#10b981' };
-    case 'hidden':
-      return { backgroundColor: '#f59e0b' };
-    default:
-      return { backgroundColor: '#6b7280' };
-  }
-};
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    padding: 16,
+const getStyles = (theme: any) => StyleSheet.create({
+  container: {
     marginBottom: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  glass: {
+    padding: 16,
+    borderRadius: 16,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
-    position: 'relative',
-  },
-  cardUnlocked: {
-    backgroundColor: '#fef3c7',
-    borderColor: '#f59e0b',
-  },
-  emojiContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#e5e7eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  emojiContainerUnlocked: {
-    backgroundColor: '#fbbf24',
-  },
-  emoji: {
-    fontSize: 32,
-  },
-  infoContainer: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  nameUnlocked: {
-    color: '#92400e',
-  },
-  description: {
-    fontSize: 13,
-    color: '#6b7280',
     marginBottom: 8,
   },
-  progressContainer: {
-    marginTop: 8,
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    borderWidth: 1,
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 4,
+  iconLocked: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  iconUnlocked: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  emoji: {
+    fontSize: 24,
+  },
+  headerText: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    marginBottom: 2,
+  },
+  titleUnlocked: {
+    color: theme.colors.text,
+  },
+  categoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  categoryText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+  },
+  checkBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  checkGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  description: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  progressContainer: {
+    marginTop: 4,
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 4,
   },
-  progressFill: {
+  progressBarFill: {
     height: '100%',
-    backgroundColor: '#3b82f6',
-    borderRadius: 4,
+    borderRadius: 3,
   },
   progressText: {
-    fontSize: 11,
-    color: '#6b7280',
+    fontSize: 12,
+    color: theme.colors.textTertiary,
     textAlign: 'right',
   },
-  unlockedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
-  unlockedText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#15803d',
-  },
   unlockedDate: {
-    fontSize: 11,
-    color: '#78350f',
-  },
-  categoryBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  categoryText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 12,
+    color: theme.colors.primary,
+    marginTop: 4,
+    fontWeight: '600',
   },
 });
 

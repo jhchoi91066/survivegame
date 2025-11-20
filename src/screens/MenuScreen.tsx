@@ -11,6 +11,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } fro
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Tutorial } from '../components/shared/Tutorial';
+import { GlassView } from '../components/shared/GlassView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncGameRecords } from '../utils/cloudSync';
 import Toast from '../components/shared/Toast';
@@ -134,8 +135,8 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
     switch (gameId) {
       case 'flip_match': return theme.gradients.flipMatch;
       case 'math_rush': return theme.gradients.mathRush;
-      case 'spatial_memory': return ['#8b5cf6', '#6366f1'];
-      case 'stroop': return ['#ec4899', '#d946ef'];
+      case 'spatial_memory': return theme.gradients.spatialMemory;
+      case 'stroop': return theme.gradients.stroop;
       default: return theme.gradients.flipMatch;
     }
   };
@@ -154,24 +155,22 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
               <Text style={styles.subtitle}>두뇌를 깨우는 즐거운 시간</Text>
             </View>
             <View style={styles.headerButtons}>
-              <Pressable style={styles.textButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate(user ? 'Profile' : 'Login'); }}>
-                <LinearGradient colors={user ? theme.gradients.flipMatch : ['#334155', '#1e293b']} style={styles.textButtonGradient}>
-                  <UserCircle size={20} color="#fff" style={{ marginRight: 4 }} />
-                  <Text style={styles.buttonText}>{user ? 'Profile' : 'Login'}</Text>
-                </LinearGradient>
+              <Pressable style={styles.iconButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate(user ? 'Profile' : 'Login'); }}>
+                <GlassView style={styles.iconButtonGlass} intensity={20}>
+                  <UserCircle size={24} color={theme.colors.text} />
+                </GlassView>
               </Pressable>
               {user && (
-                <Pressable style={styles.textButton} onPress={handleManualSync} disabled={isSyncing}>
-                  <LinearGradient colors={isSyncing ? ['#94a3b8', '#64748b'] : ['#10b981', '#059669']} style={styles.textButtonGradient}>
-                    <RefreshCw size={16} color="#fff" style={{ marginRight: 4 }} />
-                    <Text style={styles.buttonText}>{isSyncing ? 'Syncing' : 'Sync'}</Text>
-                  </LinearGradient>
+                <Pressable style={styles.iconButton} onPress={handleManualSync} disabled={isSyncing}>
+                  <GlassView style={styles.iconButtonGlass} intensity={20}>
+                    <RefreshCw size={20} color={theme.colors.text} style={isSyncing ? { opacity: 0.5 } : {}} />
+                  </GlassView>
                 </Pressable>
               )}
-              <Pressable style={styles.textButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate('Settings'); }}>
-                <LinearGradient colors={['#334155', '#1e293b']} style={styles.textButtonGradient}>
-                  <Settings size={20} color="#fff" />
-                </LinearGradient>
+              <Pressable style={styles.iconButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate('Settings'); }}>
+                <GlassView style={styles.iconButtonGlass} intensity={20}>
+                  <Settings size={24} color={theme.colors.text} />
+                </GlassView>
               </Pressable>
             </View>
           </View>
@@ -184,34 +183,34 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
 
           <View style={styles.bottomButtonsGrid}>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Stats'); }}>
-              <LinearGradient colors={theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0']} style={styles.bottomButtonGradient}>
+              <GlassView style={styles.bottomButtonGlass} intensity={30}>
                 <BarChart3 size={24} color={theme.colors.text} />
                 <Text style={styles.bottomButtonText}>통계</Text>
-              </LinearGradient>
+              </GlassView>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Leaderboard'); }}>
-              <LinearGradient colors={user ? theme.gradients.flipMatch : (theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0'])} style={styles.bottomButtonGradient}>
-                <Trophy size={24} color={user ? '#fff' : theme.colors.text} />
-                <Text style={[styles.bottomButtonText, user && { color: '#fff' }]}>리더보드</Text>
-              </LinearGradient>
+              <GlassView style={styles.bottomButtonGlass} intensity={30}>
+                <Trophy size={24} color={theme.colors.warning} />
+                <Text style={styles.bottomButtonText}>리더보드</Text>
+              </GlassView>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Friends'); }}>
-              <LinearGradient colors={user ? ['#10b981', '#059669'] : (theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0'])} style={styles.bottomButtonGradient}>
-                <Users size={24} color={user ? '#fff' : theme.colors.text} />
-                <Text style={[styles.bottomButtonText, user && { color: '#fff' }]}>친구</Text>
-              </LinearGradient>
+              <GlassView style={styles.bottomButtonGlass} intensity={30}>
+                <Users size={24} color={theme.colors.success} />
+                <Text style={styles.bottomButtonText}>친구</Text>
+              </GlassView>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); user ? navigation.navigate('MultiplayerLobby') : navigation.navigate('Login'); }}>
-              <LinearGradient colors={user ? ['#ec4899', '#db2777'] : (theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0'])} style={styles.bottomButtonGradient}>
-                <Swords size={24} color={user ? '#fff' : theme.colors.text} />
-                <Text style={[styles.bottomButtonText, user && { color: '#fff' }]}>대전</Text>
-              </LinearGradient>
+              <GlassView style={styles.bottomButtonGlass} intensity={30}>
+                <Swords size={24} color={theme.colors.error} />
+                <Text style={styles.bottomButtonText}>대전</Text>
+              </GlassView>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Achievements'); }}>
-              <LinearGradient colors={theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0']} style={styles.bottomButtonGradient}>
-                <Medal size={24} color={theme.colors.text} />
+              <GlassView style={styles.bottomButtonGlass} intensity={30}>
+                <Medal size={24} color={theme.colors.primary} />
                 <Text style={styles.bottomButtonText}>업적</Text>
-              </LinearGradient>
+              </GlassView>
             </Pressable>
           </View>
 
@@ -242,20 +241,29 @@ const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, inde
   return (
     <Animated.View style={[styles.gameCardWrapper, animatedStyle]}>
       <Pressable style={({ pressed }) => [styles.gameCard, pressed && styles.gameCardPressed]} onPress={onPress}>
-        <LinearGradient colors={gradientColors} style={styles.gameCardGradient}>
-          <View style={styles.glassOverlay} />
-          <View style={styles.gameIconContainer}>
-            <View style={styles.iconGlow}>
-              <Icon size={32} color="#fff" />
+        <GlassView style={styles.gameCardGlass} intensity={40} tint="dark">
+          <LinearGradient
+            colors={[gradientColors[0] + '80', gradientColors[1] + '40']} // Semi-transparent gradient
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+          <View style={styles.gameCardContent}>
+            <View style={styles.gameIconContainer}>
+              <View style={[styles.iconGlow, { backgroundColor: gradientColors[0] + '40' }]}>
+                <Icon size={32} color="#fff" />
+              </View>
+            </View>
+            <View>
+              <Text style={styles.gameName}>{game.name}</Text>
+              <Text style={styles.gameDescription}>{game.description}</Text>
+            </View>
+            <View style={styles.recordContainer}>
+              <Text style={styles.recordLabel}>BEST</Text>
+              <Text style={styles.recordValue}>{game.bestRecordValue}</Text>
             </View>
           </View>
-          <Text style={styles.gameName}>{game.name}</Text>
-          <Text style={styles.gameDescription}>{game.description}</Text>
-          <View style={styles.recordContainer}>
-            <Text style={styles.recordLabel}>BEST</Text>
-            <Text style={styles.recordValue}>{game.bestRecordValue}</Text>
-          </View>
-        </LinearGradient>
+        </GlassView>
       </Pressable>
     </Animated.View>
   );
@@ -265,35 +273,32 @@ const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1 },
   backgroundGradient: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   safeArea: { flex: 1, paddingTop: Platform.OS === 'web' ? 40 : 0 },
-  scrollContent: { flexGrow: 1, padding: 16, paddingTop: 8 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, marginTop: 8 },
+  scrollContent: { flexGrow: 1, padding: 20, paddingTop: 10 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, marginTop: 8 },
   titleContainer: { flex: 1 },
-  title: { fontSize: isSmallScreen ? 30 : 34, fontWeight: '900', color: theme.colors.text, letterSpacing: -1 },
-  subtitle: { fontSize: 13, color: theme.colors.textSecondary, marginTop: 6 },
-  headerButtons: { flexDirection: 'row', gap: 8 },
-  textButton: { height: 40, borderRadius: 12, overflow: 'hidden' },
-  textButtonGradient: { height: '100%', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
-  buttonText: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  gamesContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 16 },
-  gameCardWrapper: { width: (width - 48) / 2, marginBottom: 16 },
-  gameCard: { borderRadius: 20, overflow: 'hidden', shadowColor: theme.colors.shadow, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 10 },
-  gameCardPressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
-  gameCardGradient: { padding: 12, alignItems: 'center', minHeight: 165, justifyContent: 'space-between' },
-  glassOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.2)', borderWidth: 1, borderColor: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.3)', borderRadius: 20 },
-  gameIconContainer: { width: 56, height: 56, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
-  iconGlow: { width: 56, height: 56, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
-  gameEmoji: { fontSize: 32 },
-  gameName: { fontSize: 15, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 2, textShadowColor: 'rgba(0, 0, 0, 0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
-  gameDescription: { fontSize: 11, color: 'rgba(255, 255, 255, 0.8)', textAlign: 'center', marginBottom: 10, fontWeight: '500' },
-  recordContainer: { backgroundColor: 'rgba(0, 0, 0, 0.3)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.2)', minWidth: 60, alignItems: 'center' },
-  recordLabel: { fontSize: 8, fontWeight: '700', color: 'rgba(255, 255, 255, 0.7)', letterSpacing: 0.5, marginBottom: 1 },
-  recordValue: { fontSize: 13, fontWeight: '800', color: '#fff' },
-  bottomButtonsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16, justifyContent: 'space-between' },
-  bottomButton: { width: (width - 42) / 2, borderRadius: 16, overflow: 'hidden', shadowColor: theme.colors.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 5 },
-  bottomButtonGradient: { paddingVertical: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 16 },
-  bottomButtonIcon: { fontSize: 20, color: theme.colors.text },
-  bottomButtonText: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
-  version: { fontSize: 11, color: theme.colors.textTertiary, textAlign: 'center', marginTop: 0, marginBottom: 16, fontWeight: '500' },
+  title: { fontSize: isSmallScreen ? 28 : 32, fontWeight: '900', color: theme.colors.text, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: theme.colors.textSecondary, marginTop: 4 },
+  headerButtons: { flexDirection: 'row', gap: 12 },
+  iconButton: { borderRadius: 12, overflow: 'hidden' },
+  iconButtonGlass: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
+  gamesContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
+  gameCardWrapper: { width: (width - 52) / 2, marginBottom: 16 },
+  gameCard: { borderRadius: 24, overflow: 'hidden', height: 180 },
+  gameCardPressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
+  gameCardGlass: { flex: 1, borderRadius: 24 },
+  gameCardContent: { flex: 1, padding: 16, justifyContent: 'space-between', alignItems: 'center' },
+  gameIconContainer: { width: 64, height: 64, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  iconGlow: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  gameName: { fontSize: 16, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 4 },
+  gameDescription: { fontSize: 12, color: 'rgba(255, 255, 255, 0.7)', textAlign: 'center', marginBottom: 8 },
+  recordContainer: { backgroundColor: 'rgba(0, 0, 0, 0.3)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)', minWidth: 80, alignItems: 'center' },
+  recordLabel: { fontSize: 9, fontWeight: '700', color: 'rgba(255, 255, 255, 0.6)', letterSpacing: 1, marginBottom: 2 },
+  recordValue: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  bottomButtonsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24, justifyContent: 'space-between' },
+  bottomButton: { width: (width - 52) / 2, borderRadius: 20, overflow: 'hidden', marginBottom: 0 },
+  bottomButtonGlass: { paddingVertical: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, borderRadius: 20 },
+  bottomButtonText: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+  version: { fontSize: 12, color: theme.colors.textTertiary, textAlign: 'center', marginBottom: 20 },
 });
 
 export default MenuScreen;

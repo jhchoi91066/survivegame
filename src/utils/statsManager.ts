@@ -78,17 +78,6 @@ export const updateFlipMatchRecord = async (
   await saveGameRecord('flip_match', newRecord);
 };
 
-// Sequence 기록 업데이트
-export const updateSequenceRecord = async (level: number, playTime: number): Promise<void> => {
-  const current = await loadGameRecord('sequence');
-  const newRecord = {
-    highestLevel: !current || level > current.highestLevel ? level : current.highestLevel,
-    totalPlays: (current?.totalPlays || 0) + 1,
-    totalPlayTime: (current?.totalPlayTime || 0) + playTime,
-  };
-  await saveGameRecord('sequence', newRecord);
-};
-
 // Math Rush 기록 업데이트
 export const updateMathRushRecord = async (
   score: number,
@@ -122,6 +111,18 @@ export const updateSpatialMemoryRecord = async (
   await saveGameRecord('spatial_memory', newRecord);
 };
 
+
+// Merge Puzzle 기록 업데이트
+export const updateMergePuzzleRecord = async (
+  moves: number,
+  highestNumber: number,
+  playTime: number
+): Promise<void> => {
+  // Merge Puzzle은 현재 별도 레코드로 관리되지 않거나 타입이 정의되지 않았을 수 있음
+  // 임시로 로그만 남기거나 필요한 경우 구현
+  console.log('Merge Puzzle record update not implemented yet', { moves, highestNumber, playTime });
+};
+
 // Stroop Test 기록 업데이트
 export const updateStroopRecord = async (score: number, playTime: number): Promise<void> => {
   const current = await loadGameRecord('stroop');
@@ -132,17 +133,6 @@ export const updateStroopRecord = async (score: number, playTime: number): Promi
   };
   console.log('📊 Saving Stroop Test record:', { current, newRecord });
   await saveGameRecord('stroop', newRecord);
-};
-
-// N-Back 기록 업데이트
-export const updateNBackRecord = async (level: number, playTime: number): Promise<void> => {
-  const current = await loadGameRecord('n_back');
-  const newRecord = {
-    highestLevel: !current || level > current.highestLevel ? level : current.highestLevel,
-    totalPlays: (current?.totalPlays || 0) + 1,
-    totalPlayTime: (current?.totalPlayTime || 0) + playTime,
-  };
-  await saveGameRecord('n_back', newRecord);
 };
 
 

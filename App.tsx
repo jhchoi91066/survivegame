@@ -39,6 +39,7 @@ export type RootStackParamList = {
   MathRushGame: { multiplayerRoomId?: string; difficulty?: string; } | undefined;
   SpatialMemoryGame: { multiplayerRoomId?: string; difficulty?: string; } | undefined;
   StroopTestGame: { multiplayerRoomId?: string; difficulty?: string; } | undefined;
+  MergePuzzleGame: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

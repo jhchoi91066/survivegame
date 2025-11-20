@@ -110,10 +110,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await GoogleSignin.hasPlayServices();
         const userInfo = await GoogleSignin.signIn();
 
-        if (userInfo.idToken) {
+        // Check if idToken is available directly or nested in data (depending on version)
+        const response = userInfo as any;
+        const idToken = response.data?.idToken || response.idToken;
+
+        if (idToken) {
           const { data, error } = await supabase.auth.signInWithIdToken({
             provider: 'google',
-            token: userInfo.idToken,
+            token: idToken,
           });
           if (error) throw error;
         } else {

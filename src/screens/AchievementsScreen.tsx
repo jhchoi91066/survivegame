@@ -23,22 +23,35 @@ import {
   getAchievementCompletionRate,
 } from '../utils/achievementManager';
 import AchievementCard from '../components/shared/AchievementCard';
+import { useTheme } from '../contexts/ThemeContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GlassView } from '../components/shared/GlassView';
+import {
+  ArrowLeft,
+  Trophy,
+  Medal,
+  Target,
+  Layers,
+  Grid3X3,
+  Zap
+} from 'lucide-react-native';
 
 type AchievementsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'Achievements'
 >;
 
-const CATEGORIES: { key: AchievementCategory | 'all'; label: string }[] = [
-  { key: 'all', label: '전체' },
-  { key: 'progress', label: '진행' },
-  { key: 'skill', label: '스킬' },
-  { key: 'challenge', label: '도전' },
-  { key: 'collection', label: '수집' },
+const CATEGORIES: { key: AchievementCategory | 'all'; label: string; icon: React.ElementType }[] = [
+  { key: 'all', label: '전체', icon: Trophy },
+  { key: 'progress', label: '진행', icon: Target },
+  { key: 'skill', label: '스킬', icon: Zap },
+  { key: 'challenge', label: '도전', icon: Medal },
+  { key: 'collection', label: '수집', icon: Layers },
 ];
 
 const AchievementsScreen: React.FC = () => {
   const navigation = useNavigation<AchievementsScreenNavigationProp>();
+  const { theme } = useTheme();
   const [achievementProgress, setAchievementProgress] = useState<AchievementProgress[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<AchievementCategory | 'all'>('all');
   const [completionRate, setCompletionRate] = useState(0);
@@ -82,195 +95,149 @@ const AchievementsScreen: React.FC = () => {
 
   const unlockedCount = achievementProgress.filter(p => p.unlocked).length;
   const totalCount = ACHIEVEMENTS.length;
+  const styles = getStyles(theme);
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>업적 불러오는 중...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <LinearGradient colors={theme.gradients.background} style={styles.backgroundGradient} />
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>업적 불러오는 중...</Text>
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← 뒤로</Text>
-        </Pressable>
-        <Text style={styles.title}>업적</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      {/* 진행도 요약 */}
-      <View style={styles.summaryContainer}>
-        <Text style={styles.summaryTitle}>전체 달성률</Text>
-        <View style={styles.summaryBar}>
-          <View style={[styles.summaryFill, { width: `${completionRate}%` }]} />
-        </View>
-        <Text style={styles.summaryText}>
-          {unlockedCount} / {totalCount} ({completionRate}%)
-        </Text>
-      </View>
-
-      {/* 카테고리 필터 */}
-      <ScrollView
-        horizontal
-        style={styles.categoryContainer}
-        showsHorizontalScrollIndicator={false}
-      >
-        {CATEGORIES.map(category => (
-          <Pressable
-            key={category.key}
-            style={[
-              styles.categoryButton,
-              selectedCategory === category.key && styles.categoryButtonActive,
-            ]}
-            onPress={() => setSelectedCategory(category.key)}
-          >
-            <Text
-              style={[
-                styles.categoryButtonText,
-                selectedCategory === category.key && styles.categoryButtonTextActive,
-              ]}
-            >
-              {category.label}
-            </Text>
+    <View style={styles.container}>
+      <LinearGradient colors={theme.gradients.background} style={styles.backgroundGradient} />
+      <SafeAreaView style={styles.safeArea}>
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+            <GlassView style={styles.iconButtonGlass} intensity={20}>
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </GlassView>
           </Pressable>
-        ))}
-      </ScrollView>
-
-      {/* 업적 리스트 */}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {getFilteredAchievements().map(achievement => (
-          <AchievementCard
-            key={achievement.id}
-            achievement={achievement}
-            progress={getProgressForAchievement(achievement.id)}
-          />
-        ))}
-
-        {getFilteredAchievements().length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>이 카테고리에 업적이 없습니다</Text>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>업적</Text>
+            <Text style={styles.subtitle}>나만의 트로피를 모아보세요!</Text>
           </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+        </View>
+
+        {/* 진행도 요약 */}
+        <View style={styles.summaryContainer}>
+          <GlassView style={styles.summaryGlass} intensity={20} tint="dark">
+            <View style={styles.summaryHeader}>
+              <Trophy size={20} color={theme.colors.warning} style={{ marginRight: 8 }} />
+              <Text style={styles.summaryTitle}>전체 달성률</Text>
+            </View>
+            <View style={styles.summaryBarContainer}>
+              <View style={styles.summaryBarBg} />
+              <LinearGradient
+                colors={theme.gradients.primary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.summaryBarFill, { width: `${completionRate}%` }]}
+              />
+            </View>
+            <Text style={styles.summaryText}>
+              {unlockedCount} / {totalCount} ({completionRate}%)
+            </Text>
+          </GlassView>
+        </View>
+
+        {/* 카테고리 필터 */}
+        <View style={styles.categoryContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryContent}
+          >
+            {CATEGORIES.map(category => {
+              const isActive = selectedCategory === category.key;
+              const Icon = category.icon;
+              return (
+                <Pressable
+                  key={category.key}
+                  style={styles.categoryButtonWrapper}
+                  onPress={() => setSelectedCategory(category.key)}
+                >
+                  <GlassView
+                    style={styles.categoryButtonGlass}
+                    intensity={isActive ? 40 : 20}
+                    tint={isActive ? 'light' : 'dark'}
+                  >
+                    <Icon size={16} color={isActive ? theme.colors.text : theme.colors.textSecondary} style={{ marginRight: 6 }} />
+                    <Text
+                      style={[
+                        styles.categoryButtonText,
+                        isActive && styles.categoryButtonTextActive,
+                      ]}
+                    >
+                      {category.label}
+                    </Text>
+                  </GlassView>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* 업적 리스트 */}
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {getFilteredAchievements().map(achievement => (
+            <AchievementCard
+              key={achievement.id}
+              achievement={achievement}
+              progress={getProgressForAchievement(achievement.id)}
+            />
+          ))}
+
+          {getFilteredAchievements().length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Trophy size={48} color={theme.colors.textTertiary} style={{ marginBottom: 16 }} />
+              <Text style={styles.emptyText}>이 카테고리에 업적이 없습니다</Text>
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'web' ? 40 : 0,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#3b82f6',
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  placeholder: {
-    width: 60,
-  },
-  summaryContainer: {
-    padding: 20,
-    backgroundColor: '#f9fafb',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  summaryTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 8,
-  },
-  summaryBar: {
-    height: 12,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 6,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  summaryFill: {
-    height: '100%',
-    backgroundColor: '#3b82f6',
-    borderRadius: 6,
-  },
-  summaryText: {
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'right',
-  },
-  categoryContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  categoryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
-    marginRight: 8,
-  },
-  categoryButtonActive: {
-    backgroundColor: '#3b82f6',
-  },
-  categoryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6b7280',
-  },
-  categoryButtonTextActive: {
-    color: '#fff',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#6b7280',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#9ca3af',
-  },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1 },
+  backgroundGradient: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  safeArea: { flex: 1, paddingTop: Platform.OS === 'web' ? 40 : 0 },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 10 },
+  backButton: { marginRight: 16, borderRadius: 12, overflow: 'hidden' },
+  iconButtonGlass: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
+  headerTitleContainer: { flex: 1 },
+  title: { fontSize: 28, fontWeight: '900', color: theme.colors.text, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: theme.colors.textSecondary, marginTop: 2 },
+  summaryContainer: { paddingHorizontal: 20, marginBottom: 24 },
+  summaryGlass: { padding: 20, borderRadius: 20 },
+  summaryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  summaryTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
+  summaryBarContainer: { height: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 },
+  summaryBarBg: { ...StyleSheet.absoluteFillObject, opacity: 0.1 },
+  summaryBarFill: { height: '100%', borderRadius: 4 },
+  summaryText: { fontSize: 14, color: theme.colors.textSecondary, textAlign: 'right', fontWeight: '600' },
+  categoryContainer: { marginBottom: 16 },
+  categoryContent: { paddingHorizontal: 20, gap: 8 },
+  categoryButtonWrapper: { borderRadius: 12, overflow: 'hidden' },
+  categoryButtonGlass: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+  categoryButtonText: { fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary },
+  categoryButtonTextActive: { color: theme.colors.text, fontWeight: '700' },
+  scrollView: { flex: 1 },
+  scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 40 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { fontSize: 16, color: theme.colors.textSecondary },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
+  emptyText: { fontSize: 16, color: theme.colors.textSecondary, fontWeight: '600' },
 });
 
 export default AchievementsScreen;

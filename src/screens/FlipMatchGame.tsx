@@ -20,6 +20,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { PauseMenu } from '../components/shared/PauseMenu';
 import { MultiplayerProvider, useMultiplayer } from '../contexts/MultiplayerContext';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GlassView } from '../components/shared/GlassView';
 import {
   ArrowLeft,
   Pause,
@@ -223,11 +225,14 @@ const FlipMatchGameContent: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
             <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-              <ArrowLeft size={24} color={theme.colors.text} />
+              <GlassView style={styles.iconButtonGlass} intensity={20}>
+                <ArrowLeft size={24} color={theme.colors.text} />
+              </GlassView>
             </Pressable>
             <Text style={styles.title}>Flip & Match</Text>
             <View style={styles.headerRight}>
@@ -236,15 +241,19 @@ const FlipMatchGameContent: React.FC = () => {
                 style={styles.pauseButton}
                 disabled={gameStatus !== 'playing'}
               >
-                <Pause size={24} color={theme.colors.text} />
+                <GlassView style={styles.iconButtonGlass} intensity={20}>
+                  <Pause size={24} color={theme.colors.text} />
+                </GlassView>
               </Pressable>
               <Pressable onPress={handleRestart} style={styles.restartButton}>
-                <RotateCcw size={24} color={theme.colors.text} />
+                <GlassView style={styles.iconButtonGlass} intensity={20}>
+                  <RotateCcw size={24} color={theme.colors.text} />
+                </GlassView>
               </Pressable>
             </View>
           </View>
 
-          <View style={styles.stats}>
+          <GlassView style={styles.stats} intensity={20}>
             <View style={styles.statItem}>
               <View style={styles.statHeader}>
                 <Timer size={16} color={theme.colors.textSecondary} />
@@ -280,11 +289,13 @@ const FlipMatchGameContent: React.FC = () => {
                 <Animated.Text style={[styles.statValue, opponentScoreAnimatedStyle]}>{opponentScore}</Animated.Text>
               </View>
             )}
-          </View>
+          </GlassView>
 
           {gameStatus === 'preview' && (
             <View style={styles.previewOverlay}>
-              <Text style={styles.previewText}>카드를 기억하세요!</Text>
+              <GlassView style={styles.previewGlass} intensity={40}>
+                <Text style={styles.previewText}>카드를 기억하세요!</Text>
+              </GlassView>
             </View>
           )}
           {gameStatus !== 'ready' && <GameBoard />}
@@ -292,7 +303,7 @@ const FlipMatchGameContent: React.FC = () => {
 
         <Modal visible={showDifficultyModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <GlassView style={styles.modalContent} intensity={30} tint="dark">
               <Grid3X3 size={64} color={theme.colors.primary} style={{ marginBottom: 24 }} />
               <Text style={styles.modalTitle}>난이도 선택</Text>
               <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
@@ -308,13 +319,13 @@ const FlipMatchGameContent: React.FC = () => {
                 <Play size={24} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={styles.startButtonText}>게임 시작</Text>
               </Pressable>
-            </View>
+            </GlassView>
           </View>
         </Modal>
 
         <Modal visible={gameStatus === 'won'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <GlassView style={styles.modalContent} intensity={30} tint="dark">
               <Trophy size={80} color={theme.colors.warning} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>완료!</Text>
               {isNewRecord && <Text style={styles.newRecord}>🏆 신기록 달성!</Text>}
@@ -328,13 +339,13 @@ const FlipMatchGameContent: React.FC = () => {
                 <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.menuButtonText}>메뉴로</Text>
               </Pressable>
-            </View>
+            </GlassView>
           </View>
         </Modal>
 
         <Modal visible={gameStatus === 'lost'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <GlassView style={styles.modalContent} intensity={30} tint="dark">
               <Timer size={80} color={theme.colors.error} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>시간 초과!</Text>
               <Text style={styles.victoryStats}>완성: {matchedPairs}/{totalPairs} 쌍</Text>
@@ -347,7 +358,7 @@ const FlipMatchGameContent: React.FC = () => {
                 <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.menuButtonText}>메뉴로</Text>
               </Pressable>
-            </View>
+            </GlassView>
           </View>
         </Modal>
 
@@ -380,30 +391,32 @@ const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   scrollContent: { flexGrow: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  backButton: { padding: 8 },
+  backButton: { borderRadius: 12, overflow: 'hidden' },
+  iconButtonGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   title: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  pauseButton: { padding: 8 },
-  restartButton: { padding: 8 },
-  stats: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface, marginHorizontal: 16, borderRadius: 12, marginBottom: 16 },
+  pauseButton: { borderRadius: 12, overflow: 'hidden' },
+  restartButton: { borderRadius: 12, overflow: 'hidden' },
+  stats: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 16, marginHorizontal: 16, borderRadius: 20, marginBottom: 16 },
   statItem: { alignItems: 'center' },
   statHeader: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
   statLabel: { fontSize: 12, color: theme.colors.textSecondary },
   statValue: { fontSize: 20, fontWeight: 'bold', color: theme.colors.text },
   statValueWarning: { color: theme.colors.error },
   previewOverlay: { position: 'absolute', top: 120, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
-  previewText: { fontSize: 24, fontWeight: 'bold', color: '#fff', backgroundColor: 'rgba(59, 130, 246, 0.9)', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 16 },
-  modalOverlay: { flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center' },
-  modalContent: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 32, width: '80%', maxWidth: 400, alignItems: 'center' },
+  previewGlass: { paddingHorizontal: 32, paddingVertical: 16, borderRadius: 16, backgroundColor: 'rgba(59, 130, 246, 0.5)' },
+  previewText: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { borderRadius: 24, padding: 32, width: '85%', maxWidth: 400, alignItems: 'center' },
   modalTitle: { fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginBottom: 24 },
-  difficultyButton: { width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginBottom: 12, alignItems: 'center' },
+  difficultyButton: { width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginBottom: 12, alignItems: 'center' },
   difficultyButtonSelected: { backgroundColor: theme.colors.primary },
   difficultyButtonText: { fontSize: 18, fontWeight: '600', color: theme.colors.text },
-  startButton: { width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginTop: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  startButton: { width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginTop: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   startButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   victoryStats: { fontSize: 16, color: theme.colors.textSecondary, marginBottom: 8 },
   newRecord: { fontSize: 20, fontWeight: 'bold', color: theme.colors.primary, marginBottom: 16 },
-  menuButton: { width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginTop: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  menuButton: { width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginTop: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   menuButtonText: { fontSize: 16, fontWeight: '600', color: theme.colors.text },
 });
 

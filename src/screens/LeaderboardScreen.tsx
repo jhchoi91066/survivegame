@@ -18,6 +18,23 @@ import { RootStackParamList } from '../../App';
 import * as Haptics from 'expo-haptics';
 import { updateLeaderboardRanks } from '../utils/achievementManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../contexts/ThemeContext';
+import { GlassView } from '../components/shared/GlassView';
+import {
+  ArrowLeft,
+  Trophy,
+  Grid3X3,
+  Calculator,
+  Brain,
+  Palette,
+  Medal,
+  User,
+  Calendar,
+  Crown,
+  Clock,
+  Hash,
+  Target
+} from 'lucide-react-native';
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const CACHE_KEY_PREFIX = '@leaderboard_cache_';
@@ -46,6 +63,7 @@ type Difficulty = 'easy' | 'medium' | 'hard' | 'normal';
 
 const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedGame, setSelectedGame] = useState<GameType>('flip_match');
@@ -250,19 +268,6 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
     }
   };
 
-  const getRankEmoji = (rank: number): string => {
-    switch (rank) {
-      case 1:
-        return '🥇';
-      case 2:
-        return '🥈';
-      case 3:
-        return '🥉';
-      default:
-        return `${rank}`;
-    }
-  };
-
   const handleGameSelect = (game: GameType) => {
     setSelectedGame(game);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -280,9 +285,11 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
     return ['normal'];
   };
 
+  const styles = getStyles(theme);
+
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.gradient} />
+      <LinearGradient colors={theme.gradients.background} style={styles.backgroundGradient} />
 
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
@@ -292,15 +299,16 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               navigation.goBack();
             }}
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.backButtonPressed,
-            ]}
+            style={styles.backButton}
           >
-            <Text style={styles.backText}>← 뒤로</Text>
+            <GlassView style={styles.iconButtonGlass} intensity={20}>
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </GlassView>
           </Pressable>
-          <Text style={styles.title}>🏆 리더보드</Text>
-          <Text style={styles.subtitle}>전 세계 플레이어와 경쟁하세요!</Text>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>리더보드</Text>
+            <Text style={styles.subtitle}>전 세계 플레이어와 경쟁하세요!</Text>
+          </View>
         </View>
 
         {/* Game Selector */}
@@ -311,65 +319,69 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
           contentContainerStyle={styles.gameSelectorContent}
         >
           {[
-            { id: 'flip_match' as GameType, name: 'Flip & Match', emoji: '🎴' },
-            { id: 'math_rush' as GameType, name: 'Math Rush', emoji: '➕' },
-            { id: 'spatial_memory' as GameType, name: 'Spatial Memory', emoji: '🧠' },
-            { id: 'stroop' as GameType, name: 'Stroop Test', emoji: '🎨' },
-          ].map((game) => (
-            <Pressable
-              key={game.id}
-              onPress={() => handleGameSelect(game.id)}
-              style={({ pressed }) => [
-                styles.gameTab,
-                selectedGame === game.id && styles.gameTabActive,
-                pressed && styles.gameTabPressed,
-              ]}
-            >
-              <Text style={styles.gameTabEmoji}>{game.emoji}</Text>
-              <Text
-                style={[
-                  styles.gameTabText,
-                  selectedGame === game.id && styles.gameTabTextActive,
-                ]}
+            { id: 'flip_match' as GameType, name: 'Flip & Match', icon: Grid3X3 },
+            { id: 'math_rush' as GameType, name: 'Math Rush', icon: Calculator },
+            { id: 'spatial_memory' as GameType, name: 'Spatial Memory', icon: Brain },
+            { id: 'stroop' as GameType, name: 'Stroop Test', icon: Palette },
+          ].map((game) => {
+            const Icon = game.icon;
+            const isActive = selectedGame === game.id;
+            return (
+              <Pressable
+                key={game.id}
+                onPress={() => handleGameSelect(game.id)}
+                style={styles.gameTabWrapper}
               >
-                {game.name}
-              </Text>
-            </Pressable>
-          ))}
+                <GlassView
+                  style={styles.gameTabGlass}
+                  intensity={isActive ? 40 : 20}
+                  tint={isActive ? 'light' : 'dark'}
+                >
+                  <Icon size={20} color={isActive ? theme.colors.text : theme.colors.textSecondary} />
+                  <Text style={[styles.gameTabText, isActive && styles.gameTabTextActive]}>
+                    {game.name}
+                  </Text>
+                </GlassView>
+              </Pressable>
+            );
+          })}
         </ScrollView>
 
         {/* Difficulty Selector */}
         {getDifficultiesForGame(selectedGame).length > 1 && (
           <View style={styles.difficultySelectorContainer}>
-            {getDifficultiesForGame(selectedGame).map((difficulty) => (
-              <Pressable
-                key={difficulty}
-                onPress={() => handleDifficultySelect(difficulty)}
-                style={({ pressed }) => [
-                  styles.difficultyTab,
-                  selectedDifficulty === difficulty && styles.difficultyTabActive,
-                  pressed && styles.difficultyTabPressed,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.difficultyTabText,
-                    selectedDifficulty === difficulty && styles.difficultyTabTextActive,
-                  ]}
+            {getDifficultiesForGame(selectedGame).map((difficulty) => {
+              const isActive = selectedDifficulty === difficulty;
+              return (
+                <Pressable
+                  key={difficulty}
+                  onPress={() => handleDifficultySelect(difficulty)}
+                  style={styles.difficultyTabWrapper}
                 >
-                  {difficulty === 'easy' ? 'Easy' : difficulty === 'medium' ? 'Medium' : 'Hard'}
-                </Text>
-              </Pressable>
-            ))}
+                  <GlassView
+                    style={styles.difficultyTabGlass}
+                    intensity={isActive ? 30 : 10}
+                    tint={isActive ? 'light' : 'dark'}
+                  >
+                    <Text style={[styles.difficultyTabText, isActive && styles.difficultyTabTextActive]}>
+                      {difficulty === 'easy' ? 'Easy' : difficulty === 'medium' ? 'Medium' : 'Hard'}
+                    </Text>
+                  </GlassView>
+                </Pressable>
+              );
+            })}
           </View>
         )}
 
         {/* Not logged in warning */}
         {!user && (
           <View style={styles.warningContainer}>
-            <Text style={styles.warningText}>
-              🔐 로그인하면 리더보드에 참여할 수 있습니다
-            </Text>
+            <GlassView style={styles.warningGlass} intensity={20} tint="dark">
+              <User size={20} color={theme.colors.warning} style={{ marginBottom: 8 }} />
+              <Text style={styles.warningText}>
+                로그인하면 리더보드에 참여할 수 있습니다
+              </Text>
+            </GlassView>
           </View>
         )}
 
@@ -381,72 +393,84 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor="#6366f1"
+              tintColor={theme.colors.primary}
             />
           }
         >
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#6366f1" />
+              <ActivityIndicator size="large" color={theme.colors.primary} />
               <Text style={styles.loadingText}>로딩 중...</Text>
             </View>
           ) : leaderboard.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>🏆</Text>
+              <Trophy size={64} color={theme.colors.textTertiary} style={{ marginBottom: 16 }} />
               <Text style={styles.emptyText}>아직 기록이 없습니다</Text>
               <Text style={styles.emptySubtext}>첫 번째 플레이어가 되어보세요!</Text>
             </View>
           ) : (
             <>
               {leaderboard.map((entry) => (
-                <View
-                  key={entry.user_id}
-                  style={[
-                    styles.rankCard,
-                    entry.user_id === user?.id && styles.rankCardHighlight,
-                  ]}
-                >
-                  <LinearGradient
-                    colors={
-                      entry.rank === 1
-                        ? ['#fbbf24', '#f59e0b']
-                        : entry.rank === 2
-                        ? ['#94a3b8', '#64748b']
-                        : entry.rank === 3
-                        ? ['#cd7f32', '#b87333']
-                        : ['#1e293b', '#0f172a']
-                    }
-                    style={styles.rankBadge}
+                <View key={entry.user_id} style={styles.rankCardWrapper}>
+                  <GlassView
+                    style={styles.rankCardGlass}
+                    intensity={entry.user_id === user?.id ? 40 : 20}
+                    tint="dark"
                   >
-                    <Text style={styles.rankBadgeText}>{getRankEmoji(entry.rank!)}</Text>
-                  </LinearGradient>
+                    <View style={styles.rankBadgeContainer}>
+                      <LinearGradient
+                        colors={
+                          entry.rank === 1
+                            ? ['#fbbf24', '#f59e0b']
+                            : entry.rank === 2
+                              ? ['#94a3b8', '#64748b']
+                              : entry.rank === 3
+                                ? ['#cd7f32', '#b87333']
+                                : ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']
+                        }
+                        style={styles.rankBadge}
+                      >
+                        {entry.rank && entry.rank <= 3 ? (
+                          <Crown size={20} color="#fff" />
+                        ) : (
+                          <Text style={styles.rankBadgeText}>{entry.rank}</Text>
+                        )}
+                      </LinearGradient>
+                    </View>
 
-                  <View style={styles.rankInfo}>
-                    <Text
-                      style={[
-                        styles.username,
-                        entry.user_id === user?.id && styles.usernameHighlight,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {entry.username}
-                      {entry.user_id === user?.id && ' (나)'}
-                    </Text>
-                    <Text style={styles.updateTime}>
-                      {new Date(entry.last_updated).toLocaleDateString('ko-KR')}
-                    </Text>
-                  </View>
+                    <View style={styles.rankInfo}>
+                      <Text
+                        style={[
+                          styles.username,
+                          entry.user_id === user?.id && styles.usernameHighlight,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {entry.username}
+                        {entry.user_id === user?.id && ' (나)'}
+                      </Text>
+                      <View style={styles.dateContainer}>
+                        <Calendar size={12} color={theme.colors.textTertiary} style={{ marginRight: 4 }} />
+                        <Text style={styles.updateTime}>
+                          {new Date(entry.last_updated).toLocaleDateString('ko-KR')}
+                        </Text>
+                      </View>
+                    </View>
 
-                  <Text style={styles.score}>{formatScore(entry)}</Text>
+                    <Text style={styles.score}>{formatScore(entry)}</Text>
+                  </GlassView>
                 </View>
               ))}
 
               {/* My Rank Summary */}
               {user && myRank && (
-                <View style={styles.myRankContainer}>
-                  <Text style={styles.myRankText}>
-                    내 순위: #{myRank} / {leaderboard.length}명
-                  </Text>
+                <View style={styles.myRankWrapper}>
+                  <GlassView style={styles.myRankGlass} intensity={30} tint="light">
+                    <Medal size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                    <Text style={styles.myRankText}>
+                      내 순위: #{myRank} / {leaderboard.length}명
+                    </Text>
+                  </GlassView>
                 </View>
               )}
             </>
@@ -457,226 +481,51 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  safeArea: {
-    flex: 1,
-    paddingTop: Platform.OS === 'web' ? 40 : 0,
-  },
-  header: {
-    padding: 20,
-    paddingTop: 10,
-  },
-  backButton: {
-    marginBottom: 16,
-    padding: 8,
-    alignSelf: 'flex-start',
-  },
-  backButtonPressed: {
-    opacity: 0.6,
-  },
-  backText: {
-    color: '#6366f1',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#94a3b8',
-  },
-  gameSelectorContainer: {
-    maxHeight: 70,
-    marginBottom: 16,
-  },
-  gameSelectorContent: {
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  gameTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderWidth: 1,
-    borderColor: '#334155',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  gameTabActive: {
-    backgroundColor: '#6366f1',
-    borderColor: '#6366f1',
-  },
-  gameTabPressed: {
-    opacity: 0.8,
-  },
-  gameTabEmoji: {
-    fontSize: 20,
-  },
-  gameTabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#94a3b8',
-  },
-  gameTabTextActive: {
-    color: '#fff',
-  },
-  difficultySelectorContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 8,
-    marginBottom: 16,
-  },
-  difficultyTab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderWidth: 1,
-    borderColor: '#334155',
-    alignItems: 'center',
-  },
-  difficultyTabActive: {
-    backgroundColor: '#8b5cf6',
-    borderColor: '#8b5cf6',
-  },
-  difficultyTabPressed: {
-    opacity: 0.8,
-  },
-  difficultyTabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#94a3b8',
-  },
-  difficultyTabTextActive: {
-    color: '#fff',
-  },
-  warningContainer: {
-    marginHorizontal: 20,
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.3)',
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#fbbf24',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#94a3b8',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#64748b',
-  },
-  rankCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
-  },
-  rankCardHighlight: {
-    borderColor: '#6366f1',
-    borderWidth: 2,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-  },
-  rankBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  rankBadgeText: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#fff',
-  },
-  rankInfo: {
-    flex: 1,
-  },
-  username: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  usernameHighlight: {
-    color: '#6366f1',
-  },
-  updateTime: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  score: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  myRankContainer: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    borderWidth: 1,
-    borderColor: '#6366f1',
-    alignItems: 'center',
-  },
-  myRankText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#6366f1',
-  },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1 },
+  backgroundGradient: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  safeArea: { flex: 1, paddingTop: Platform.OS === 'web' ? 40 : 0 },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 10 },
+  backButton: { marginRight: 16, borderRadius: 12, overflow: 'hidden' },
+  iconButtonGlass: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
+  headerTitleContainer: { flex: 1 },
+  title: { fontSize: 28, fontWeight: '900', color: theme.colors.text, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: theme.colors.textSecondary, marginTop: 2 },
+  gameSelectorContainer: { maxHeight: 60, marginBottom: 16 },
+  gameSelectorContent: { paddingHorizontal: 20, gap: 12 },
+  gameTabWrapper: { borderRadius: 16, overflow: 'hidden', marginRight: 8 },
+  gameTabGlass: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 16 },
+  gameTabText: { fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary },
+  gameTabTextActive: { color: theme.colors.text, fontWeight: '700' },
+  difficultySelectorContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
+  difficultyTabWrapper: { flex: 1, borderRadius: 12, overflow: 'hidden' },
+  difficultyTabGlass: { alignItems: 'center', paddingVertical: 10, borderRadius: 12 },
+  difficultyTabText: { fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary },
+  difficultyTabTextActive: { color: theme.colors.text, fontWeight: '700' },
+  warningContainer: { marginHorizontal: 20, marginBottom: 16, borderRadius: 16, overflow: 'hidden' },
+  warningGlass: { padding: 16, alignItems: 'center', borderRadius: 16 },
+  warningText: { fontSize: 14, color: theme.colors.warning, fontWeight: '600', textAlign: 'center' },
+  scrollView: { flex: 1 },
+  scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 40 },
+  loadingContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  loadingText: { marginTop: 16, fontSize: 16, color: theme.colors.textSecondary },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  emptyText: { fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 8 },
+  emptySubtext: { fontSize: 14, color: theme.colors.textSecondary },
+  rankCardWrapper: { marginBottom: 12, borderRadius: 16, overflow: 'hidden' },
+  rankCardGlass: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16 },
+  rankBadgeContainer: { marginRight: 16 },
+  rankBadge: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  rankBadgeText: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  rankInfo: { flex: 1 },
+  username: { fontSize: 16, fontWeight: '700', color: theme.colors.text, marginBottom: 4 },
+  usernameHighlight: { color: theme.colors.primary },
+  dateContainer: { flexDirection: 'row', alignItems: 'center' },
+  updateTime: { fontSize: 12, color: theme.colors.textTertiary },
+  score: { fontSize: 18, fontWeight: '800', color: theme.colors.text },
+  myRankWrapper: { marginTop: 16, borderRadius: 16, overflow: 'hidden' },
+  myRankGlass: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16 },
+  myRankText: { fontSize: 16, fontWeight: '700', color: theme.colors.primary },
 });
 
 export default LeaderboardScreen;
