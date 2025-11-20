@@ -10,6 +10,20 @@ import { soundManager } from '../utils/soundManager';
 import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import {
+  Moon,
+  Sun,
+  Volume2,
+  VolumeX,
+  Gamepad2,
+  Globe,
+  User,
+  Info,
+  ArrowLeft,
+  Vibrate,
+  Download,
+  Trash2
+} from 'lucide-react-native';
 
 const TUTORIAL_KEY = '@brain_games_first_visit';
 const AUTO_SYNC_KEY = '@auto_sync_enabled';
@@ -239,7 +253,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
     <SafeAreaView style={dynamicStyles.container}>
       <View style={dynamicStyles.header}>
         <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={dynamicStyles.backButtonText}>← 뒤로</Text>
+          <ArrowLeft size={24} color={theme.colors.text} />
         </Pressable>
         <Text style={dynamicStyles.title}>설정</Text>
         <View style={styles.placeholder} />
@@ -248,7 +262,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
       <View style={styles.content}>
         {/* Appearance Settings */}
         <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>외관</Text>
+          <View style={styles.sectionHeader}>
+            {themeMode === 'dark' ? <Moon size={20} color={theme.colors.primary} /> : <Sun size={20} color={theme.colors.primary} />}
+            <Text style={dynamicStyles.sectionTitle}>외관</Text>
+          </View>
 
           <View style={dynamicStyles.setting}>
             <View>
@@ -268,7 +285,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
         {/* Sound Settings */}
         <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>사운드</Text>
+          <View style={styles.sectionHeader}>
+            {soundEnabled ? <Volume2 size={20} color={theme.colors.primary} /> : <VolumeX size={20} color={theme.colors.primary} />}
+            <Text style={dynamicStyles.sectionTitle}>사운드</Text>
+          </View>
 
           <View style={dynamicStyles.setting}>
             <View>
@@ -302,7 +322,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
         {/* Game Settings */}
         <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>게임</Text>
+          <View style={styles.sectionHeader}>
+            <Gamepad2 size={20} color={theme.colors.primary} />
+            <Text style={dynamicStyles.sectionTitle}>게임</Text>
+          </View>
 
           <Pressable style={dynamicStyles.button} onPress={handleResetTutorial}>
             <Text style={dynamicStyles.buttonText}>튜토리얼 다시 보기</Text>
@@ -316,7 +339,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
         {/* Online Settings */}
         {user && (
           <View style={dynamicStyles.section}>
-            <Text style={dynamicStyles.sectionTitle}>온라인 설정</Text>
+            <View style={styles.sectionHeader}>
+              <Globe size={20} color={theme.colors.primary} />
+              <Text style={dynamicStyles.sectionTitle}>온라인 설정</Text>
+            </View>
 
             <View style={dynamicStyles.setting}>
               <View style={{ flex: 1 }}>
@@ -365,15 +391,21 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
         {/* Account Management */}
         {user && (
           <View style={dynamicStyles.section}>
-            <Text style={dynamicStyles.sectionTitle}>계정 관리</Text>
+            <View style={styles.sectionHeader}>
+              <User size={20} color={theme.colors.primary} />
+              <Text style={dynamicStyles.sectionTitle}>계정 관리</Text>
+            </View>
 
             <Pressable
               style={dynamicStyles.button}
               onPress={handleDownloadData}
             >
-              <Text style={dynamicStyles.buttonText}>
-                내 데이터 다운로드
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <Download size={18} color={theme.colors.primary} />
+                <Text style={dynamicStyles.buttonText}>
+                  내 데이터 다운로드
+                </Text>
+              </View>
             </Pressable>
 
             <Text style={[dynamicStyles.infoText, { marginTop: 8, marginBottom: 16 }]}>
@@ -384,9 +416,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
               style={[dynamicStyles.button, { backgroundColor: '#ef4444' }]}
               onPress={handleDeleteAccount}
             >
-              <Text style={[dynamicStyles.buttonText, { color: '#ffffff' }]}>
-                계정 삭제
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <Trash2 size={18} color="#ffffff" />
+                <Text style={[dynamicStyles.buttonText, { color: '#ffffff' }]}>
+                  계정 삭제
+                </Text>
+              </View>
             </Pressable>
 
             <Text style={[dynamicStyles.infoText, { marginTop: 8 }]}>
@@ -397,7 +432,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
         {/* About */}
         <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>정보</Text>
+          <View style={styles.sectionHeader}>
+            <Info size={20} color={theme.colors.primary} />
+            <Text style={dynamicStyles.sectionTitle}>정보</Text>
+          </View>
           <Text style={dynamicStyles.infoText}>버전: 3.0.0</Text>
           <Text style={dynamicStyles.infoText}>개발: React Native + Expo</Text>
         </View>
@@ -431,7 +469,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   placeholder: {
-    width: 60,
+    width: 40,
   },
   content: {
     padding: 16,
@@ -446,10 +484,15 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 16,
   },
   setting: {
     flexDirection: 'row',

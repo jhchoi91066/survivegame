@@ -1,12 +1,15 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
+import React, { useState } from 'react';
+import { Modal, View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { LucideIcon } from 'lucide-react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
-interface TutorialStep {
+const { width } = Dimensions.get('window');
+
+export interface TutorialStep {
   title: string;
   description: string;
-  emoji: string;
+  icon: LucideIcon;
 }
 
 interface TutorialProps {
@@ -22,7 +25,7 @@ export const Tutorial: React.FC<TutorialProps> = ({
   onComplete,
   gradientColors,
 }) => {
-  const [currentStep, setCurrentStep] = React.useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -41,6 +44,7 @@ export const Tutorial: React.FC<TutorialProps> = ({
   if (!visible) return null;
 
   const step = steps[currentStep];
+  const Icon = step.icon;
 
   return (
     <Modal
@@ -53,7 +57,7 @@ export const Tutorial: React.FC<TutorialProps> = ({
         <Animated.View
           entering={FadeIn}
           exiting={FadeOut}
-          style={styles.content}
+          style={styles.container}
         >
           <LinearGradient
             colors={gradientColors}
@@ -63,50 +67,55 @@ export const Tutorial: React.FC<TutorialProps> = ({
           >
             <View style={styles.glassOverlay} />
 
-            <View style={styles.header}>
-              <Text style={styles.emoji}>{step.emoji}</Text>
-              <Text style={styles.stepIndicator}>
-                {currentStep + 1} / {steps.length}
-              </Text>
-            </View>
+            <View style={styles.content}>
+              <View style={styles.iconContainer}>
+                <Icon size={64} color="#fff" />
+              </View>
 
-            <Text style={styles.title}>{step.title}</Text>
-            <Text style={styles.description}>{step.description}</Text>
-
-            <View style={styles.buttons}>
-              {currentStep === 0 && (
-                <Pressable
-                  style={[styles.button, styles.skipButton]}
-                  onPress={handleSkip}
-                >
-                  <Text style={styles.skipButtonText}>건너뛰기</Text>
-                </Pressable>
-              )}
-
-              <Pressable
-                style={[
-                  styles.button,
-                  styles.nextButton,
-                  currentStep === 0 && { flex: 1 }
-                ]}
-                onPress={handleNext}
-              >
-                <Text style={styles.nextButtonText}>
-                  {currentStep < steps.length - 1 ? '다음' : '시작하기'}
+              <View style={styles.stepIndicatorContainer}>
+                <Text style={styles.stepIndicator}>
+                  {currentStep + 1} / {steps.length}
                 </Text>
-              </Pressable>
-            </View>
+              </View>
 
-            <View style={styles.dots}>
-              {steps.map((_, index) => (
-                <View
-                  key={index}
+              <Text style={styles.title}>{step.title}</Text>
+              <Text style={styles.description}>{step.description}</Text>
+
+              <View style={styles.buttons}>
+                {currentStep === 0 && (
+                  <Pressable
+                    style={[styles.button, styles.skipButton]}
+                    onPress={handleSkip}
+                  >
+                    <Text style={styles.skipButtonText}>건너뛰기</Text>
+                  </Pressable>
+                )}
+
+                <Pressable
                   style={[
-                    styles.dot,
-                    index === currentStep && styles.dotActive,
+                    styles.button,
+                    styles.nextButton,
+                    currentStep === 0 && { flex: 1 }
                   ]}
-                />
-              ))}
+                  onPress={handleNext}
+                >
+                  <Text style={styles.nextButtonText}>
+                    {currentStep < steps.length - 1 ? '다음' : '시작하기'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.dots}>
+                {steps.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.dot,
+                      index === currentStep ? styles.activeDot : styles.inactiveDot,
+                    ]}
+                  />
+                ))}
+              </View>
             </View>
           </LinearGradient>
         </Animated.View>
@@ -118,25 +127,26 @@ export const Tutorial: React.FC<TutorialProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  content: {
+  container: {
     width: '100%',
-    maxWidth: 400,
-    borderRadius: 32,
+    maxWidth: 340,
+    borderRadius: 24,
     overflow: 'hidden',
+    elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.5,
-    shadowRadius: 30,
-    elevation: 20,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
   },
   gradient: {
     padding: 32,
-    minHeight: 400,
+    alignItems: 'center',
+    minHeight: 450,
   },
   glassOverlay: {
     position: 'absolute',
@@ -145,18 +155,28 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 32,
+    borderRadius: 24,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  content: {
+    alignItems: 'center',
+    width: '100%',
+    zIndex: 1,
+  },
+  iconContainer: {
+    width: 100,
+    height: 100,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 50,
+    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  emoji: {
-    fontSize: 64,
+  stepIndicatorContainer: {
+    marginBottom: 16,
   },
   stepIndicator: {
     fontSize: 14,
@@ -168,24 +188,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '900',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#fff',
-    marginBottom: 16,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   description: {
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
   },
   buttons: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 32,
+    width: '100%',
   },
   button: {
     paddingVertical: 16,
@@ -225,8 +245,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
-  dotActive: {
+  activeDot: {
     backgroundColor: '#fff',
     width: 24,
+  },
+  inactiveDot: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
 });

@@ -35,10 +35,10 @@ export type RootStackParamList = {
   FriendComparison: { friendId: string; friendUsername: string; };
   MultiplayerLobby: undefined;
   MultiplayerGame: { roomId: string; gameType: string; difficulty?: string; };
-  FlipMatchGame: undefined;
-  MathRushGame: undefined;
-  SpatialMemoryGame: undefined;
-  StroopTestGame: undefined;
+  FlipMatchGame: { multiplayerRoomId?: string; difficulty?: string; } | undefined;
+  MathRushGame: { multiplayerRoomId?: string; difficulty?: string; } | undefined;
+  SpatialMemoryGame: { multiplayerRoomId?: string; difficulty?: string; } | undefined;
+  StroopTestGame: { multiplayerRoomId?: string; difficulty?: string; } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
         maxWidth: '100vw',
         maxHeight: '100vh',
         overflow: 'auto',
-      },
+      } as any,
       default: { flex: 1, width: '100%' },
     }),
   },

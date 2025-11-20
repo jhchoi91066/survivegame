@@ -14,6 +14,24 @@ import { Tutorial } from '../components/shared/Tutorial';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncGameRecords } from '../utils/cloudSync';
 import Toast from '../components/shared/Toast';
+import {
+  Brain,
+  Trophy,
+  Users,
+  Swords,
+  Medal,
+  BarChart3,
+  Gamepad2,
+  Grid2X2,
+  Calculator,
+  Palette,
+  Rocket,
+  Target,
+  TrendingUp,
+  Settings,
+  UserCircle,
+  RefreshCw
+} from 'lucide-react-native';
 
 type MenuScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
@@ -26,10 +44,10 @@ const isSmallScreen = width < 375;
 const FIRST_VISIT_KEY = '@brain_games_first_visit';
 
 const tutorialSteps = [
-  { title: '환영합니다! 🎉', description: '4가지 두뇌 게임으로 당신의 기억력, 집중력, 계산 능력을 테스트하세요!', emoji: '🎮' },
-  { title: '게임 선택 ⚡', description: '원하는 게임을 탭하여 바로 시작하세요. 각 게임은 고유한 도전 과제를 제공합니다.', emoji: '🎯' },
-  { title: '기록 확인 📊', description: '통계 탭에서 당신의 성장을 확인하고 최고 기록을 경신하세요!', emoji: '📈' },
-  { title: '준비 완료! 🎮', description: '지금 바로 첫 게임을 시작해보세요. 즐거운 시간 되세요!', emoji: '🚀' },
+  { title: '환영합니다! 🎉', description: '4가지 두뇌 게임으로 당신의 기억력, 집중력, 계산 능력을 테스트하세요!', icon: Gamepad2 },
+  { title: '게임 선택 ⚡', description: '원하는 게임을 탭하여 바로 시작하세요. 각 게임은 고유한 도전 과제를 제공합니다.', icon: Target },
+  { title: '기록 확인 📊', description: '통계 탭에서 당신의 성장을 확인하고 최고 기록을 경신하세요!', icon: TrendingUp },
+  { title: '준비 완료! 🎮', description: '지금 바로 첫 게임을 시작해보세요. 즐거운 시간 되세요!', icon: Rocket },
 ];
 
 const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
@@ -70,11 +88,11 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
       loadGameRecord('stroop'),
     ]);
 
-    const games: GameInfo[] = [
-      { id: 'flip_match', name: 'Flip & Match', emoji: '🎴', description: '카드 뒤집기', bestRecordLabel: 'Best', bestRecordValue: records[0]?.bestTime ? `${records[0].bestTime}초` : '-' },
-      { id: 'math_rush', name: 'Math Rush', emoji: '➕', description: '빠른 계산', bestRecordLabel: 'Best', bestRecordValue: records[1]?.highScore ? `${records[1].highScore}점` : '-' },
-      { id: 'spatial_memory', name: 'Spatial Memory', emoji: '🧠', description: '공간 기억', bestRecordLabel: 'Best', bestRecordValue: records[2]?.highestLevel ? `Lv.${records[2].highestLevel}` : '-' },
-      { id: 'stroop', name: 'Stroop Test', emoji: '🎨', description: '색상-단어', bestRecordLabel: 'Best', bestRecordValue: records[3]?.highScore ? `${records[3].highScore}점` : '-' },
+    const games: any[] = [
+      { id: 'flip_match', name: 'Flip & Match', icon: Grid2X2, description: '카드 뒤집기', bestRecordLabel: 'Best', bestRecordValue: records[0]?.bestTime ? `${records[0].bestTime}초` : '-' },
+      { id: 'math_rush', name: 'Math Rush', icon: Calculator, description: '빠른 계산', bestRecordLabel: 'Best', bestRecordValue: records[1]?.highScore ? `${records[1].highScore}점` : '-' },
+      { id: 'spatial_memory', name: 'Spatial Memory', icon: Brain, description: '공간 기억', bestRecordLabel: 'Best', bestRecordValue: records[2]?.highestLevel ? `Lv.${records[2].highestLevel}` : '-' },
+      { id: 'stroop', name: 'Stroop Test', icon: Palette, description: '색상-단어', bestRecordLabel: 'Best', bestRecordValue: records[3]?.highScore ? `${records[3].highScore}점` : '-' },
     ];
     setGameInfos(games);
   };
@@ -101,7 +119,7 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
     try {
       const result = await syncGameRecords();
       setToastMessage(result.success ? `동기화 완료! (업로드: ${result.recordsUploaded || 0}, 다운로드: ${result.recordsDownloaded || 0})` : `동기화 실패: ${result.error}`);
-      if(result.success) hapticPatterns.correctAnswer(); else hapticPatterns.wrongAnswer();
+      if (result.success) hapticPatterns.correctAnswer(); else hapticPatterns.wrongAnswer();
       await loadGameData();
     } catch (error) {
       setToastMessage('동기화 중 오류 발생');
@@ -138,19 +156,21 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
             <View style={styles.headerButtons}>
               <Pressable style={styles.textButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate(user ? 'Profile' : 'Login'); }}>
                 <LinearGradient colors={user ? theme.gradients.flipMatch : ['#334155', '#1e293b']} style={styles.textButtonGradient}>
+                  <UserCircle size={20} color="#fff" style={{ marginRight: 4 }} />
                   <Text style={styles.buttonText}>{user ? 'Profile' : 'Login'}</Text>
                 </LinearGradient>
               </Pressable>
               {user && (
                 <Pressable style={styles.textButton} onPress={handleManualSync} disabled={isSyncing}>
                   <LinearGradient colors={isSyncing ? ['#94a3b8', '#64748b'] : ['#10b981', '#059669']} style={styles.textButtonGradient}>
+                    <RefreshCw size={16} color="#fff" style={{ marginRight: 4 }} />
                     <Text style={styles.buttonText}>{isSyncing ? 'Syncing' : 'Sync'}</Text>
                   </LinearGradient>
                 </Pressable>
               )}
               <Pressable style={styles.textButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate('Settings'); }}>
                 <LinearGradient colors={['#334155', '#1e293b']} style={styles.textButtonGradient}>
-                  <Text style={styles.buttonText}>Settings</Text>
+                  <Settings size={20} color="#fff" />
                 </LinearGradient>
               </Pressable>
             </View>
@@ -165,31 +185,31 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
           <View style={styles.bottomButtonsGrid}>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Stats'); }}>
               <LinearGradient colors={theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0']} style={styles.bottomButtonGradient}>
-                <Text style={styles.bottomButtonIcon}>📊</Text>
+                <BarChart3 size={24} color={theme.colors.text} />
                 <Text style={styles.bottomButtonText}>통계</Text>
               </LinearGradient>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Leaderboard'); }}>
               <LinearGradient colors={user ? theme.gradients.flipMatch : (theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0'])} style={styles.bottomButtonGradient}>
-                <Text style={styles.bottomButtonIcon}>🏆</Text>
-                <Text style={styles.bottomButtonText}>리더보드</Text>
+                <Trophy size={24} color={user ? '#fff' : theme.colors.text} />
+                <Text style={[styles.bottomButtonText, user && { color: '#fff' }]}>리더보드</Text>
               </LinearGradient>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Friends'); }}>
               <LinearGradient colors={user ? ['#10b981', '#059669'] : (theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0'])} style={styles.bottomButtonGradient}>
-                <Text style={styles.bottomButtonIcon}>👥</Text>
-                <Text style={styles.bottomButtonText}>친구</Text>
+                <Users size={24} color={user ? '#fff' : theme.colors.text} />
+                <Text style={[styles.bottomButtonText, user && { color: '#fff' }]}>친구</Text>
               </LinearGradient>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); user ? navigation.navigate('MultiplayerLobby') : navigation.navigate('Login'); }}>
               <LinearGradient colors={user ? ['#ec4899', '#db2777'] : (theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0'])} style={styles.bottomButtonGradient}>
-                <Text style={styles.bottomButtonIcon}>⚔️</Text>
-                <Text style={styles.bottomButtonText}>대전</Text>
+                <Swords size={24} color={user ? '#fff' : theme.colors.text} />
+                <Text style={[styles.bottomButtonText, user && { color: '#fff' }]}>대전</Text>
               </LinearGradient>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Achievements'); }}>
               <LinearGradient colors={theme.mode === 'dark' ? ['#1e293b', '#0f172a'] : ['#fff', '#e2e8f0']} style={styles.bottomButtonGradient}>
-                <Text style={styles.bottomButtonIcon}>🎖️</Text>
+                <Medal size={24} color={theme.colors.text} />
                 <Text style={styles.bottomButtonText}>업적</Text>
               </LinearGradient>
             </Pressable>
@@ -203,12 +223,13 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
   );
 };
 
-interface GameCardProps { game: GameInfo; onPress: () => void; gradientColors: [string, string]; index: number; }
+interface GameCardProps { game: any; onPress: () => void; gradientColors: [string, string]; index: number; }
 
 const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, index }) => {
   const { theme } = useTheme();
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
+  const Icon = game.icon;
 
   useEffect(() => {
     scale.value = withDelay(index * 70, withSpring(1, { damping: 15, stiffness: 100 }));
@@ -224,7 +245,9 @@ const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, inde
         <LinearGradient colors={gradientColors} style={styles.gameCardGradient}>
           <View style={styles.glassOverlay} />
           <View style={styles.gameIconContainer}>
-            <View style={styles.iconGlow}><Text style={styles.gameEmoji}>{game.emoji}</Text></View>
+            <View style={styles.iconGlow}>
+              <Icon size={32} color="#fff" />
+            </View>
           </View>
           <Text style={styles.gameName}>{game.name}</Text>
           <Text style={styles.gameDescription}>{game.description}</Text>
@@ -238,7 +261,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, inde
   );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1 },
   backgroundGradient: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   safeArea: { flex: 1, paddingTop: Platform.OS === 'web' ? 40 : 0 },
@@ -249,7 +272,7 @@ const getStyles = (theme) => StyleSheet.create({
   subtitle: { fontSize: 13, color: theme.colors.textSecondary, marginTop: 6 },
   headerButtons: { flexDirection: 'row', gap: 8 },
   textButton: { height: 40, borderRadius: 12, overflow: 'hidden' },
-  textButtonGradient: { height: '100%', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
+  textButtonGradient: { height: '100%', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
   buttonText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   gamesContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 16 },
   gameCardWrapper: { width: (width - 48) / 2, marginBottom: 16 },

@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withSequence,
+  withTiming,
   interpolate,
 } from 'react-native-reanimated';
 import { Card as CardType } from '../../game/flipmatch/types';
@@ -23,7 +24,8 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
   const scale = useSharedValue(1);
 
   useEffect(() => {
-    rotation.value = withSpring(card.isFlipped ? 180 : 0, SPRING_CONFIGS.gentle);
+    // Quiet, standard flip without bounce/wobble
+    rotation.value = withTiming(card.isFlipped ? 180 : 0, { duration: 300 });
     if (card.isFlipped && !card.isMatched) {
       soundManager.playSound('card_flip');
     }
@@ -31,10 +33,10 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
 
   useEffect(() => {
     if (card.isMatched) {
-      // 매칭 성공 시 펄스 애니메이션
+      // Simple match pulse without wobble
       scale.value = withSequence(
-        withSpring(1.1, SPRING_CONFIGS.bouncy),
-        withSpring(1, SPRING_CONFIGS.gentle)
+        withSpring(1.1, { damping: 12, stiffness: 100 }),
+        withSpring(1, { damping: 15, stiffness: 100 })
       );
       soundManager.playSound('card_match');
     }
@@ -42,10 +44,10 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
 
   const handlePress = () => {
     if (!card.isFlipped && !card.isMatched) {
-      // 탭 시 스케일 효과
+      // Very subtle press effect
       scale.value = withSequence(
-        withSpring(0.95, SPRING_CONFIGS.stiff),
-        withSpring(1, SPRING_CONFIGS.stiff)
+        withTiming(0.96, { duration: 50 }),
+        withTiming(1, { duration: 50 })
       );
     }
     onPress();
@@ -103,9 +105,9 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
         style={[
           styles.card,
           styles.cardBack,
-          { 
+          {
             backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border 
+            borderColor: theme.colors.border
           },
           cardMatchedStyle,
           backAnimatedStyle,

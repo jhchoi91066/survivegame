@@ -11,6 +11,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
+import {
+  Gamepad2,
+  Trophy,
+  Users,
+  Cloud,
+  Gift,
+  Chrome,
+  Ghost,
+  LogIn,
+  LucideIcon
+} from 'lucide-react-native';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
@@ -80,7 +91,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
       <View style={styles.content}>
         {/* 헤더 */}
         <View style={styles.header}>
-          <Text style={styles.emoji}>🎮</Text>
+          <View style={styles.iconContainer}>
+            <Gamepad2 size={64} color="#fff" />
+          </View>
           <Text style={styles.title}>Brain Games</Text>
           <Text style={styles.subtitle}>
             로그인하고 온라인 기능을 사용해보세요!
@@ -89,10 +102,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
 
         {/* 혜택 안내 */}
         <View style={styles.benefits}>
-          <BenefitItem emoji="🏆" text="글로벌 리더보드 참여" />
-          <BenefitItem emoji="👥" text="친구 추가 및 경쟁" />
-          <BenefitItem emoji="☁️" text="기록 백업 및 복구" />
-          <BenefitItem emoji="🎁" text="특별 업적 해제" />
+          <BenefitItem icon={Trophy} text="글로벌 리더보드 참여" />
+          <BenefitItem icon={Users} text="친구 추가 및 경쟁" />
+          <BenefitItem icon={Cloud} text="기록 백업 및 복구" />
+          <BenefitItem icon={Gift} text="특별 업적 해제" />
         </View>
 
         {/* 로그인 버튼들 */}
@@ -116,7 +129,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <>
-                  <Text style={styles.buttonEmoji}>🔵</Text>
+                  <Chrome size={24} color="#fff" />
                   <Text style={styles.buttonText}>Google로 계속하기</Text>
                 </>
               )}
@@ -143,7 +156,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <>
-                    <Text style={styles.buttonEmoji}>🍎</Text>
+                    {/* Apple icon is not in Lucide, using LogIn as generic or just text */}
+                    <LogIn size={24} color="#fff" />
                     <Text style={styles.buttonText}>Apple로 계속하기</Text>
                   </>
                 )}
@@ -170,7 +184,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <>
-                  <Text style={styles.buttonEmoji}>👤</Text>
+                  <Ghost size={24} color="#fff" />
                   <Text style={styles.buttonText}>익명으로 계속하기</Text>
                 </>
               )}
@@ -201,13 +215,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
 };
 
 interface BenefitItemProps {
-  emoji: string;
+  icon: LucideIcon;
   text: string;
 }
 
-const BenefitItem: React.FC<BenefitItemProps> = ({ emoji, text }) => (
+const BenefitItem: React.FC<BenefitItemProps> = ({ icon: Icon, text }) => (
   <View style={styles.benefitItem}>
-    <Text style={styles.benefitEmoji}>{emoji}</Text>
+    <Icon size={24} color="#cbd5e1" style={{ marginRight: 12 }} />
     <Text style={styles.benefitText}>{text}</Text>
   </View>
 );
@@ -229,9 +243,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
-  emoji: {
-    fontSize: 80,
-    marginBottom: 16,
+  iconContainer: {
+    width: 100,
+    height: 100,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   title: {
     fontSize: 36,
@@ -252,10 +273,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     paddingHorizontal: 16,
-  },
-  benefitEmoji: {
-    fontSize: 24,
-    marginRight: 12,
   },
   benefitText: {
     fontSize: 16,
@@ -286,9 +303,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-  },
-  buttonEmoji: {
-    fontSize: 24,
   },
   buttonText: {
     color: '#fff',

@@ -73,6 +73,8 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'info' | 'success' | 'warning' | 'error' }>({ visible: false, message: '', type: 'info' });
   const [waitingTime, setWaitingTime] = useState(0);
   const [waitingTimeoutReached, setWaitingTimeoutReached] = useState(false);
+  const isGameStarting = React.useRef(false);
+  const shouldDisconnectOnUnmount = React.useRef(true);
 
   // Animation values for countdown
   const countdownScale = useSharedValue(1);
@@ -102,6 +104,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
       });
       hapticPatterns.levelComplete();
     },
+    shouldDisconnectOnUnmount,
   });
 
   // Initial setup and reconnection attempt
@@ -161,7 +164,8 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
     return () => {
       subscription.unsubscribe();
       roomSubscription.unsubscribe();
-      clearReconnectData();
+      // Do NOT clear reconnect data here automatically
+      // It should only be cleared when explicitly leaving or finishing
     };
   }, [user, roomId, reconnectToken]);
 
@@ -343,6 +347,8 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
 
   const startGame = async () => {
     try {
+      isGameStarting.current = true;
+      shouldDisconnectOnUnmount.current = false; // Don't disconnect when navigating to game
       hapticPatterns.levelComplete();
 
       // Update room status to playing
@@ -405,6 +411,9 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
       if (isRoomCreator) {
         await supabase.from('multiplayer_rooms').delete().eq('id', roomId);
       }
+
+      // Clear reconnection data since we are explicitly leaving
+      await clearReconnectData();
     } catch (error) {
       console.error('Failed to leave room:', error);
     }
@@ -541,10 +550,10 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
                       player.connection_status === 'disconnected'
                         ? '연결 끊김'
                         : player.id === user?.id
-                        ? '준비됨'
-                        : opponentReady
-                        ? '준비됨'
-                        : '대기 중',
+                          ? '준비됨'
+                          : opponentReady
+                            ? '준비됨'
+                            : '대기 중',
                   }}
                 >
                   <LinearGradient
@@ -561,10 +570,10 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
                       {player.connection_status === 'disconnected'
                         ? '연결 끊김'
                         : player.id === user?.id
-                        ? '준비됨'
-                        : opponentReady
-                        ? '준비됨'
-                        : '대기 중'}
+                          ? '준비됨'
+                          : opponentReady
+                            ? '준비됨'
+                            : '대기 중'}
                     </Text>
                   </LinearGradient>
                 </View>

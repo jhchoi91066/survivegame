@@ -24,10 +24,11 @@ export const usePresence = ({
   roomId,
   onPlayerDisconnected,
   onPlayerReconnected,
-}: UsePresenceOptions) => {
+  shouldDisconnectOnUnmount,
+}: UsePresenceOptions & { shouldDisconnectOnUnmount?: React.MutableRefObject<boolean> }) => {
   const { user } = useAuth();
-  const heartbeatInterval = useRef<NodeJS.Timeout>();
-  const reconnectToken = useRef<string>(crypto.randomUUID());
+  const heartbeatInterval = useRef<NodeJS.Timeout>(undefined);
+  const reconnectToken = useRef<string>(Math.random().toString(36).substring(2) + Date.now().toString(36));
 
   // Send heartbeat to mark player as online
   const sendHeartbeat = useCallback(async () => {
@@ -91,15 +92,17 @@ export const usePresence = ({
       }
       subscription.unsubscribe();
 
-      // Mark as disconnected (fire-and-forget)
-      supabase
-        .from('player_presence')
-        .update({ status: 'disconnected' })
-        .eq('user_id', user.id)
-        .eq('room_id', roomId)
-        .then(() => {});
+      // Mark as disconnected (fire-and-forget) ONLY if allowed
+      if (!shouldDisconnectOnUnmount || shouldDisconnectOnUnmount.current) {
+        supabase
+          .from('player_presence')
+          .update({ status: 'disconnected' })
+          .eq('user_id', user.id)
+          .eq('room_id', roomId)
+          .then(() => { });
+      }
     };
-  }, [user, roomId, sendHeartbeat, onPlayerDisconnected, onPlayerReconnected]);
+  }, [user, roomId, sendHeartbeat, onPlayerDisconnected, onPlayerReconnected, shouldDisconnectOnUnmount]);
 
   return {
     reconnectToken: reconnectToken.current,

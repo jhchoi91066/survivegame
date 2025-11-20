@@ -20,6 +20,18 @@ import { useAuth } from '../contexts/AuthContext';
 import { PauseMenu } from '../components/shared/PauseMenu';
 import { MultiplayerProvider, useMultiplayer } from '../contexts/MultiplayerContext';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
+import {
+  ArrowLeft,
+  Pause,
+  RotateCcw,
+  Trophy,
+  Timer,
+  Flame,
+  Grid3X3,
+  Play,
+  Menu,
+  Move
+} from 'lucide-react-native';
 
 type FlipMatchGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FlipMatchGame'>;
 
@@ -59,6 +71,15 @@ const FlipMatchGameContent: React.FC = () => {
   const opponentScoreAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: opponentScoreScale.value }],
   }));
+
+  const isMounted = React.useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // Animate opponent score when it changes
   useEffect(() => {
@@ -108,6 +129,8 @@ const FlipMatchGameContent: React.FC = () => {
       const timeTaken = getTimeLimit() - timeRemaining;
 
       const oldRecord = await loadGameRecord('flip_match');
+      if (!isMounted.current) return;
+
       if (!oldRecord || !oldRecord.bestTime || timeTaken < oldRecord.bestTime) {
         setIsNewRecord(true);
       }
@@ -129,6 +152,8 @@ const FlipMatchGameContent: React.FC = () => {
       }
 
       const newAchievements = await updateStatsOnGamePlayed('flip_match', moves, timeTaken, settings.difficulty);
+      if (!isMounted.current) return;
+
       if (newAchievements.length > 0) {
         setUnlockedAchievements(newAchievements);
         setShowAchievementModal(true);
@@ -163,7 +188,9 @@ const FlipMatchGameContent: React.FC = () => {
     soundManager.playSound('game_start');
     // 사운드가 재생된 후 게임 초기화 (약간의 지연)
     setTimeout(() => {
-      initializeGame({ difficulty: selectedDifficulty, theme: 'animals' });
+      if (isMounted.current) {
+        initializeGame({ difficulty: selectedDifficulty, theme: 'animals' });
+      }
     }, 100);
   };
 
@@ -199,29 +226,46 @@ const FlipMatchGameContent: React.FC = () => {
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Pressable onPress={handleBackToMenu} style={styles.backButton}><Text style={styles.backButtonText}>← 메뉴</Text></Pressable>
-            <Text style={styles.title}>🎴 Flip & Match</Text>
+            <Pressable onPress={handleBackToMenu} style={styles.backButton}>
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </Pressable>
+            <Text style={styles.title}>Flip & Match</Text>
             <View style={styles.headerRight}>
               <Pressable
                 onPress={togglePause}
                 style={styles.pauseButton}
                 disabled={gameStatus !== 'playing'}
               >
-                <Text style={styles.pauseButtonText}>{isPaused ? '▶️' : '⏸'}</Text>
+                <Pause size={24} color={theme.colors.text} />
               </Pressable>
               <Pressable onPress={handleRestart} style={styles.restartButton}>
-                <Text style={styles.restartButtonText}>🔄</Text>
+                <RotateCcw size={24} color={theme.colors.text} />
               </Pressable>
             </View>
           </View>
 
           <View style={styles.stats}>
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>남은 시간</Text>
+              <View style={styles.statHeader}>
+                <Timer size={16} color={theme.colors.textSecondary} />
+                <Text style={styles.statLabel}>시간</Text>
+              </View>
               <Text style={[styles.statValue, timeRemaining <= 10 && styles.statValueWarning]}>{formatTime(timeRemaining)}</Text>
             </View>
-            <View style={styles.statItem}><Text style={styles.statLabel}>이동</Text><Text style={styles.statValue}>{moves}</Text></View>
-            <View style={styles.statItem}><Text style={styles.statLabel}>진행</Text><Text style={styles.statValue}>{matchedPairs}/{totalPairs}</Text></View>
+            <View style={styles.statItem}>
+              <View style={styles.statHeader}>
+                <Move size={16} color={theme.colors.textSecondary} />
+                <Text style={styles.statLabel}>이동</Text>
+              </View>
+              <Text style={styles.statValue}>{moves}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <View style={styles.statHeader}>
+                <Grid3X3 size={16} color={theme.colors.textSecondary} />
+                <Text style={styles.statLabel}>진행</Text>
+              </View>
+              <Text style={styles.statValue}>{matchedPairs}/{totalPairs}</Text>
+            </View>
             {isMultiplayer && (
               <View
                 style={styles.statItem}
@@ -229,19 +273,27 @@ const FlipMatchGameContent: React.FC = () => {
                 accessibilityRole="text"
                 accessibilityLabel={`상대방 점수: ${opponentScore}점`}
               >
-                <Text style={styles.statLabel}>상대 점수</Text>
+                <View style={styles.statHeader}>
+                  <Trophy size={16} color={theme.colors.textSecondary} />
+                  <Text style={styles.statLabel}>상대</Text>
+                </View>
                 <Animated.Text style={[styles.statValue, opponentScoreAnimatedStyle]}>{opponentScore}</Animated.Text>
               </View>
             )}
           </View>
 
-          {gameStatus === 'preview' && <View style={styles.previewOverlay}><Text style={styles.previewText}>🧠 카드를 기억하세요!</Text></View>}
+          {gameStatus === 'preview' && (
+            <View style={styles.previewOverlay}>
+              <Text style={styles.previewText}>카드를 기억하세요!</Text>
+            </View>
+          )}
           {gameStatus !== 'ready' && <GameBoard />}
         </ScrollView>
 
         <Modal visible={showDifficultyModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
+              <Grid3X3 size={64} color={theme.colors.primary} style={{ marginBottom: 24 }} />
               <Text style={styles.modalTitle}>난이도 선택</Text>
               <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
                 <Text style={styles.difficultyButtonText}>쉬움 (4x4)</Text>
@@ -252,7 +304,10 @@ const FlipMatchGameContent: React.FC = () => {
               <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
                 <Text style={styles.difficultyButtonText}>어려움 (8x4)</Text>
               </Pressable>
-              <Pressable style={styles.startButton} onPress={handleStartGame}><Text style={styles.startButtonText}>게임 시작</Text></Pressable>
+              <Pressable style={styles.startButton} onPress={handleStartGame}>
+                <Play size={24} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.startButtonText}>게임 시작</Text>
+              </Pressable>
             </View>
           </View>
         </Modal>
@@ -260,13 +315,19 @@ const FlipMatchGameContent: React.FC = () => {
         <Modal visible={gameStatus === 'won'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.victoryEmoji}>🎉</Text>
+              <Trophy size={80} color={theme.colors.warning} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>완료!</Text>
               {isNewRecord && <Text style={styles.newRecord}>🏆 신기록 달성!</Text>}
               <Text style={styles.victoryStats}>소요 시간: {formatTime(getTimeLimit() - timeRemaining)}</Text>
               <Text style={styles.victoryStats}>이동 횟수: {moves}</Text>
-              <Pressable style={styles.startButton} onPress={handleRestart}><Text style={styles.startButtonText}>다시 하기</Text></Pressable>
-              <Pressable style={styles.menuButton} onPress={handleBackToMenu}><Text style={styles.menuButtonText}>메뉴로</Text></Pressable>
+              <Pressable style={styles.startButton} onPress={handleRestart}>
+                <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.startButtonText}>다시 하기</Text>
+              </Pressable>
+              <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+                <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
+                <Text style={styles.menuButtonText}>메뉴로</Text>
+              </Pressable>
             </View>
           </View>
         </Modal>
@@ -274,12 +335,18 @@ const FlipMatchGameContent: React.FC = () => {
         <Modal visible={gameStatus === 'lost'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.defeatEmoji}>⏰</Text>
+              <Timer size={80} color={theme.colors.error} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>시간 초과!</Text>
               <Text style={styles.victoryStats}>완성: {matchedPairs}/{totalPairs} 쌍</Text>
               <Text style={styles.victoryStats}>이동 횟수: {moves}</Text>
-              <Pressable style={styles.startButton} onPress={handleRestart}><Text style={styles.startButtonText}>다시 하기</Text></Pressable>
-              <Pressable style={styles.menuButton} onPress={handleBackToMenu}><Text style={styles.menuButtonText}>메뉴로</Text></Pressable>
+              <Pressable style={styles.startButton} onPress={handleRestart}>
+                <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.startButtonText}>다시 하기</Text>
+              </Pressable>
+              <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+                <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
+                <Text style={styles.menuButtonText}>메뉴로</Text>
+              </Pressable>
             </View>
           </View>
         </Modal>
@@ -314,33 +381,29 @@ const getStyles = (theme: any) => StyleSheet.create({
   scrollContent: { flexGrow: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   backButton: { padding: 8 },
-  backButtonText: { color: theme.colors.textSecondary, fontSize: 16 },
   title: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pauseButton: { padding: 8 },
-  pauseButtonText: { fontSize: 20, color: theme.colors.text },
   restartButton: { padding: 8 },
-  restartButtonText: { fontSize: 24, color: theme.colors.text },
   stats: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface, marginHorizontal: 16, borderRadius: 12, marginBottom: 16 },
   statItem: { alignItems: 'center' },
-  statLabel: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4 },
+  statHeader: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  statLabel: { fontSize: 12, color: theme.colors.textSecondary },
   statValue: { fontSize: 20, fontWeight: 'bold', color: theme.colors.text },
   statValueWarning: { color: theme.colors.error },
   previewOverlay: { position: 'absolute', top: 120, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
-  previewText: { fontSize: 28, fontWeight: 'bold', color: '#fff', backgroundColor: 'rgba(59, 130, 246, 0.9)', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 16 },
+  previewText: { fontSize: 24, fontWeight: 'bold', color: '#fff', backgroundColor: 'rgba(59, 130, 246, 0.9)', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 16 },
   modalOverlay: { flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center' },
   modalContent: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 32, width: '80%', maxWidth: 400, alignItems: 'center' },
   modalTitle: { fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginBottom: 24 },
   difficultyButton: { width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginBottom: 12, alignItems: 'center' },
   difficultyButtonSelected: { backgroundColor: theme.colors.primary },
   difficultyButtonText: { fontSize: 18, fontWeight: '600', color: theme.colors.text },
-  startButton: { width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginTop: 12, alignItems: 'center' },
+  startButton: { width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginTop: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   startButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  victoryEmoji: { fontSize: 64, marginBottom: 16 },
-  defeatEmoji: { fontSize: 64, marginBottom: 16 },
   victoryStats: { fontSize: 16, color: theme.colors.textSecondary, marginBottom: 8 },
   newRecord: { fontSize: 20, fontWeight: 'bold', color: theme.colors.primary, marginBottom: 16 },
-  menuButton: { width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginTop: 8, alignItems: 'center' },
+  menuButton: { width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginTop: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   menuButtonText: { fontSize: 16, fontWeight: '600', color: theme.colors.text },
 });
 

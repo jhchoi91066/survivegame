@@ -24,6 +24,9 @@ const MultiplayerContext = createContext<MultiplayerContextValue | null>(null);
  * @param roomId - Optional room ID. If provided, enables multiplayer mode
  * @param children - Child components (game screens)
  */
+import { usePresence } from '../hooks/usePresence';
+import Toast from '../components/shared/Toast';
+
 export const MultiplayerProvider: React.FC<{
   roomId?: string;
   children: React.ReactNode;
@@ -31,6 +34,27 @@ export const MultiplayerProvider: React.FC<{
   const { user } = useAuth();
   const [opponentScore, setOpponentScore] = useState(0);
   const [myScore, setMyScore] = useState(0);
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'info' | 'success' | 'warning' | 'error' }>({ visible: false, message: '', type: 'info' });
+
+  // Integrate presence management
+  // We don't pass shouldDisconnectOnUnmount here, so it defaults to true (disconnect when game ends/leaves)
+  usePresence({
+    roomId: roomId || '',
+    onPlayerDisconnected: () => {
+      setToast({
+        visible: true,
+        message: '상대방 연결 끊김 - 재연결 대기 중',
+        type: 'warning',
+      });
+    },
+    onPlayerReconnected: () => {
+      setToast({
+        visible: true,
+        message: '상대방이 재연결되었습니다!',
+        type: 'success',
+      });
+    },
+  });
 
   useEffect(() => {
     if (!roomId || !user) return;
@@ -89,7 +113,7 @@ export const MultiplayerProvider: React.FC<{
     <MultiplayerContext.Provider
       value={{
         isMultiplayer: !!roomId,
-        roomId,
+        roomId: roomId || null,
         opponentScore,
         myScore,
         updateMyScore,
@@ -97,6 +121,12 @@ export const MultiplayerProvider: React.FC<{
       }}
     >
       {children}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ visible: false, message: '', type: 'info' })}
+      />
     </MultiplayerContext.Provider>
   );
 };
@@ -118,8 +148,8 @@ export const useMultiplayer = () => {
       roomId: null,
       opponentScore: 0,
       myScore: 0,
-      updateMyScore: async () => {},
-      finishGame: async () => {},
+      updateMyScore: async () => { },
+      finishGame: async () => { },
     };
   }
 

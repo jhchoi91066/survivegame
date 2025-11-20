@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
+import { Play, RotateCcw, ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { hapticPatterns } from '../../utils/haptics';
 
@@ -71,23 +72,32 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
             style={[styles.resumeButton, { backgroundColor: theme.colors.success }]}
             onPress={handleResume}
           >
-            <Text style={styles.resumeButtonText}>계속하기 ▶️</Text>
+            <View style={styles.buttonContent}>
+              <Text style={styles.resumeButtonText}>계속하기</Text>
+              <Play size={20} color="#fff" style={{ marginLeft: 8 }} />
+            </View>
           </Pressable>
 
           <Pressable
             style={[styles.restartButton, { backgroundColor: theme.colors.primary }]}
             onPress={handleRestart}
           >
-            <Text style={styles.restartButtonText}>다시 시작 🔄</Text>
+            <View style={styles.buttonContent}>
+              <Text style={styles.restartButtonText}>다시 시작</Text>
+              <RotateCcw size={18} color="#fff" style={{ marginLeft: 8 }} />
+            </View>
           </Pressable>
 
           <Pressable
             style={[styles.quitButton, { backgroundColor: theme.colors.surfaceSecondary }]}
             onPress={handleQuit}
           >
-            <Text style={[styles.quitButtonText, { color: theme.colors.text }]}>
-              메뉴로 ←
-            </Text>
+            <View style={styles.buttonContent}>
+              <Text style={[styles.quitButtonText, { color: theme.colors.text }]}>
+                메뉴로
+              </Text>
+              <ArrowLeft size={18} color={theme.colors.text} style={{ marginLeft: 8 }} />
+            </View>
           </Pressable>
         </Animated.View>
       </Animated.View>
@@ -145,6 +155,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   resumeButtonText: {
     fontSize: 18,

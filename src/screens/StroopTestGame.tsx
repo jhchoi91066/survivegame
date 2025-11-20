@@ -2,6 +2,18 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, Platform } from 'react-native';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  ArrowLeft,
+  Palette,
+  Play,
+  RotateCcw,
+  Menu,
+  Heart,
+  Timer,
+  Award,
+  Trophy,
+  Target
+} from 'lucide-react-native';
 import { RootStackParamList } from '../../App';
 import { useStroopStore } from '../game/stroop/store';
 import { hapticPatterns } from '../utils/haptics';
@@ -44,6 +56,14 @@ const StroopTestGameContent: React.FC = () => {
   const [isNewRecord, setIsNewRecord] = useState(false);
   const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const isMounted = React.useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // 화면이 포커스될 때마다 게임 상태 리셋
   useFocusEffect(
@@ -83,6 +103,8 @@ const StroopTestGameContent: React.FC = () => {
     }
 
     const oldRecord = await loadGameRecord('stroop');
+    if (!isMounted.current) return;
+
     if (!oldRecord || !oldRecord.highScore || score > oldRecord.highScore) {
       setIsNewRecord(true);
     }
@@ -106,6 +128,8 @@ const StroopTestGameContent: React.FC = () => {
     }
 
     const newAchievements = await updateStatsOnGamePlayed('stroop', score, playTime, 'normal');
+    if (!isMounted.current) return;
+
     if (newAchievements.length > 0) {
       setUnlockedAchievements(newAchievements);
       setShowAchievementModal(true);
@@ -151,32 +175,49 @@ const StroopTestGameContent: React.FC = () => {
     <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
-          <Pressable onPress={handleBackToMenu} style={styles.backButton}><Text style={styles.backButtonText}>← 메뉴</Text></Pressable>
-          <Text style={styles.title}>🎨 Stroop Test</Text>
-          <View style={{ width: 60 }} />
+          <Pressable onPress={handleBackToMenu} style={styles.backButton}>
+            <ArrowLeft size={24} color={theme.colors.textSecondary} />
+          </Pressable>
+          <View style={styles.titleContainer}>
+            <Palette size={24} color={theme.colors.text} style={{ marginRight: 8 }} />
+            <Text style={styles.title}>Stroop Test</Text>
+          </View>
+          <View style={{ width: 40 }} />
         </View>
 
         {gameStatus === 'ready' && (
           <View style={styles.startContainer}>
-            <Text style={styles.startEmoji}>🎨</Text>
+            <Palette size={80} color={theme.colors.primary} style={{ marginBottom: 24 }} />
             <Text style={styles.startTitle}>Stroop Test</Text>
             <Text style={styles.startDescription}>글자의 의미가 아닌, 글자의 색깔을 맞추세요!{`\n`}3번 틀리면 게임이 종료됩니다.</Text>
-            <Pressable style={styles.startButton} onPress={handleStart}><Text style={styles.startButtonText}>시작하기</Text></Pressable>
+            <Pressable style={styles.startButton} onPress={handleStart}>
+              <Play size={24} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.startButtonText}>시작하기</Text>
+            </Pressable>
           </View>
         )}
 
         {gameStatus === 'playing' && currentProblem && (
           <>
             <View style={styles.stats}>
-              <View style={styles.statItem}><Text style={styles.statLabel}>점수</Text><Text style={styles.statValue}>{score}</Text></View>
-              <View style={styles.statItem}><Text style={styles.statLabel}>시간</Text><Text style={[styles.statValue, { color: timeRemaining <= 5 ? theme.colors.error : theme.colors.text }]}>{timeRemaining}</Text></View>
+              <View style={styles.statItem}>
+                <Award size={20} color={theme.colors.textSecondary} style={{ marginBottom: 4 }} />
+                <Text style={styles.statValue}>{score}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Timer size={20} color={theme.colors.textSecondary} style={{ marginBottom: 4 }} />
+                <Text style={[styles.statValue, { color: timeRemaining <= 5 ? theme.colors.error : theme.colors.text }]}>{timeRemaining}</Text>
+              </View>
               {isMultiplayer ? (
                 <View style={styles.statItem} accessible={true} accessibilityRole="text" accessibilityLabel={`상대방 점수: ${opponentScore}점`}>
-                  <Text style={styles.statLabel}>상대 점수</Text>
+                  <Trophy size={20} color={theme.colors.warning} style={{ marginBottom: 4 }} />
                   <Text style={styles.statValue}>{opponentScore}</Text>
                 </View>
               ) : (
-                <View style={styles.statItem}><Text style={styles.statLabel}>생명</Text><Text style={styles.statValue}>{'❤️'.repeat(lives)}</Text></View>
+                <View style={styles.statItem}>
+                  <Heart size={20} color={theme.colors.error} style={{ marginBottom: 4 }} />
+                  <Text style={styles.statValue}>{lives}</Text>
+                </View>
               )}
             </View>
             <View style={styles.questionContainer}><Text style={[styles.question, { color: currentProblem.color }]}>{currentProblem.text}</Text></View>
@@ -191,12 +232,23 @@ const StroopTestGameContent: React.FC = () => {
         <Modal visible={gameStatus === 'finished'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.victoryEmoji}>🎯</Text>
+              <Target size={64} color={theme.colors.primary} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>게임 종료!</Text>
-              {isNewRecord && <Text style={styles.newRecord}>🏆 신기록 달성!</Text>}
+              {isNewRecord && (
+                <View style={styles.newRecordContainer}>
+                  <Trophy size={24} color={theme.colors.warning} style={{ marginRight: 8 }} />
+                  <Text style={styles.newRecord}>신기록 달성!</Text>
+                </View>
+              )}
               <Text style={styles.finalScore}>최종 점수: {score}</Text>
-              <Pressable style={styles.nextButton} onPress={handleRestart}><Text style={styles.nextButtonText}>다시 하기</Text></Pressable>
-              <Pressable style={styles.menuButton} onPress={handleBackToMenu}><Text style={styles.menuButtonText}>메뉴로</Text></Pressable>
+              <Pressable style={styles.nextButton} onPress={handleRestart}>
+                <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.nextButtonText}>다시 하기</Text>
+              </Pressable>
+              <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+                <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
+                <Text style={styles.menuButtonText}>메뉴로</Text>
+              </Pressable>
             </View>
           </View>
         </Modal>
@@ -211,17 +263,18 @@ const StroopTestGameContent: React.FC = () => {
   );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   backButton: { padding: 8 },
   backButtonText: { color: theme.colors.textSecondary, fontSize: 16 },
+  titleContainer: { flexDirection: 'row', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text },
   startContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   startEmoji: { fontSize: 80, marginBottom: 24 },
   startTitle: { fontSize: 36, fontWeight: 'bold', color: theme.colors.text, marginBottom: 16 },
   startDescription: { fontSize: 16, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 32, lineHeight: 24 },
-  startButton: { backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 48, borderRadius: 12 },
+  startButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 48, borderRadius: 12 },
   startButtonText: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
   stats: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, backgroundColor: theme.colors.surface, marginHorizontal: 16, borderRadius: 12, marginBottom: 16 },
   statItem: { alignItems: 'center', minWidth: 60 },
@@ -237,10 +290,11 @@ const getStyles = (theme) => StyleSheet.create({
   modalTitle: { fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginBottom: 16 },
   victoryEmoji: { fontSize: 64, marginBottom: 16 },
   finalScore: { fontSize: 24, color: theme.colors.success, marginBottom: 24, fontWeight: 'bold' },
-  newRecord: { fontSize: 20, fontWeight: 'bold', color: theme.colors.primary, marginBottom: 16 },
-  nextButton: { width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, borderRadius: 12, marginBottom: 8, alignItems: 'center' },
+  newRecordContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  newRecord: { fontSize: 20, fontWeight: 'bold', color: theme.colors.primary },
+  nextButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, borderRadius: 12, marginBottom: 8, alignItems: 'center' },
   nextButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  menuButton: { width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+  menuButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: theme.colors.surfaceSecondary, paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
   menuButtonText: { fontSize: 16, fontWeight: '600', color: theme.colors.text },
 });
 
