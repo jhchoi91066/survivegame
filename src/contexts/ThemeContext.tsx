@@ -120,8 +120,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = '@brain_games_theme';
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark');
-  const [theme, setTheme] = useState<Theme>(darkTheme);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('light');
+  const [theme, setTheme] = useState<Theme>(lightTheme);
 
   useEffect(() => {
     loadTheme();

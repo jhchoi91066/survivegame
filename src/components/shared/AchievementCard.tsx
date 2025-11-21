@@ -13,7 +13,7 @@ interface AchievementCardProps {
 }
 
 const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, progress }) => {
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const isLocked = !progress.unlocked && achievement.isHidden;
   const styles = getStyles(theme);
 
@@ -48,13 +48,14 @@ const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, progress
       <GlassView
         style={styles.glass}
         intensity={progress.unlocked ? 30 : 15}
-        tint={progress.unlocked ? 'light' : 'dark'}
+        tint={themeMode === 'dark' ? (progress.unlocked ? 'light' : 'dark') : (progress.unlocked ? 'dark' : 'light')}
       >
         {/* Header / Icon */}
         <View style={styles.header}>
           <View style={[
             styles.iconContainer,
-            progress.unlocked ? styles.iconUnlocked : styles.iconLocked
+            progress.unlocked ? styles.iconUnlocked : styles.iconLocked,
+            { borderColor: theme.colors.border }
           ]}>
             {isLocked ? (
               <Lock size={24} color={theme.colors.textTertiary} />
@@ -65,7 +66,7 @@ const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, progress
           <View style={styles.headerText}>
             <Text style={[
               styles.title,
-              progress.unlocked && styles.titleUnlocked
+              progress.unlocked && { color: theme.colors.text }
             ]}>
               {isLocked ? '???' : achievement.name}
             </Text>
@@ -94,7 +95,7 @@ const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, progress
         {/* Progress Bar */}
         {!progress.unlocked && !isLocked && (
           <View style={styles.progressContainer}>
-            <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarBg, { backgroundColor: theme.colors.border }]}>
               <LinearGradient
                 colors={theme.gradients.primary}
                 start={{ x: 0, y: 0 }}

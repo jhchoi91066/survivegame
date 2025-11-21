@@ -50,7 +50,7 @@ const SpatialMemoryGame: React.FC = () => {
 
 const SpatialMemoryGameContent: React.FC = () => {
   const navigation = useNavigation<SpatialMemoryGameNavigationProp>();
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const { user } = useAuth();
   const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
@@ -218,7 +218,7 @@ const SpatialMemoryGameContent: React.FC = () => {
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
           <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-            <GlassView style={styles.iconButtonGlass} intensity={20}>
+            <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <ArrowLeft size={24} color={theme.colors.textSecondary} />
             </GlassView>
           </Pressable>
@@ -227,13 +227,13 @@ const SpatialMemoryGameContent: React.FC = () => {
             <Text style={styles.title}>Spatial Memory</Text>
           </View>
           <Pressable onPress={handleRestart} style={styles.restartButton}>
-            <GlassView style={styles.iconButtonGlass} intensity={20}>
+            <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <RotateCcw size={24} color={theme.colors.text} />
             </GlassView>
           </Pressable>
         </View>
 
-        <GlassView style={styles.stats} intensity={20}>
+        <GlassView style={styles.stats} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
           <View style={styles.statItem}>
             <Layers size={20} color={theme.colors.textSecondary} style={{ marginBottom: 4 }} />
             <Text style={styles.statValue}>{currentLevel}</Text>
@@ -264,24 +264,24 @@ const SpatialMemoryGameContent: React.FC = () => {
 
         <Modal visible={showDifficultyModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint="dark">
+            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <Grid3x3 size={48} color={theme.colors.primary} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>난이도 선택</Text>
               <Text style={styles.modalDescription}>깜빡이는 타일의 순서를 기억하세요!{`\n`}레벨이 올라갈수록 더 많은 타일이 깜빡입니다.</Text>
 
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
-                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'easy' && { color: '#fff' }]}>쉬움 (3×3)</Text>
-                <Text style={[styles.difficultySubText, selectedDifficulty === 'easy' && { color: 'rgba(255,255,255,0.8)' }]}>레벨 3부터 시작 · 느린 속도</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
+                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'easy' && { color: '#fff' }, selectedDifficulty !== 'easy' && { color: theme.colors.text }]}>쉬움 (3×3)</Text>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'easy' && { color: 'rgba(255,255,255,0.8)' }, selectedDifficulty !== 'easy' && { color: theme.colors.textSecondary }]}>레벨 3부터 시작 · 느린 속도</Text>
               </Pressable>
 
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'medium' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('medium'); hapticPatterns.buttonPress(); }}>
-                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'medium' && { color: '#fff' }]}>보통 (4×4)</Text>
-                <Text style={[styles.difficultySubText, selectedDifficulty === 'medium' && { color: 'rgba(255,255,255,0.8)' }]}>레벨 3부터 시작 · 보통 속도</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'medium' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('medium'); hapticPatterns.buttonPress(); }}>
+                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'medium' && { color: '#fff' }, selectedDifficulty !== 'medium' && { color: theme.colors.text }]}>보통 (4×4)</Text>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'medium' && { color: 'rgba(255,255,255,0.8)' }, selectedDifficulty !== 'medium' && { color: theme.colors.textSecondary }]}>레벨 3부터 시작 · 보통 속도</Text>
               </Pressable>
 
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
-                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'hard' && { color: '#fff' }]}>어려움 (5×5)</Text>
-                <Text style={[styles.difficultySubText, selectedDifficulty === 'hard' && { color: 'rgba(255,255,255,0.8)' }]}>레벨 4부터 시작 · 빠른 속도</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
+                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'hard' && { color: '#fff' }, selectedDifficulty !== 'hard' && { color: theme.colors.text }]}>어려움 (5×5)</Text>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'hard' && { color: 'rgba(255,255,255,0.8)' }, selectedDifficulty !== 'hard' && { color: theme.colors.textSecondary }]}>레벨 4부터 시작 · 빠른 속도</Text>
               </Pressable>
 
               <Pressable style={styles.startButton} onPress={handleStartGame}>
@@ -294,7 +294,7 @@ const SpatialMemoryGameContent: React.FC = () => {
 
         <Modal visible={gameStatus === 'gameover'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint="dark">
+            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <Brain size={64} color={theme.colors.primary} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>게임 오버!</Text>
               {isNewRecord && (
@@ -309,7 +309,7 @@ const SpatialMemoryGameContent: React.FC = () => {
                 <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={styles.startButtonText}>다시 하기</Text>
               </Pressable>
-              <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+              <Pressable style={[styles.menuButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={handleBackToMenu}>
                 <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.menuButtonText}>메뉴로</Text>
               </Pressable>

@@ -222,7 +222,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-            <GlassView style={styles.backButtonGlass} intensity={20}>
+            <GlassView style={styles.backButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <ArrowLeft size={24} color={theme.colors.text} />
             </GlassView>
           </Pressable>
@@ -232,7 +232,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Appearance Settings */}
-          <GlassView style={styles.section} intensity={20}>
+          <GlassView style={styles.section} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
             <View style={styles.sectionHeader}>
               {themeMode === 'dark' ? <Moon size={20} color={theme.colors.primary} /> : <Sun size={20} color={theme.colors.primary} />}
               <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>외관</Text>
@@ -255,7 +255,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
           </GlassView>
 
           {/* Sound Settings */}
-          <GlassView style={styles.section} intensity={20}>
+          <GlassView style={styles.section} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
             <View style={styles.sectionHeader}>
               {soundEnabled ? <Volume2 size={20} color={theme.colors.primary} /> : <VolumeX size={20} color={theme.colors.primary} />}
               <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>사운드</Text>
@@ -292,20 +292,20 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
           </GlassView>
 
           {/* Game Settings */}
-          <GlassView style={styles.section} intensity={20}>
+          <GlassView style={styles.section} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
             <View style={styles.sectionHeader}>
               <Gamepad2 size={20} color={theme.colors.primary} />
               <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>게임</Text>
             </View>
 
             <Pressable style={styles.button} onPress={handleResetTutorial}>
-              <GlassView style={styles.buttonGlass} intensity={30}>
+              <GlassView style={styles.buttonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <Text style={[styles.buttonText, { color: theme.colors.text }]}>튜토리얼 다시 보기</Text>
               </GlassView>
             </Pressable>
 
             <Pressable style={styles.button} onPress={handleResetProgress}>
-              <GlassView style={styles.buttonGlass} intensity={30}>
+              <GlassView style={styles.buttonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <Text style={[styles.buttonText, { color: theme.colors.text }]}>진행도 초기화</Text>
               </GlassView>
             </Pressable>
@@ -313,7 +313,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
           {/* Online Settings */}
           {user && (
-            <GlassView style={styles.section} intensity={20}>
+            <GlassView style={styles.section} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <View style={styles.sectionHeader}>
                 <Globe size={20} color={theme.colors.primary} />
                 <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>온라인 설정</Text>
@@ -365,14 +365,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
           {/* Account Management */}
           {user && (
-            <GlassView style={styles.section} intensity={20}>
+            <GlassView style={styles.section} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <View style={styles.sectionHeader}>
                 <User size={20} color={theme.colors.primary} />
                 <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>계정 관리</Text>
               </View>
 
               <Pressable style={styles.button} onPress={handleDownloadData}>
-                <GlassView style={styles.buttonGlass} intensity={30}>
+                <GlassView style={styles.buttonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <Download size={18} color={theme.colors.primary} />
                     <Text style={[styles.buttonText, { color: theme.colors.text }]}>
@@ -387,7 +387,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
               </Text>
 
               <Pressable style={styles.button} onPress={handleDeleteAccount}>
-                <GlassView style={[styles.buttonGlass, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]} intensity={30}>
+                <GlassView style={[styles.buttonGlass, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <Trash2 size={18} color="#ef4444" />
                     <Text style={[styles.buttonText, { color: '#ef4444' }]}>
@@ -404,7 +404,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
           )}
 
           {/* About */}
-          <GlassView style={styles.section} intensity={20}>
+          <GlassView style={styles.section} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
             <View style={styles.sectionHeader}>
               <Info size={20} color={theme.colors.primary} />
               <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>정보</Text>

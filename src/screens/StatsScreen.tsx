@@ -154,7 +154,7 @@ interface GameStatCardProps {
 }
 
 const GameStatCard: React.FC<GameStatCardProps> = ({ Icon, title, stats, delay, gradientColors }) => {
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const scale = useSharedValue(0);
   const styles = getStyles(theme);
 
@@ -166,10 +166,14 @@ const GameStatCard: React.FC<GameStatCardProps> = ({ Icon, title, stats, delay, 
 
   return (
     <Animated.View style={[styles.gameCardWrapper, animatedStyle]}>
-      <GlassView style={styles.gameCardGlass} intensity={30}>
-        <View style={styles.gameCardHeader}>
+      <GlassView
+        style={styles.gameCardGlass}
+        intensity={30}
+        tint={themeMode === 'dark' ? 'dark' : 'light'}
+      >
+        <View style={[styles.gameCardHeader, { borderBottomColor: theme.colors.border }]}>
           <View style={[styles.iconContainer, { backgroundColor: gradientColors[0] + '40', borderColor: gradientColors[0] + '60' }]}>
-            <Icon size={24} color="#fff" />
+            <Icon size={24} color={themeMode === 'dark' ? '#fff' : theme.colors.primary} />
           </View>
           <Text style={styles.gameTitle}>{title}</Text>
         </View>
@@ -205,7 +209,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   placeholder: { width: 44 },
   gameCardWrapper: { marginBottom: 16, borderRadius: 20, overflow: 'hidden' },
   gameCardGlass: { padding: 20, borderRadius: 20 },
-  gameCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
+  gameCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1 },
   iconContainer: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1 },
   gameTitle: { fontSize: 20, fontWeight: '800', color: theme.colors.text },
   statsContainer: { gap: 12 },

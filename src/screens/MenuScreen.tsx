@@ -52,7 +52,7 @@ const tutorialSteps = [
 ];
 
 const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const { user } = useAuth();
   const [gameInfos, setGameInfos] = useState<GameInfo[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -156,19 +156,19 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
             </View>
             <View style={styles.headerButtons}>
               <Pressable style={styles.iconButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate(user ? 'Profile' : 'Login'); }}>
-                <GlassView style={styles.iconButtonGlass} intensity={20}>
+                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                   <UserCircle size={24} color={theme.colors.text} />
                 </GlassView>
               </Pressable>
               {user && (
                 <Pressable style={styles.iconButton} onPress={handleManualSync} disabled={isSyncing}>
-                  <GlassView style={styles.iconButtonGlass} intensity={20}>
+                  <GlassView style={styles.gameCardGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                     <RefreshCw size={20} color={theme.colors.text} style={isSyncing ? { opacity: 0.5 } : {}} />
                   </GlassView>
                 </Pressable>
               )}
               <Pressable style={styles.iconButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate('Settings'); }}>
-                <GlassView style={styles.iconButtonGlass} intensity={20}>
+                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                   <Settings size={24} color={theme.colors.text} />
                 </GlassView>
               </Pressable>
@@ -183,31 +183,31 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
 
           <View style={styles.bottomButtonsGrid}>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Stats'); }}>
-              <GlassView style={styles.bottomButtonGlass} intensity={30}>
+              <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <BarChart3 size={24} color={theme.colors.text} />
                 <Text style={styles.bottomButtonText}>통계</Text>
               </GlassView>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Leaderboard'); }}>
-              <GlassView style={styles.bottomButtonGlass} intensity={30}>
+              <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <Trophy size={24} color={theme.colors.warning} />
                 <Text style={styles.bottomButtonText}>리더보드</Text>
               </GlassView>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Friends'); }}>
-              <GlassView style={styles.bottomButtonGlass} intensity={30}>
+              <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <Users size={24} color={theme.colors.success} />
                 <Text style={styles.bottomButtonText}>친구</Text>
               </GlassView>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); user ? navigation.navigate('MultiplayerLobby') : navigation.navigate('Login'); }}>
-              <GlassView style={styles.bottomButtonGlass} intensity={30}>
+              <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <Swords size={24} color={theme.colors.error} />
                 <Text style={styles.bottomButtonText}>대전</Text>
               </GlassView>
             </Pressable>
             <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Achievements'); }}>
-              <GlassView style={styles.bottomButtonGlass} intensity={30}>
+              <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <Medal size={24} color={theme.colors.primary} />
                 <Text style={styles.bottomButtonText}>업적</Text>
               </GlassView>
@@ -225,7 +225,7 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
 interface GameCardProps { game: any; onPress: () => void; gradientColors: [string, string]; index: number; }
 
 const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, index }) => {
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
   const Icon = game.icon;
@@ -241,7 +241,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, inde
   return (
     <Animated.View style={[styles.gameCardWrapper, animatedStyle]}>
       <Pressable style={({ pressed }) => [styles.gameCard, pressed && styles.gameCardPressed]} onPress={onPress}>
-        <GlassView style={styles.gameCardGlass} intensity={40} tint="dark">
+        <GlassView style={styles.gameCardGlass} intensity={40} tint={themeMode === 'dark' ? 'dark' : 'light'}>
           <LinearGradient
             colors={[gradientColors[0] + '80', gradientColors[1] + '40']} // Semi-transparent gradient
             style={StyleSheet.absoluteFill}

@@ -8,6 +8,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { updateMergePuzzleRecord } from '../utils/statsManager';
 import { incrementGameCount } from '../utils/reviewManager';
+import { useTheme } from '../contexts/ThemeContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GlassView } from '../components/shared/GlassView';
+import { ArrowLeft, RotateCcw, Trophy, AlertCircle } from 'lucide-react-native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'MergePuzzleGame'>;
 
@@ -15,6 +19,7 @@ const MergePuzzleGame: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { tiles, moves, maxMoves, gameStatus, targetNumber, initializeGame, selectTile, resetGame } =
     useMergePuzzleStore();
+  const { theme, themeMode } = useTheme();
 
   const [gameStartTime, setGameStartTime] = React.useState<number>(0);
 
@@ -88,46 +93,55 @@ const MergePuzzleGame: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={themeMode === 'dark' ? ['#0f172a', '#1e293b'] : ['#f0f9ff', '#e0f2fe']}
+        style={StyleSheet.absoluteFill}
+      />
       {/* 헤더 */}
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={handleBackToMenu}>
-          <Text style={styles.backButtonText}>← 메뉴</Text>
+          <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </GlassView>
         </Pressable>
-        <Text style={styles.title}>Merge Puzzle</Text>
+        <Text style={[styles.title, { color: theme.colors.text }]}>Merge Puzzle</Text>
       </View>
 
       {/* 게임 정보 */}
       <View style={styles.infoContainer}>
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>목표</Text>
-          <Text style={styles.infoValue}>{targetNumber}</Text>
-        </View>
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>이동</Text>
-          <Text style={styles.infoValue}>
+        <GlassView style={styles.infoBox} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+          <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>목표</Text>
+          <Text style={[styles.infoValue, { color: theme.colors.primary }]}>{targetNumber}</Text>
+        </GlassView>
+        <GlassView style={styles.infoBox} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+          <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>이동</Text>
+          <Text style={[styles.infoValue, { color: theme.colors.primary }]}>
             {moves}/{maxMoves}
           </Text>
-        </View>
+        </GlassView>
       </View>
 
       {/* 설명 */}
-      <Text style={styles.description}>같은 숫자를 선택하여 합치세요!</Text>
+      <Text style={[styles.description, { color: theme.colors.textSecondary }]}>같은 숫자를 선택하여 합치세요!</Text>
 
       {/* 게임 보드 */}
       {renderGrid()}
 
       {/* 재시작 버튼 */}
       <Pressable style={styles.restartButton} onPress={handleRestart}>
-        <Text style={styles.restartButtonText}>🔄 재시작</Text>
+        <GlassView style={styles.restartButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+          <RotateCcw size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
+          <Text style={[styles.restartButtonText, { color: theme.colors.text }]}>재시작</Text>
+        </GlassView>
       </Pressable>
 
       {/* 승리 모달 */}
       <Modal visible={gameStatus === 'won'} transparent animationType="fade">
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalEmoji}>🎉</Text>
-            <Text style={styles.modalTitle}>성공!</Text>
-            <Text style={styles.modalMessage}>
+          <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+            <Trophy size={64} color={theme.colors.warning} style={{ marginBottom: 16 }} />
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>성공!</Text>
+            <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>
               {targetNumber}를 만들었습니다!{'\n'}
               이동 횟수: {moves}회
             </Text>
@@ -135,21 +149,21 @@ const MergePuzzleGame: React.FC = () => {
               <Pressable style={[styles.modalButton, styles.retryButton]} onPress={handleRestart}>
                 <Text style={styles.modalButtonText}>다시 도전</Text>
               </Pressable>
-              <Pressable style={[styles.modalButton, styles.menuButton]} onPress={handleBackToMenu}>
-                <Text style={styles.modalButtonText}>메뉴로</Text>
+              <Pressable style={[styles.modalButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={handleBackToMenu}>
+                <Text style={[styles.modalButtonText, { color: theme.colors.text }]}>메뉴로</Text>
               </Pressable>
             </View>
-          </View>
+          </GlassView>
         </View>
       </Modal>
 
       {/* 패배 모달 */}
       <Modal visible={gameStatus === 'lost'} transparent animationType="fade">
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalEmoji}>😢</Text>
-            <Text style={styles.modalTitle}>실패!</Text>
-            <Text style={styles.modalMessage}>
+          <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+            <AlertCircle size={64} color={theme.colors.error} style={{ marginBottom: 16 }} />
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>실패!</Text>
+            <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>
               더 이상 합칠 수 없습니다.{'\n'}
               이동 횟수: {moves}회
             </Text>
@@ -157,11 +171,11 @@ const MergePuzzleGame: React.FC = () => {
               <Pressable style={[styles.modalButton, styles.retryButton]} onPress={handleRestart}>
                 <Text style={styles.modalButtonText}>다시 도전</Text>
               </Pressable>
-              <Pressable style={[styles.modalButton, styles.menuButton]} onPress={handleBackToMenu}>
-                <Text style={styles.modalButtonText}>메뉴로</Text>
+              <Pressable style={[styles.modalButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={handleBackToMenu}>
+                <Text style={[styles.modalButtonText, { color: theme.colors.text }]}>메뉴로</Text>
               </Pressable>
             </View>
-          </View>
+          </GlassView>
         </View>
       </Modal>
     </View>
@@ -171,7 +185,6 @@ const MergePuzzleGame: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
     paddingTop: 60,
     paddingHorizontal: 20,
   },
@@ -181,12 +194,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   backButton: {
-    padding: 8,
+    marginRight: 16,
   },
-  backButtonText: {
-    color: '#22d3ee',
-    fontSize: 16,
-    fontWeight: '600',
+  iconButtonGlass: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
   title: {
     flex: 1,
@@ -194,7 +210,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
-    marginRight: 60,
+    marginRight: 56, // Balance back button width
   },
   infoContainer: {
     flexDirection: 'row',
@@ -203,11 +219,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   infoBox: {
-    backgroundColor: '#1e293b',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
+    minWidth: 100,
+    overflow: 'hidden',
   },
   infoLabel: {
     fontSize: 12,
@@ -215,9 +232,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   infoValue: {
-    fontSize: 20,
     fontWeight: 'bold',
-    color: '#22d3ee',
   },
   description: {
     fontSize: 14,
@@ -227,9 +242,8 @@ const styles = StyleSheet.create({
   },
   gridContainer: {
     alignSelf: 'center',
-    backgroundColor: '#1e293b',
-    padding: 8,
     borderRadius: 12,
+    overflow: 'hidden', // Ensure glass effect stays within bounds if needed, though Grid is usually transparent
   },
   row: {
     flexDirection: 'row',
@@ -249,11 +263,15 @@ const styles = StyleSheet.create({
   },
   restartButton: {
     marginTop: 24,
-    backgroundColor: '#22d3ee',
+    alignSelf: 'center',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  restartButtonGlass: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 12,
-    alignSelf: 'center',
   },
   restartButtonText: {
     fontSize: 16,
@@ -267,12 +285,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1e293b',
-    borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
     width: '80%',
     maxWidth: 400,
+    overflow: 'hidden',
   },
   modalEmoji: {
     fontSize: 64,
@@ -305,7 +320,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#22d3ee',
   },
   menuButton: {
-    backgroundColor: '#475569',
+    // backgroundColor: '#475569', // Handled dynamically
   },
   modalButtonText: {
     fontSize: 16,

@@ -17,6 +17,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '../contexts/ThemeContext';
+import { GlassView } from '../components/shared/GlassView';
 
 type FriendComparisonScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FriendComparison'>;
 type FriendComparisonScreenRouteProp = RouteProp<RootStackParamList, 'FriendComparison'>;
@@ -48,6 +50,7 @@ const { width } = Dimensions.get('window');
 
 const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { theme, themeMode } = useTheme();
   const { friendId, friendUsername } = route.params;
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ComparisonData | null>(null);
@@ -180,8 +183,8 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
     return (
       <View key={gameType} style={styles.gameSection}>
         <View style={styles.gameSectionHeader}>
-          <Text style={styles.gameSectionEmoji}>{emoji}</Text>
-          <Text style={styles.gameSectionTitle}>{gameName}</Text>
+          <Text style={styles.gameSectionEmoji} accessibilityElementsHidden={true}>{emoji}</Text>
+          <Text style={[styles.gameSectionTitle, { color: theme.colors.text }]}>{gameName}</Text>
         </View>
 
         {difficulties.map(difficulty => {
@@ -190,18 +193,27 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
           const winner = getWinner(myRecord, friendRecord, gameType);
 
           return (
-            <View key={`${gameType}-${difficulty}`} style={styles.comparisonCard}>
+            <GlassView
+              key={`${gameType}-${difficulty}`}
+              style={styles.comparisonCard}
+              intensity={20}
+              tint={themeMode === 'dark' ? 'dark' : 'light'}
+            >
               {difficulties.length > 1 && (
-                <Text style={styles.difficultyLabel}>
+                <Text style={[styles.difficultyLabel, { color: theme.colors.primary }]}>
                   {difficulty === 'easy' ? 'Easy' : difficulty === 'medium' ? 'Medium' : difficulty === 'hard' ? 'Hard' : 'Normal'}
                 </Text>
               )}
 
               <View style={styles.recordsRow}>
                 {/* My Record */}
-                <View style={[styles.recordBox, winner === 'me' && styles.recordBoxWinner]}>
-                  <Text style={styles.recordLabel}>나</Text>
-                  <Text style={[styles.recordValue, winner === 'me' && styles.recordValueWinner]}>
+                <View style={[
+                  styles.recordBox,
+                  winner === 'me' && styles.recordBoxWinner,
+                  { backgroundColor: themeMode === 'dark' ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.5)', borderColor: theme.colors.border }
+                ]}>
+                  <Text style={[styles.recordLabel, { color: theme.colors.textSecondary }]}>나</Text>
+                  <Text style={[styles.recordValue, winner === 'me' && styles.recordValueWinner, { color: theme.colors.text }]}>
                     {formatScore(myRecord, gameType)}
                   </Text>
                   {winner === 'me' && <Text style={styles.winnerEmoji}>🏆</Text>}
@@ -209,19 +221,23 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
 
                 {/* VS */}
                 <View style={styles.vsContainer}>
-                  <Text style={styles.vsText}>VS</Text>
+                  <Text style={[styles.vsText, { color: theme.colors.textTertiary }]}>VS</Text>
                 </View>
 
                 {/* Friend's Record */}
-                <View style={[styles.recordBox, winner === 'friend' && styles.recordBoxWinner]}>
-                  <Text style={styles.recordLabel}>{data?.friendUsername}</Text>
-                  <Text style={[styles.recordValue, winner === 'friend' && styles.recordValueWinner]}>
+                <View style={[
+                  styles.recordBox,
+                  winner === 'friend' && styles.recordBoxWinner,
+                  { backgroundColor: themeMode === 'dark' ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.5)', borderColor: theme.colors.border }
+                ]}>
+                  <Text style={[styles.recordLabel, { color: theme.colors.textSecondary }]}>{data?.friendUsername}</Text>
+                  <Text style={[styles.recordValue, winner === 'friend' && styles.recordValueWinner, { color: theme.colors.text }]}>
                     {formatScore(friendRecord, gameType)}
                   </Text>
                   {winner === 'friend' && <Text style={styles.winnerEmoji}>🏆</Text>}
                 </View>
               </View>
-            </View>
+            </GlassView>
           );
         })}
       </View>
@@ -231,11 +247,14 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
   if (loading) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.gradient} />
+        <LinearGradient
+          colors={themeMode === 'dark' ? ['#0f172a', '#1e293b'] : ['#f0f9ff', '#e0f2fe']}
+          style={styles.gradient}
+        />
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#6366f1" />
-            <Text style={styles.loadingText}>기록 비교 중...</Text>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>기록 비교 중...</Text>
           </View>
         </SafeAreaView>
       </View>
@@ -246,7 +265,10 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.gradient} />
+      <LinearGradient
+        colors={themeMode === 'dark' ? ['#0f172a', '#1e293b'] : ['#f0f9ff', '#e0f2fe']}
+        style={styles.gradient}
+      />
 
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
@@ -261,31 +283,35 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
               pressed && styles.backButtonPressed,
             ]}
           >
-            <Text style={styles.backText}>← 뒤로</Text>
+            <Text style={[styles.backText, { color: theme.colors.primary }]}>← 뒤로</Text>
           </Pressable>
-          <Text style={styles.title}>⚔️ 기록 비교</Text>
-          <Text style={styles.subtitle}>나 vs {data?.friendUsername}</Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>⚔️ 기록 비교</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>나 vs {data?.friendUsername}</Text>
         </View>
 
         {/* Overall Stats */}
         <View style={styles.overallStats}>
           <LinearGradient
-            colors={['rgba(99, 102, 241, 0.2)', 'rgba(139, 92, 246, 0.2)']}
-            style={styles.overallStatsGradient}
+            colors={
+              themeMode === 'dark'
+                ? ['rgba(99, 102, 241, 0.2)', 'rgba(139, 92, 246, 0.2)']
+                : ['rgba(99, 102, 241, 0.1)', 'rgba(139, 92, 246, 0.1)']
+            }
+            style={[styles.overallStatsGradient, { borderColor: theme.colors.primary }]}
           >
             <View style={styles.statColumn}>
-              <Text style={styles.statValue}>{myWins}</Text>
-              <Text style={styles.statLabel}>내 승리</Text>
+              <Text style={[styles.statValue, { color: theme.colors.text }]}>{myWins}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>내 승리</Text>
             </View>
-            <View style={styles.statDivider} />
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.primary }]} />
             <View style={styles.statColumn}>
-              <Text style={styles.statValue}>{ties}</Text>
-              <Text style={styles.statLabel}>무승부</Text>
+              <Text style={[styles.statValue, { color: theme.colors.text }]}>{ties}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>무승부</Text>
             </View>
-            <View style={styles.statDivider} />
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.primary }]} />
             <View style={styles.statColumn}>
-              <Text style={styles.statValue}>{friendWins}</Text>
-              <Text style={styles.statLabel}>{data?.friendUsername} 승리</Text>
+              <Text style={[styles.statValue, { color: theme.colors.text }]}>{friendWins}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>{data?.friendUsername} 승리</Text>
             </View>
           </LinearGradient>
         </View>
@@ -305,7 +331,7 @@ const FriendComparisonScreen: React.FC<FriendComparisonScreenProps> = ({ navigat
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: 'transparent',
   },
   gradient: {
     ...StyleSheet.absoluteFillObject,
@@ -327,14 +353,12 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   backText: {
-    color: '#6366f1',
     fontSize: 16,
     fontWeight: '600',
   },
   title: {
     fontSize: 32,
     fontWeight: '900',
-    color: '#fff',
     marginBottom: 8,
   },
   subtitle: {
@@ -350,40 +374,37 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#94a3b8',
+    fontWeight: '600',
   },
   overallStats: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
+    paddingHorizontal: 20,
+    marginBottom: 24,
   },
   overallStatsGradient: {
     flexDirection: 'row',
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#6366f1',
     borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   statColumn: {
     flex: 1,
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '900',
-    color: '#fff',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#94a3b8',
     fontWeight: '600',
   },
   statDivider: {
     width: 1,
-    backgroundColor: 'rgba(99, 102, 241, 0.5)',
-    marginHorizontal: 12,
+    height: '80%',
+    opacity: 0.2,
   },
   scrollView: {
     flex: 1,
@@ -391,6 +412,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingTop: 0,
+    paddingBottom: 40,
   },
   gameSection: {
     marginBottom: 24,
@@ -407,22 +429,19 @@ const styles = StyleSheet.create({
   gameSectionTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#fff',
   },
   comparisonCard: {
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderWidth: 1,
-    borderColor: '#334155',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
+    overflow: 'hidden',
   },
   difficultyLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#8b5cf6',
-    marginBottom: 12,
-    textAlign: 'center',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   recordsRow: {
     flexDirection: 'row',
@@ -434,9 +453,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
     borderWidth: 1,
-    borderColor: '#334155',
     position: 'relative',
   },
   recordBoxWinner: {
@@ -445,14 +462,12 @@ const styles = StyleSheet.create({
   },
   recordLabel: {
     fontSize: 12,
-    color: '#94a3b8',
     marginBottom: 4,
     fontWeight: '600',
   },
   recordValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#fff',
   },
   recordValueWinner: {
     color: '#fbbf24',
@@ -469,7 +484,7 @@ const styles = StyleSheet.create({
   vsText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#64748b',
+    opacity: 0.5,
   },
 });
 

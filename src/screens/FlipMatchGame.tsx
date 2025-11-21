@@ -52,7 +52,7 @@ const FlipMatchGame: React.FC = () => {
 // Main game component with multiplayer support
 const FlipMatchGameContent: React.FC = () => {
   const navigation = useNavigation<FlipMatchGameNavigationProp>();
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const { user } = useAuth();
   const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
@@ -230,7 +230,7 @@ const FlipMatchGameContent: React.FC = () => {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
             <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-              <GlassView style={styles.iconButtonGlass} intensity={20}>
+              <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <ArrowLeft size={24} color={theme.colors.text} />
               </GlassView>
             </Pressable>
@@ -241,19 +241,19 @@ const FlipMatchGameContent: React.FC = () => {
                 style={styles.pauseButton}
                 disabled={gameStatus !== 'playing'}
               >
-                <GlassView style={styles.iconButtonGlass} intensity={20}>
+                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                   <Pause size={24} color={theme.colors.text} />
                 </GlassView>
               </Pressable>
               <Pressable onPress={handleRestart} style={styles.restartButton}>
-                <GlassView style={styles.iconButtonGlass} intensity={20}>
+                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                   <RotateCcw size={24} color={theme.colors.text} />
                 </GlassView>
               </Pressable>
             </View>
           </View>
 
-          <GlassView style={styles.stats} intensity={20}>
+          <GlassView style={styles.stats} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
             <View style={styles.statItem}>
               <View style={styles.statHeader}>
                 <Timer size={16} color={theme.colors.textSecondary} />
@@ -293,7 +293,7 @@ const FlipMatchGameContent: React.FC = () => {
 
           {gameStatus === 'preview' && (
             <View style={styles.previewOverlay}>
-              <GlassView style={styles.previewGlass} intensity={40}>
+              <GlassView style={styles.previewGlass} intensity={40} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <Text style={styles.previewText}>카드를 기억하세요!</Text>
               </GlassView>
             </View>
@@ -303,17 +303,17 @@ const FlipMatchGameContent: React.FC = () => {
 
         <Modal visible={showDifficultyModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint="dark">
+            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <Grid3X3 size={64} color={theme.colors.primary} style={{ marginBottom: 24 }} />
               <Text style={styles.modalTitle}>난이도 선택</Text>
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
-                <Text style={styles.difficultyButtonText}>쉬움 (4x4)</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
+                <Text style={[styles.difficultyButtonText, { color: theme.colors.text }]}>쉬움 (4x4)</Text>
               </Pressable>
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'medium' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('medium'); hapticPatterns.buttonPress(); }}>
-                <Text style={styles.difficultyButtonText}>보통 (6x4)</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'medium' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('medium'); hapticPatterns.buttonPress(); }}>
+                <Text style={[styles.difficultyButtonText, { color: theme.colors.text }]}>보통 (6x4)</Text>
               </Pressable>
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
-                <Text style={styles.difficultyButtonText}>어려움 (8x4)</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
+                <Text style={[styles.difficultyButtonText, { color: theme.colors.text }]}>어려움 (8x4)</Text>
               </Pressable>
               <Pressable style={styles.startButton} onPress={handleStartGame}>
                 <Play size={24} color="#fff" style={{ marginRight: 8 }} />
@@ -325,7 +325,7 @@ const FlipMatchGameContent: React.FC = () => {
 
         <Modal visible={gameStatus === 'won'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint="dark">
+            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <Trophy size={80} color={theme.colors.warning} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>완료!</Text>
               {isNewRecord && <Text style={styles.newRecord}>🏆 신기록 달성!</Text>}
@@ -335,7 +335,7 @@ const FlipMatchGameContent: React.FC = () => {
                 <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={styles.startButtonText}>다시 하기</Text>
               </Pressable>
-              <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+              <Pressable style={[styles.menuButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={handleBackToMenu}>
                 <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.menuButtonText}>메뉴로</Text>
               </Pressable>
@@ -345,7 +345,7 @@ const FlipMatchGameContent: React.FC = () => {
 
         <Modal visible={gameStatus === 'lost'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint="dark">
+            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <Timer size={80} color={theme.colors.error} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>시간 초과!</Text>
               <Text style={styles.victoryStats}>완성: {matchedPairs}/{totalPairs} 쌍</Text>
@@ -354,7 +354,7 @@ const FlipMatchGameContent: React.FC = () => {
                 <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={styles.startButtonText}>다시 하기</Text>
               </Pressable>
-              <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+              <Pressable style={[styles.menuButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={handleBackToMenu}>
                 <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.menuButtonText}>메뉴로</Text>
               </Pressable>

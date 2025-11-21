@@ -47,7 +47,7 @@ const StroopTestGame: React.FC = () => {
 
 const StroopTestGameContent: React.FC = () => {
   const navigation = useNavigation<StroopGameNavigationProp>();
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const { user } = useAuth();
   const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
@@ -179,7 +179,7 @@ const StroopTestGameContent: React.FC = () => {
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
           <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-            <GlassView style={styles.iconButtonGlass} intensity={20}>
+            <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <ArrowLeft size={24} color={theme.colors.textSecondary} />
             </GlassView>
           </Pressable>
@@ -192,7 +192,7 @@ const StroopTestGameContent: React.FC = () => {
 
         {gameStatus === 'ready' && (
           <View style={styles.startContainer}>
-            <GlassView style={styles.startGlass} intensity={30}>
+            <GlassView style={styles.startGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <Palette size={80} color={theme.colors.primary} style={{ marginBottom: 24 }} />
               <Text style={styles.startTitle}>Stroop Test</Text>
               <Text style={styles.startDescription}>글자의 의미가 아닌, 글자의 색깔을 맞추세요!{`\n`}3번 틀리면 게임이 종료됩니다.</Text>
@@ -206,7 +206,7 @@ const StroopTestGameContent: React.FC = () => {
 
         {gameStatus === 'playing' && currentProblem && (
           <>
-            <GlassView style={styles.stats} intensity={20}>
+            <GlassView style={styles.stats} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <View style={styles.statItem}>
                 <Award size={20} color={theme.colors.textSecondary} style={{ marginBottom: 4 }} />
                 <Text style={styles.statValue}>{score}</Text>
@@ -228,14 +228,14 @@ const StroopTestGameContent: React.FC = () => {
               )}
             </GlassView>
             <View style={styles.questionContainerWrapper}>
-              <GlassView style={styles.questionContainer} intensity={30}>
+              <GlassView style={styles.questionContainer} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <Text style={[styles.question, { color: currentProblem.color }]}>{currentProblem.text}</Text>
               </GlassView>
             </View>
             <View style={styles.optionsContainer}>
               {currentProblem.options.map((option) => (
                 <Pressable key={option} style={styles.optionButton} onPress={() => handleAnswer(option)}>
-                  <GlassView style={styles.optionGlass} intensity={20} tint="light">
+                  <GlassView style={styles.optionGlass} intensity={20} tint={themeMode === 'dark' ? 'light' : 'dark'}>
                     <Text style={styles.optionText}>{option}</Text>
                   </GlassView>
                 </Pressable>
@@ -246,7 +246,7 @@ const StroopTestGameContent: React.FC = () => {
 
         <Modal visible={gameStatus === 'finished'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint="dark">
+            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <Target size={64} color={theme.colors.primary} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>게임 종료!</Text>
               {isNewRecord && (
@@ -260,7 +260,7 @@ const StroopTestGameContent: React.FC = () => {
                 <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={styles.nextButtonText}>다시 하기</Text>
               </Pressable>
-              <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+              <Pressable style={[styles.menuButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={handleBackToMenu}>
                 <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.menuButtonText}>메뉴로</Text>
               </Pressable>

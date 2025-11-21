@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  SafeAreaView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +17,9 @@ import { supabase } from '../lib/supabase';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '../contexts/ThemeContext';
+import { GlassView } from '../components/shared/GlassView';
+import { ArrowLeft, User, Mail, Calendar, Globe, LogOut, Trash2, Edit2, Check, X } from 'lucide-react-native';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
@@ -33,6 +37,7 @@ interface Profile {
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const { user, signOut } = useAuth();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -211,212 +216,232 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
+  const styles = getStyles(theme);
+
   if (loading) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.gradient} />
-        <ActivityIndicator size="large" color="#6366f1" />
+        <LinearGradient colors={theme.gradients.background} style={styles.backgroundGradient} />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.gradient} />
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.backButtonPressed,
-            ]}
-          >
-            <Text style={styles.backText}>← 뒤로</Text>
-          </Pressable>
-          <Text style={styles.title}>내 프로필</Text>
-        </View>
-
-        {/* 아바타 */}
-        <View style={styles.avatarSection}>
-          <LinearGradient
-            colors={['#6366f1', '#8b5cf6']}
-            style={styles.avatar}
-          >
-            <Text style={styles.avatarText}>
-              {username ? username[0].toUpperCase() : '?'}
-            </Text>
-          </LinearGradient>
-        </View>
-
-        {/* 프로필 정보 */}
-        <View style={styles.section}>
-          <Text style={styles.label}>닉네임 *</Text>
-          <TextInput
-            style={[styles.input, !editing && styles.inputDisabled]}
-            value={username}
-            onChangeText={setUsername}
-            placeholder="3-20자 닉네임"
-            placeholderTextColor="#475569"
-            editable={editing}
-            maxLength={20}
-          />
-
-          <Text style={styles.label}>국가 코드 (선택)</Text>
-          <TextInput
-            style={[styles.input, !editing && styles.inputDisabled]}
-            value={countryCode}
-            onChangeText={(text) => setCountryCode(text.toUpperCase())}
-            placeholder="KR, US, JP 등"
-            placeholderTextColor="#475569"
-            editable={editing}
-            maxLength={2}
-            autoCapitalize="characters"
-          />
-
-          <Text style={styles.hint}>
-            국가 코드는 지역별 리더보드에 사용됩니다.
-          </Text>
-        </View>
-
-        {/* 계정 정보 */}
-        {profile && (
-          <View style={styles.section}>
-            <Text style={styles.label}>계정 정보</Text>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>이메일</Text>
-              <Text style={styles.infoValue}>{user?.email || '익명'}</Text>
-            </View>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>가입일</Text>
-              <Text style={styles.infoValue}>
-                {new Date(profile.created_at).toLocaleDateString('ko-KR')}
-              </Text>
-            </View>
+      <LinearGradient colors={theme.gradients.background} style={styles.backgroundGradient} />
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+          {/* 헤더 */}
+          <View style={styles.header}>
+            <Pressable
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <GlassView style={styles.iconButtonGlass} intensity={20}>
+                <ArrowLeft size={24} color={theme.colors.text} />
+              </GlassView>
+            </Pressable>
+            <Text style={styles.title}>내 프로필</Text>
+            <View style={styles.placeholder} />
           </View>
-        )}
 
-        {/* 버튼들 */}
-        <View style={styles.buttons}>
-          {editing ? (
-            <>
-              <Pressable
-                onPress={handleSave}
-                disabled={saving}
-                style={({ pressed }) => [
-                  styles.button,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <LinearGradient
-                  colors={['#6366f1', '#8b5cf6']}
-                  style={styles.buttonGradient}
-                >
-                  {saving ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.buttonText}>저장</Text>
-                  )}
-                </LinearGradient>
-              </Pressable>
+          {/* 아바타 */}
+          <View style={styles.avatarSection}>
+            <LinearGradient
+              colors={theme.gradients.primary}
+              style={styles.avatar}
+            >
+              <Text style={styles.avatarText}>
+                {username ? username[0].toUpperCase() : '?'}
+              </Text>
+            </LinearGradient>
+            <Text style={styles.usernameDisplay}>{username || '사용자'}</Text>
+            <Text style={styles.emailDisplay}>{user?.email || '익명 사용자'}</Text>
+          </View>
 
-              {profile && (
-                <Pressable
-                  onPress={() => {
-                    setUsername(profile.username);
-                    setCountryCode(profile.country_code || '');
-                    setEditing(false);
-                  }}
-                  style={({ pressed }) => [
-                    styles.secondaryButton,
-                    pressed && styles.buttonPressed,
-                  ]}
-                >
-                  <Text style={styles.secondaryButtonText}>취소</Text>
+          {/* 프로필 정보 */}
+          <GlassView style={styles.section} intensity={20}>
+            <View style={styles.sectionHeader}>
+              <User size={20} color={theme.colors.primary} />
+              <Text style={styles.sectionTitle}>프로필 정보</Text>
+              {!editing && (
+                <Pressable onPress={() => setEditing(true)} style={styles.editButton}>
+                  <Edit2 size={16} color={theme.colors.primary} />
                 </Pressable>
               )}
-            </>
-          ) : (
-            <>
-              <Pressable
-                onPress={() => setEditing(true)}
-                style={({ pressed }) => [
-                  styles.button,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <LinearGradient
-                  colors={['#6366f1', '#8b5cf6']}
-                  style={styles.buttonGradient}
-                >
-                  <Text style={styles.buttonText}>프로필 수정</Text>
-                </LinearGradient>
-              </Pressable>
+            </View>
 
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>닉네임</Text>
+              <GlassView style={styles.inputContainer} intensity={10} tint="dark" border={false}>
+                <TextInput
+                  style={[styles.input, !editing && styles.inputDisabled]}
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder="3-20자 닉네임"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  editable={editing}
+                  maxLength={20}
+                />
+              </GlassView>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>국가 코드</Text>
+              <GlassView style={styles.inputContainer} intensity={10} tint="dark" border={false}>
+                <TextInput
+                  style={[styles.input, !editing && styles.inputDisabled]}
+                  value={countryCode}
+                  onChangeText={(text) => setCountryCode(text.toUpperCase())}
+                  placeholder="KR, US, JP 등 (선택)"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  editable={editing}
+                  maxLength={2}
+                  autoCapitalize="characters"
+                />
+              </GlassView>
+              {editing && (
+                <Text style={styles.hint}>
+                  국가 코드는 지역별 리더보드에 사용됩니다.
+                </Text>
+              )}
+            </View>
+
+            {editing && (
+              <View style={styles.editActions}>
+                <Pressable
+                  onPress={() => {
+                    setUsername(profile?.username || '');
+                    setCountryCode(profile?.country_code || '');
+                    setEditing(false);
+                  }}
+                  style={styles.cancelButton}
+                >
+                  <X size={20} color={theme.colors.textSecondary} />
+                </Pressable>
+                <Pressable
+                  onPress={handleSave}
+                  disabled={saving}
+                  style={styles.saveButton}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Check size={20} color="#fff" />
+                  )}
+                </Pressable>
+              </View>
+            )}
+          </GlassView>
+
+          {/* 계정 정보 */}
+          {profile && (
+            <GlassView style={styles.section} intensity={20}>
+              <View style={styles.sectionHeader}>
+                <Mail size={20} color={theme.colors.primary} />
+                <Text style={styles.sectionTitle}>계정 상세</Text>
+              </View>
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>이메일</Text>
+                  <Text style={styles.infoValue}>{user?.email || '익명'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>가입일</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <Calendar size={14} color={theme.colors.textSecondary} style={{ marginRight: 6 }} />
+                    <Text style={styles.infoValue}>
+                      {new Date(profile.created_at).toLocaleDateString('ko-KR')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </GlassView>
+          )}
+
+          {/* 계정 관리 버튼들 */}
+          {!editing && (
+            <View style={styles.buttons}>
               <Pressable
                 onPress={handleSignOut}
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  pressed && styles.buttonPressed,
-                ]}
+                style={styles.actionButton}
               >
-                <Text style={styles.secondaryButtonText}>로그아웃</Text>
+                <GlassView style={styles.actionButtonGlass} intensity={20}>
+                  <LogOut size={20} color={theme.colors.text} />
+                  <Text style={styles.actionButtonText}>로그아웃</Text>
+                </GlassView>
               </Pressable>
 
               <Pressable
                 onPress={handleDeleteAccount}
-                style={({ pressed }) => [
-                  styles.dangerButton,
-                  pressed && styles.buttonPressed,
-                ]}
+                style={styles.actionButton}
               >
-                <Text style={styles.dangerButtonText}>계정 삭제</Text>
+                <GlassView style={[styles.actionButtonGlass, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]} intensity={20}>
+                  <Trash2 size={20} color={theme.colors.error} />
+                  <Text style={[styles.actionButtonText, { color: theme.colors.error }]}>계정 삭제</Text>
+                </GlassView>
               </Pressable>
-            </>
+            </View>
           )}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
   },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
+  backgroundGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  safeArea: {
+    flex: 1,
+    paddingTop: Platform.OS === 'web' ? 40 : 0,
   },
   scrollView: {
     flex: 1,
   },
   content: {
     padding: 20,
-    paddingTop: 60,
+    paddingBottom: 40,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 32,
   },
   backButton: {
-    marginBottom: 16,
-    padding: 8,
-    alignSelf: 'flex-start',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  backButtonPressed: {
-    opacity: 0.6,
-  },
-  backText: {
-    color: '#6366f1',
-    fontSize: 16,
-    fontWeight: '600',
+  iconButtonGlass: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
   },
   title: {
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: '900',
-    color: '#fff',
+    color: theme.colors.text,
+  },
+  placeholder: {
+    width: 44,
   },
   avatarSection: {
     alignItems: 'center',
@@ -428,114 +453,147 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#6366f1',
+    marginBottom: 16,
+    elevation: 8,
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
   avatarText: {
-    fontSize: 48,
+    fontSize: 40,
     fontWeight: '900',
     color: '#fff',
   },
+  usernameDisplay: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  emailDisplay: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+  },
   section: {
-    marginBottom: 32,
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginLeft: 10,
+    flex: 1,
+  },
+  editButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+  },
+  inputGroup: {
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     marginBottom: 8,
-    textTransform: 'uppercase',
+    marginLeft: 4,
+  },
+  inputContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)',
   },
   input: {
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#fff',
-    marginBottom: 16,
+    color: theme.colors.text,
   },
   inputDisabled: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
   hint: {
     fontSize: 12,
-    color: '#64748b',
-    marginTop: -8,
+    color: theme.colors.textTertiary,
+    marginTop: 6,
+    marginLeft: 4,
   },
-  infoCard: {
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 8,
+  },
+  cancelButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: theme.colors.success,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  infoRow: {
+    marginBottom: 8,
+  },
+  infoItem: {
+    marginBottom: 8,
   },
   infoLabel: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: theme.colors.textTertiary,
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
+    color: theme.colors.text,
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: 16,
+    opacity: 0.5,
   },
   buttons: {
     gap: 12,
-    marginBottom: 40,
   },
-  button: {
-    height: 56,
+  actionButton: {
     borderRadius: 16,
     overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
-  },
-  buttonGradient: {
-    flex: 1,
+  actionButtonGlass: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    height: 56,
+    padding: 16,
+    gap: 10,
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#334155',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  secondaryButtonText: {
-    color: '#94a3b8',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  dangerButton: {
-    height: 56,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#dc2626',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dangerButtonText: {
-    color: '#ef4444',
-    fontSize: 18,
-    fontWeight: '700',
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
   },
 });
 

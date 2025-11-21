@@ -33,6 +33,7 @@ import {
   clearReconnectData,
 } from '../utils/reconnection';
 import Toast from '../components/shared/Toast';
+import { GlassView } from '../components/shared/GlassView';
 
 type MultiplayerGameNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -62,7 +63,7 @@ interface GameState {
 const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, route }) => {
   const { roomId, gameType, difficulty } = route.params;
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const [gameState, setGameState] = useState<GameState>({
     status: 'waiting',
     players: [],
@@ -472,7 +473,10 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} style={styles.gradient} />
+      <LinearGradient
+        colors={themeMode === 'dark' ? ['#0f172a', '#1e293b', '#0f172a'] : ['#f0f9ff', '#e0f2fe', '#f0f9ff']}
+        style={styles.gradient}
+      />
 
       <View style={styles.content}>
         {/* Header */}
@@ -487,7 +491,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
           >
             <Text style={styles.leaveText}>← 나가기</Text>
           </Pressable>
-          <Text style={styles.gameTitle} accessibilityRole="header">
+          <Text style={[styles.gameTitle, { color: theme.colors.text }]} accessibilityRole="header">
             <Text accessibilityElementsHidden={true}>{getGameEmoji(gameType)} </Text>
             {getGameName(gameType)}
           </Text>
@@ -498,13 +502,14 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
         {gameState.status === 'waiting' && (
           <View style={styles.waitingContainer}>
             <Text style={styles.waitingEmoji}>⏳</Text>
-            <Text style={styles.waitingTitle}>상대방을 기다리는 중...</Text>
-            <Text style={styles.waitingSubtitle}>곧 게임이 시작됩니다</Text>
+            <Text style={[styles.waitingTitle, { color: theme.colors.text }]}>상대방을 기다리는 중...</Text>
+            <Text style={[styles.waitingSubtitle, { color: theme.colors.textSecondary }]}>곧 게임이 시작됩니다</Text>
             {!opponentReady && waitingTime > 0 && (
               <Text
                 style={[
                   styles.waitingTimer,
                   waitingTime >= 90 && styles.waitingTimerWarning,
+                  { color: theme.colors.textSecondary }
                 ]}
                 accessible={true}
                 accessibilityRole="timer"
@@ -556,17 +561,16 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
                             : '대기 중',
                   }}
                 >
-                  <LinearGradient
-                    colors={
-                      player.id === user?.id ? ['#3b82f6', '#2563eb'] : ['#1e293b', '#0f172a']
-                    }
+                  <GlassView
                     style={styles.playerCardGradient}
+                    intensity={20}
+                    tint={themeMode === 'dark' ? 'dark' : 'light'}
                   >
                     <Text style={styles.playerEmoji} accessibilityElementsHidden={true}>
                       {player.id === user?.id ? '👤' : '🎮'}
                     </Text>
-                    <Text style={styles.playerName}>{player.username}</Text>
-                    <Text style={styles.playerStatus}>
+                    <Text style={[styles.playerName, { color: theme.colors.text }]}>{player.username}</Text>
+                    <Text style={[styles.playerStatus, { color: theme.colors.textSecondary }]}>
                       {player.connection_status === 'disconnected'
                         ? '연결 끊김'
                         : player.id === user?.id
@@ -575,7 +579,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
                             ? '준비됨'
                             : '대기 중'}
                     </Text>
-                  </LinearGradient>
+                  </GlassView>
                 </View>
               ))}
             </View>
@@ -583,12 +587,12 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
             {!opponentReady && (
               <>
                 {/* Helpful tips */}
-                <View style={styles.tipsContainer}>
-                  <Text style={styles.tipsTitle}>💡 게임 팁</Text>
-                  <Text style={styles.tipsText}>
+                <GlassView style={styles.tipsContainer} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+                  <Text style={[styles.tipsTitle, { color: theme.colors.primary }]}>💡 게임 팁</Text>
+                  <Text style={[styles.tipsText, { color: theme.colors.text }]}>
                     {getGameTip(gameType)}
                   </Text>
-                </View>
+                </GlassView>
 
                 <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
 
@@ -620,14 +624,14 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
             <Animated.Text style={[styles.countdownNumber, countdownAnimatedStyle]} accessibilityElementsHidden={true}>
               {countdown > 0 ? countdown : 'GO!'}
             </Animated.Text>
-            <Text style={styles.countdownText}>게임 시작!</Text>
+            <Text style={[styles.countdownText, { color: theme.colors.text }]}>게임 시작!</Text>
           </View>
         )}
 
         {/* Game in progress */}
         {gameState.status === 'playing' && (
           <View style={styles.playingContainer}>
-            <Text style={styles.playingText}>게임 진행 중...</Text>
+            <Text style={[styles.playingText, { color: theme.colors.text }]}>게임 진행 중...</Text>
             <ActivityIndicator size="large" color="#3b82f6" />
           </View>
         )}
@@ -643,50 +647,49 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
               return (
                 <>
                   <Text style={styles.finishedEmoji}>{isWinner ? '🎉' : '😊'}</Text>
-                  <Text style={styles.finishedTitle}>
+                  <Text style={[styles.finishedTitle, { color: theme.colors.text }]}>
                     {isWinner ? '승리!' : '패배'}
                   </Text>
 
                   {isWinner && (
-                    <Text style={styles.winnerSubtitle}>축하합니다! 상대를 이겼습니다!</Text>
+                    <Text style={[styles.winnerSubtitle, { color: theme.colors.textSecondary }]}>축하합니다! 상대를 이겼습니다!</Text>
                   )}
 
                   {/* Winner highlight */}
-                  <View style={styles.winnerCard}>
+                  <GlassView style={styles.winnerCard} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                     <Text style={styles.winnerBadge}>👑 우승자</Text>
-                    <Text style={styles.winnerName}>{winner?.username}</Text>
+                    <Text style={[styles.winnerName, { color: theme.colors.text }]}>{winner?.username}</Text>
                     <Text style={styles.winnerScore}>{winner?.score}점</Text>
-                  </View>
+                  </GlassView>
 
                   {/* Results */}
                   <View style={styles.results}>
-                    <Text style={styles.resultsTitle}>최종 결과</Text>
+                    <Text style={[styles.resultsTitle, { color: theme.colors.text }]}>최종 결과</Text>
                     {sortedPlayers.map((player, index) => (
-                      <View
+                      <GlassView
                         key={player.id}
                         style={[
                           styles.resultCard,
                           index === 0 && styles.resultCardWinner,
                           player.id === user?.id && styles.resultCardYou
                         ]}
-                        accessible={true}
-                        accessibilityRole="summary"
-                        accessibilityLabel={`${index + 1}위: ${player.username}, ${player.score}점`}
+                        intensity={20}
+                        tint={themeMode === 'dark' ? 'dark' : 'light'}
                       >
                         <Text style={[styles.resultRank, index === 0 && styles.resultRankWinner]}>
                           {index === 0 ? '🥇' : '🥈'}
                         </Text>
                         <View style={styles.resultInfo}>
-                          <Text style={[styles.resultName, index === 0 && styles.resultNameWinner]}>
+                          <Text style={[styles.resultName, index === 0 && styles.resultNameWinner, { color: theme.colors.text }]}>
                             {player.username}
                             {player.id === user?.id && ' (나)'}
                           </Text>
-                          <Text style={styles.resultRankText}>#{index + 1}</Text>
+                          <Text style={[styles.resultRankText, { color: theme.colors.textSecondary }]}>#{index + 1}</Text>
                         </View>
-                        <Text style={[styles.resultScore, index === 0 && styles.resultScoreWinner]}>
+                        <Text style={[styles.resultScore, index === 0 && styles.resultScoreWinner, { color: theme.colors.primary }]}>
                           {player.score}점
                         </Text>
-                      </View>
+                      </GlassView>
                     ))}
                   </View>
 

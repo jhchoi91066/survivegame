@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { hapticPatterns } from '../utils/haptics';
 import { useTheme } from '../contexts/ThemeContext';
+import { GlassView } from '../components/shared/GlassView';
 
 type MultiplayerLobbyNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -44,7 +45,7 @@ interface Room {
 
 const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation }) => {
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const [loading, setLoading] = useState(true);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [creating, setCreating] = useState(false);
@@ -227,13 +228,17 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
 
   return (
     <SafeAreaView style={styles.container}>
+      <LinearGradient
+        colors={themeMode === 'dark' ? ['#0f172a', '#1e293b'] : ['#f0f9ff', '#e0f2fe']}
+        style={StyleSheet.absoluteFill}
+      />
       {/* 로딩 오버레이 */}
       {creating && (
         <View style={styles.loadingOverlay}>
-          <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-            <Text style={styles.loadingText}>방을 생성하는 중...</Text>
-          </View>
+          <GlassView style={styles.loadingCard} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.text }]}>방을 생성하는 중...</Text>
+          </GlassView>
         </View>
       )}
 
@@ -252,7 +257,7 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
         >
           <Text style={styles.backButtonText}>← 뒤로</Text>
         </Pressable>
-        <Text style={styles.title} accessibilityRole="header">멀티플레이어</Text>
+        <Text style={[styles.title, { color: theme.colors.text }]} accessibilityRole="header">멀티플레이어</Text>
         <Pressable
           style={styles.refreshButton}
           onPress={loadRooms}
@@ -268,7 +273,7 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
       <ScrollView style={styles.scrollView}>
         {/* 방 만들기 섹션 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>새 방 만들기</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>새 방 만들기</Text>
           <View style={styles.gameGrid}>
             {renderGameTypeButton('flip_match', '🎴', 'Flip & Match', theme.gradients.flipMatch)}
             {renderGameTypeButton(
@@ -284,14 +289,14 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
 
         {/* 대기 중인 방 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>대기 중인 방</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>대기 중인 방</Text>
           {loading ? (
             <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
           ) : rooms.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyEmoji}>🎮</Text>
-              <Text style={styles.emptyText}>대기 중인 방이 없습니다</Text>
-              <Text style={styles.emptySubtext}>새 방을 만들어보세요!</Text>
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>대기 중인 방이 없습니다</Text>
+              <Text style={[styles.emptySubtext, { color: theme.colors.textTertiary }]}>새 방을 만들어보세요!</Text>
             </View>
           ) : (
             rooms.map((room) => (
@@ -304,33 +309,30 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
                 accessibilityLabel={`${getGameName(room.game_type)} 방 참가하기`}
                 accessibilityHint={`방장: ${room.creator_profile.username}, 플레이어 ${room.current_players}명 중 ${room.max_players}명${room.difficulty ? `, 난이도: ${room.difficulty}` : ''}`}
               >
-                <LinearGradient
-                  colors={
-                    theme.mode === 'dark'
-                      ? ['#1e293b', '#0f172a']
-                      : ['#ffffff', '#f1f5f9']
-                  }
+                <GlassView
                   style={styles.roomCardGradient}
+                  intensity={20}
+                  tint={themeMode === 'dark' ? 'dark' : 'light'}
                 >
                   <View style={styles.roomInfo}>
-                    <Text style={styles.roomGame}>
+                    <Text style={[styles.roomGame, { color: theme.colors.text }]}>
                       <Text accessibilityElementsHidden={true}>{getGameEmoji(room.game_type)} </Text>
                       {getGameName(room.game_type)}
                     </Text>
                     {room.difficulty && (
-                      <Text style={styles.roomDifficulty}>{room.difficulty}</Text>
+                      <Text style={[styles.roomDifficulty, { color: theme.colors.textSecondary }]}>{room.difficulty}</Text>
                     )}
-                    <Text style={styles.roomCreator}>
+                    <Text style={[styles.roomCreator, { color: theme.colors.textTertiary }]}>
                       방장: {room.creator_profile.username}
                     </Text>
                   </View>
                   <View style={styles.roomPlayers}>
-                    <Text style={styles.playersText}>
+                    <Text style={[styles.playersText, { color: theme.colors.primary }]}>
                       {room.current_players}/{room.max_players}
                     </Text>
                     <Text style={styles.playersIcon} accessibilityElementsHidden={true}>👥</Text>
                   </View>
-                </LinearGradient>
+                </GlassView>
               </Pressable>
             ))
           )}
@@ -363,7 +365,7 @@ const getGameName = (gameType: string): string => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: 'transparent',
     paddingTop: Platform.OS === 'web' ? 40 : 0,
   },
   header: {
@@ -371,8 +373,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+    borderBottomWidth: 0,
   },
   backButton: {
     padding: 8,
@@ -510,13 +511,13 @@ const styles = StyleSheet.create({
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
   },
   loadingCard: {
-    backgroundColor: '#1e293b',
+    // backgroundColor: '#1e293b', // Removed in favor of GlassView
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',

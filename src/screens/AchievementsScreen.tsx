@@ -7,6 +7,7 @@ import {
   ScrollView,
   Pressable,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -51,7 +52,7 @@ const CATEGORIES: { key: AchievementCategory | 'all'; label: string; icon: React
 
 const AchievementsScreen: React.FC = () => {
   const navigation = useNavigation<AchievementsScreenNavigationProp>();
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const [achievementProgress, setAchievementProgress] = useState<AchievementProgress[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<AchievementCategory | 'all'>('all');
   const [completionRate, setCompletionRate] = useState(0);
@@ -103,6 +104,7 @@ const AchievementsScreen: React.FC = () => {
         <LinearGradient colors={theme.gradients.background} style={styles.backgroundGradient} />
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={styles.loadingText}>업적 불러오는 중...</Text>
           </View>
         </SafeAreaView>
@@ -129,7 +131,7 @@ const AchievementsScreen: React.FC = () => {
 
         {/* 진행도 요약 */}
         <View style={styles.summaryContainer}>
-          <GlassView style={styles.summaryGlass} intensity={20} tint="dark">
+          <GlassView style={styles.summaryGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
             <View style={styles.summaryHeader}>
               <Trophy size={20} color={theme.colors.warning} style={{ marginRight: 8 }} />
               <Text style={styles.summaryTitle}>전체 달성률</Text>
@@ -168,13 +170,13 @@ const AchievementsScreen: React.FC = () => {
                   <GlassView
                     style={styles.categoryButtonGlass}
                     intensity={isActive ? 40 : 20}
-                    tint={isActive ? 'light' : 'dark'}
+                    tint={isActive ? (themeMode === 'dark' ? 'light' : 'dark') : (themeMode === 'dark' ? 'dark' : 'light')}
                   >
-                    <Icon size={16} color={isActive ? theme.colors.text : theme.colors.textSecondary} style={{ marginRight: 6 }} />
+                    <Icon size={16} color={isActive ? (themeMode === 'dark' ? theme.colors.text : '#fff') : theme.colors.textSecondary} style={{ marginRight: 6 }} />
                     <Text
                       style={[
                         styles.categoryButtonText,
-                        isActive && styles.categoryButtonTextActive,
+                        isActive && { color: themeMode === 'dark' ? theme.colors.text : '#fff', fontWeight: '700' },
                       ]}
                     >
                       {category.label}
@@ -222,8 +224,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   summaryGlass: { padding: 20, borderRadius: 20 },
   summaryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   summaryTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
-  summaryBarContainer: { height: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 },
-  summaryBarBg: { ...StyleSheet.absoluteFillObject, opacity: 0.1 },
+  summaryBarContainer: { height: 8, backgroundColor: theme.colors.border, borderRadius: 4, overflow: 'hidden', marginBottom: 8 },
+  summaryBarBg: { ...StyleSheet.absoluteFillObject, opacity: 0.3 },
   summaryBarFill: { height: '100%', borderRadius: 4 },
   summaryText: { fontSize: 14, color: theme.colors.textSecondary, textAlign: 'right', fontWeight: '600' },
   categoryContainer: { marginBottom: 16 },
@@ -231,11 +233,10 @@ const getStyles = (theme: any) => StyleSheet.create({
   categoryButtonWrapper: { borderRadius: 12, overflow: 'hidden' },
   categoryButtonGlass: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
   categoryButtonText: { fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary },
-  categoryButtonTextActive: { color: theme.colors.text, fontWeight: '700' },
   scrollView: { flex: 1 },
   scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 40 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { fontSize: 16, color: theme.colors.textSecondary },
+  loadingText: { marginTop: 16, fontSize: 16, color: theme.colors.textSecondary },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
   emptyText: { fontSize: 16, color: theme.colors.textSecondary, fontWeight: '600' },
 });

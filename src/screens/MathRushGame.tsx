@@ -60,7 +60,7 @@ const MathRushGame: React.FC = () => {
 // Main game component with multiplayer support
 const MathRushGameContent: React.FC = () => {
   const navigation = useNavigation<MathRushGameNavigationProp>();
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const { user } = useAuth();
   const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
@@ -266,7 +266,7 @@ const MathRushGameContent: React.FC = () => {
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
           <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-            <GlassView style={styles.iconButtonGlass} intensity={20}>
+            <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <ArrowLeft size={24} color={theme.colors.textSecondary} />
             </GlassView>
           </Pressable>
@@ -279,7 +279,7 @@ const MathRushGameContent: React.FC = () => {
             style={styles.pauseButton}
             disabled={gameStatus !== 'playing'}
           >
-            <GlassView style={styles.iconButtonGlass} intensity={20}>
+            <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               {isPaused ? (
                 <Play size={24} color={theme.colors.text} />
               ) : (
@@ -291,7 +291,7 @@ const MathRushGameContent: React.FC = () => {
 
         {gameStatus === 'ready' && (
           <View style={styles.startContainer}>
-            <GlassView style={styles.startGlass} intensity={30}>
+            <GlassView style={styles.startGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <Calculator size={80} color={theme.colors.primary} style={{ marginBottom: 24 }} />
               <Text style={styles.startTitle}>Math Rush</Text>
               <Text style={styles.startDescription}>30초 안에 최대한 많은 문제를 푸세요!{`\n`}3번 틀리면 게임이 종료됩니다.</Text>
@@ -305,7 +305,7 @@ const MathRushGameContent: React.FC = () => {
 
         {gameStatus === 'playing' && currentQuestion && (
           <>
-            <GlassView style={styles.stats} intensity={20}>
+            <GlassView style={styles.stats} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <View style={styles.statItem}>
                 <Award size={20} color={theme.colors.textSecondary} style={{ marginBottom: 4 }} />
                 <Animated.Text style={[styles.statValue, scoreAnimatedStyle]}>{score}</Animated.Text>
@@ -337,14 +337,14 @@ const MathRushGameContent: React.FC = () => {
               </View>
             )}
             <Animated.View style={[styles.questionContainerWrapper, questionAnimatedStyle]}>
-              <GlassView style={styles.questionContainer} intensity={30}>
+              <GlassView style={styles.questionContainer} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
                 <Text style={styles.question}>{currentQuestion.num1} {currentQuestion.operation} {currentQuestion.num2} = ?</Text>
               </GlassView>
             </Animated.View>
             <View style={styles.optionsContainer}>
               {currentQuestion.options.map((option, index) => (
                 <Pressable key={index} style={styles.optionButton} onPress={() => handleAnswer(option)}>
-                  <GlassView style={styles.optionGlass} intensity={20} tint="light">
+                  <GlassView style={styles.optionGlass} intensity={20} tint={themeMode === 'dark' ? 'light' : 'dark'}>
                     <Text style={styles.optionText}>{option}</Text>
                   </GlassView>
                 </Pressable>
@@ -355,7 +355,7 @@ const MathRushGameContent: React.FC = () => {
 
         <Modal visible={gameStatus === 'finished'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint="dark">
+            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <Target size={64} color={theme.colors.primary} style={{ marginBottom: 16 }} />
               <Text style={styles.modalTitle}>게임 종료!</Text>
               {isNewRecord && (
@@ -370,7 +370,7 @@ const MathRushGameContent: React.FC = () => {
                 <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={styles.nextButtonText}>다시 하기</Text>
               </Pressable>
-              <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+              <Pressable style={[styles.menuButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={handleBackToMenu}>
                 <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.menuButtonText}>메뉴로</Text>
               </Pressable>

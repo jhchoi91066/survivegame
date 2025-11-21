@@ -37,7 +37,7 @@ const { width } = Dimensions.get('window');
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
   const { signInWithGoogle, signInWithApple, signInAnonymously, user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const [loading, setLoading] = useState(false);
 
   // 로그인 성공 시 자동으로 Menu로 이동
@@ -93,16 +93,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
       />
 
       <View style={styles.content}>
-        <GlassView style={styles.glassCard} intensity={30} tint="dark">
+        <GlassView style={styles.glassCard} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
           {/* 헤더 */}
           <View style={styles.header}>
             <View style={styles.iconContainer}>
               <View style={styles.iconGlow}>
-                <Gamepad2 size={48} color="#fff" />
+                <Gamepad2 size={48} color={theme.colors.primary} />
               </View>
             </View>
-            <Text style={styles.title}>Brain Games</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, { color: theme.colors.text }]}>Brain Games</Text>
+            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
               로그인하고 온라인 기능을 사용해보세요!
             </Text>
           </View>
@@ -207,11 +207,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
               pressed && styles.skipButtonPressed,
             ]}
           >
-            <Text style={styles.skipText}>나중에 하기</Text>
+            <Text style={[styles.skipText, { color: theme.colors.textSecondary }]}>나중에 하기</Text>
           </Pressable>
 
           {/* 안내 */}
-          <Text style={styles.notice}>
+          <Text style={[styles.notice, { color: theme.colors.textTertiary }]}>
             로그인 없이도 모든 게임을 플레이할 수 있습니다.{'\n'}
             온라인 기능만 제한됩니다.
           </Text>
@@ -226,19 +226,22 @@ interface BenefitItemProps {
   text: string;
 }
 
-const BenefitItem: React.FC<BenefitItemProps> = ({ icon: Icon, text }) => (
-  <View style={styles.benefitItem}>
-    <View style={styles.benefitIconContainer}>
-      <Icon size={18} color="#fff" />
+const BenefitItem: React.FC<BenefitItemProps> = ({ icon: Icon, text }) => {
+  const { theme, themeMode } = useTheme();
+  return (
+    <View style={[styles.benefitItem, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}>
+      <View style={[styles.benefitIconContainer, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }]}>
+        <Icon size={18} color={theme.colors.text} />
+      </View>
+      <Text style={[styles.benefitText, { color: theme.colors.text }]}>{text}</Text>
     </View>
-    <Text style={styles.benefitText}>{text}</Text>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: 'transparent',
   },
   gradient: {
     ...StyleSheet.absoluteFillObject,

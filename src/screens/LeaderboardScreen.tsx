@@ -63,7 +63,7 @@ type Difficulty = 'easy' | 'medium' | 'hard' | 'normal';
 
 const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedGame, setSelectedGame] = useState<GameType>('flip_match');
@@ -335,10 +335,10 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
                 <GlassView
                   style={styles.gameTabGlass}
                   intensity={isActive ? 40 : 20}
-                  tint={isActive ? 'light' : 'dark'}
+                  tint={isActive ? (themeMode === 'dark' ? 'light' : 'dark') : (themeMode === 'dark' ? 'dark' : 'light')}
                 >
-                  <Icon size={20} color={isActive ? theme.colors.text : theme.colors.textSecondary} />
-                  <Text style={[styles.gameTabText, isActive && styles.gameTabTextActive]}>
+                  <Icon size={20} color={isActive ? (themeMode === 'dark' ? theme.colors.text : '#fff') : theme.colors.textSecondary} />
+                  <Text style={[styles.gameTabText, isActive && { color: themeMode === 'dark' ? theme.colors.text : '#fff', fontWeight: '700' }]}>
                     {game.name}
                   </Text>
                 </GlassView>
@@ -361,9 +361,9 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
                   <GlassView
                     style={styles.difficultyTabGlass}
                     intensity={isActive ? 30 : 10}
-                    tint={isActive ? 'light' : 'dark'}
+                    tint={isActive ? (themeMode === 'dark' ? 'light' : 'dark') : (themeMode === 'dark' ? 'dark' : 'light')}
                   >
-                    <Text style={[styles.difficultyTabText, isActive && styles.difficultyTabTextActive]}>
+                    <Text style={[styles.difficultyTabText, isActive && { color: themeMode === 'dark' ? theme.colors.text : '#fff', fontWeight: '700' }]}>
                       {difficulty === 'easy' ? 'Easy' : difficulty === 'medium' ? 'Medium' : 'Hard'}
                     </Text>
                   </GlassView>
@@ -376,7 +376,7 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
         {/* Not logged in warning */}
         {!user && (
           <View style={styles.warningContainer}>
-            <GlassView style={styles.warningGlass} intensity={20} tint="dark">
+            <GlassView style={styles.warningGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
               <User size={20} color={theme.colors.warning} style={{ marginBottom: 8 }} />
               <Text style={styles.warningText}>
                 로그인하면 리더보드에 참여할 수 있습니다
@@ -415,7 +415,7 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
                   <GlassView
                     style={styles.rankCardGlass}
                     intensity={entry.user_id === user?.id ? 40 : 20}
-                    tint="dark"
+                    tint={themeMode === 'dark' ? 'dark' : 'light'}
                   >
                     <View style={styles.rankBadgeContainer}>
                       <LinearGradient
@@ -465,9 +465,9 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
               {/* My Rank Summary */}
               {user && myRank && (
                 <View style={styles.myRankWrapper}>
-                  <GlassView style={styles.myRankGlass} intensity={30} tint="light">
-                    <Medal size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
-                    <Text style={styles.myRankText}>
+                  <GlassView style={styles.myRankGlass} intensity={30} tint={themeMode === 'dark' ? 'light' : 'dark'}>
+                    <Medal size={20} color={themeMode === 'dark' ? theme.colors.primary : '#fff'} style={{ marginRight: 8 }} />
+                    <Text style={[styles.myRankText, { color: themeMode === 'dark' ? theme.colors.primary : '#fff' }]}>
                       내 순위: #{myRank} / {leaderboard.length}명
                     </Text>
                   </GlassView>
@@ -496,12 +496,10 @@ const getStyles = (theme: any) => StyleSheet.create({
   gameTabWrapper: { borderRadius: 16, overflow: 'hidden', marginRight: 8 },
   gameTabGlass: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 16 },
   gameTabText: { fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary },
-  gameTabTextActive: { color: theme.colors.text, fontWeight: '700' },
   difficultySelectorContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
   difficultyTabWrapper: { flex: 1, borderRadius: 12, overflow: 'hidden' },
   difficultyTabGlass: { alignItems: 'center', paddingVertical: 10, borderRadius: 12 },
   difficultyTabText: { fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary },
-  difficultyTabTextActive: { color: theme.colors.text, fontWeight: '700' },
   warningContainer: { marginHorizontal: 20, marginBottom: 16, borderRadius: 16, overflow: 'hidden' },
   warningGlass: { padding: 16, alignItems: 'center', borderRadius: 16 },
   warningText: { fontSize: 14, color: theme.colors.warning, fontWeight: '600', textAlign: 'center' },
