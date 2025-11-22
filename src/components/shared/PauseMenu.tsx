@@ -26,7 +26,7 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
   onRestart,
   onQuit,
 }) => {
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
 
   const handleResume = () => {
     hapticPatterns.buttonPress();
@@ -54,10 +54,10 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
           entering={ZoomIn.springify().damping(15)}
           style={styles.contentContainer}
         >
-          <GlassView style={styles.content} intensity={30} tint="dark">
+          <GlassView style={styles.content} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
             <Text style={[styles.title, { color: theme.colors.text }]}>일시정지</Text>
 
-            <View style={[styles.statsContainer, { backgroundColor: 'rgba(0,0,0,0.2)' }]}>
+            <View style={[styles.statsContainer, { backgroundColor: themeMode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.4)' }]}>
               {gameStats.map((stat, index) => (
                 <View key={index} style={styles.statRow}>
                   <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
@@ -91,7 +91,7 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
             </Pressable>
 
             <Pressable
-              style={[styles.quitButton, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+              style={[styles.quitButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
               onPress={handleQuit}
             >
               <View style={styles.buttonContent}>

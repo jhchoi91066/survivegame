@@ -29,7 +29,6 @@ interface Theme {
     sequence: [string, string];
     spatialMemory: [string, string];
     mathRush: [string, string];
-    mergePuzzle: [string, string];
     stroop: [string, string];
     glass: [string, string];
     primary: [string, string];
@@ -56,7 +55,7 @@ const lightTheme: Theme = {
     warning: '#f59e0b',
     error: '#ef4444',
     overlay: 'rgba(15, 23, 42, 0.7)',
-    glassBorder: 'rgba(0, 0, 0, 0.1)', // Changed from white to dark transparent for visibility
+    glassBorder: 'rgba(0, 0, 0, 0.08)', // Darker, more visible but subtle
   },
   gradients: {
     background: ['#f8fafc', '#f1f5f9', '#f8fafc'], // More subtle gradient
@@ -64,7 +63,6 @@ const lightTheme: Theme = {
     sequence: ['#06b6d4', '#3b82f6'],
     spatialMemory: ['#8b5cf6', '#6366f1'],
     mathRush: ['#f59e0b', '#ef4444'],
-    mergePuzzle: ['#10b981', '#06b6d4'],
     stroop: ['#ec4899', '#d946ef'],
     glass: ['rgba(255, 255, 255, 0.7)', 'rgba(255, 255, 255, 0.3)'],
     primary: ['#6366f1', '#8b5cf6'],
@@ -91,15 +89,14 @@ const darkTheme: Theme = {
     warning: '#fbbf24',
     error: '#f87171',
     overlay: 'rgba(0, 0, 0, 0.85)',
-    glassBorder: 'rgba(255, 255, 255, 0.1)',
+    glassBorder: 'rgba(255, 255, 255, 0.08)',
   },
   gradients: {
-    background: ['#020617', '#0f172a', '#1e1b4b'], // Deep space gradient
+    background: ['#020617', '#0f172a', '#111827'], // More subtle deep space gradient
     flipMatch: ['#6366f1', '#a855f7'], // Vibrant purple-indigo
     sequence: ['#06b6d4', '#3b82f6'], // Cyan-blue
     spatialMemory: ['#8b5cf6', '#6366f1'], // Violet-indigo
     mathRush: ['#f59e0b', '#ef4444'], // Amber-red
-    mergePuzzle: ['#10b981', '#06b6d4'], // Emerald-cyan
     stroop: ['#ec4899', '#d946ef'], // Pink-fuchsia
     glass: ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.02)'],
     primary: ['#818cf8', '#6366f1'],

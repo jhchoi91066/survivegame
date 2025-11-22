@@ -16,7 +16,7 @@ export const GRID_SIZES: Record<Difficulty, { rows: number; cols: number }> = {
 };
 
 // 게임 상태
-export type GameStatus = 'ready' | 'showing' | 'input' | 'correct' | 'wrong' | 'gameover';
+export type GameStatus = 'ready' | 'showing' | 'input' | 'paused' | 'correct' | 'wrong' | 'gameover';
 
 // 게임 설정
 export interface GameSettings {

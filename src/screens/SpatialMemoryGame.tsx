@@ -13,10 +13,12 @@ import {
   Check,
   X,
   Activity,
-  Layers
+  Layers,
+  Pause
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassView } from '../components/shared/GlassView';
+import { PauseMenu } from '../components/shared/PauseMenu';
 import { RootStackParamList } from '../../App';
 import { useSpatialMemoryStore } from '../game/spatialmemory/store';
 import { Difficulty } from '../game/spatialmemory/types';
@@ -54,12 +56,13 @@ const SpatialMemoryGameContent: React.FC = () => {
   const { user } = useAuth();
   const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
-    gameStatus, currentLevel, initializeGame, startRound, resetGame, settings,
+    gameStatus, currentLevel, initializeGame, startRound, resetGame, settings, pauseGame, resumeGame
   } = useSpatialMemoryStore();
 
   const { updateBestRecord } = useGameStore();
 
   const [showDifficultyModal, setShowDifficultyModal] = useState(true);
+  const [isPauseMenuVisible, setIsPauseMenuVisible] = useState(false);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
   const [startTime, setStartTime] = useState<number>(0);
   const [isNewRecord, setIsNewRecord] = useState(false);
@@ -190,6 +193,25 @@ const SpatialMemoryGameContent: React.FC = () => {
     navigation.goBack();
   };
 
+  const handlePause = () => {
+    hapticPatterns.buttonPress();
+    pauseGame();
+    setIsPauseMenuVisible(true);
+  };
+
+  const handleResume = () => {
+    hapticPatterns.buttonPress();
+    resumeGame();
+    setIsPauseMenuVisible(false);
+  };
+
+  const handleQuit = () => {
+    hapticPatterns.buttonPress();
+    setIsPauseMenuVisible(false);
+    resetGame();
+    navigation.goBack();
+  };
+
   const getStatusIcon = () => {
     switch (gameStatus) {
       case 'correct': return <Check size={20} color={theme.colors.success} />;
@@ -226,11 +248,21 @@ const SpatialMemoryGameContent: React.FC = () => {
             <Brain size={24} color={theme.colors.text} style={{ marginRight: 8 }} />
             <Text style={styles.title}>Spatial Memory</Text>
           </View>
-          <Pressable onPress={handleRestart} style={styles.restartButton}>
-            <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-              <RotateCcw size={24} color={theme.colors.text} />
-            </GlassView>
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {gameStatus === 'input' ? (
+              <Pressable onPress={handlePause} style={styles.restartButton}>
+                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+                  <Pause size={24} color={theme.colors.text} />
+                </GlassView>
+              </Pressable>
+            ) : (
+              <Pressable onPress={handleRestart} style={styles.restartButton}>
+                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+                  <RotateCcw size={24} color={theme.colors.text} />
+                </GlassView>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         <GlassView style={styles.stats} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
@@ -321,6 +353,20 @@ const SpatialMemoryGameContent: React.FC = () => {
           visible={showAchievementModal}
           achievements={unlockedAchievements}
           onClose={() => setShowAchievementModal(false)}
+        />
+
+        <PauseMenu
+          visible={isPauseMenuVisible}
+          gameStats={[
+            { label: '현재 레벨', value: `${currentLevel}` },
+            { label: '난이도', value: settings.difficulty === 'easy' ? '쉬움' : settings.difficulty === 'medium' ? '보통' : '어려움' },
+          ]}
+          onResume={handleResume}
+          onRestart={() => {
+            setIsPauseMenuVisible(false);
+            handleRestart();
+          }}
+          onQuit={handleQuit}
         />
       </SafeAreaView>
     </View>

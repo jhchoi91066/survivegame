@@ -12,6 +12,8 @@ interface StroopStore {
   answerProblem: (answer: string) => void;
   decrementTime: () => void;
   startGame: () => void;
+  pauseGame: () => void;
+  resumeGame: () => void;
   resetGame: () => void;
 }
 
@@ -81,6 +83,14 @@ export const useStroopStore = create<StroopStore>((set, get) => ({
   startGame: () => {
     set({ score: 0, timeRemaining: 30, gameStatus: 'playing', lives: 3 });
     get().generateProblem();
+  },
+
+  pauseGame: () => {
+    set({ gameStatus: 'paused' });
+  },
+
+  resumeGame: () => {
+    set({ gameStatus: 'playing' });
   },
 
   resetGame: () => {

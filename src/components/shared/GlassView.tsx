@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle, Platform, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface GlassViewProps {
     children: React.ReactNode;
@@ -20,10 +21,20 @@ export const GlassView: React.FC<GlassViewProps> = ({
     border = true,
     gradient = true,
 }) => {
+    const { theme } = useTheme();
+
     // Web fallback since expo-blur might have issues on some web environments or for consistency
     if (Platform.OS === 'web') {
         return (
-            <View style={[styles.webContainer, border && styles.border, style]}>
+            <View style={[
+                styles.webContainer,
+                border && {
+                    borderWidth: 1,
+                    borderColor: theme.colors.glassBorder,
+                    borderRadius: 16
+                },
+                style
+            ]}>
                 {gradient && (
                     <LinearGradient
                         colors={tint === 'dark' ? ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)'] : ['rgba(255,255,255,0.4)', 'rgba(255,255,255,0.1)']}
@@ -44,7 +55,14 @@ export const GlassView: React.FC<GlassViewProps> = ({
                     style={StyleSheet.absoluteFill}
                 />
             )}
-            <View style={[styles.content, border && styles.border]}>
+            <View style={[
+                styles.content,
+                border && {
+                    borderWidth: 1,
+                    borderColor: theme.colors.glassBorder,
+                    borderRadius: 16
+                }
+            ]}>
                 {children}
             </View>
         </View>
@@ -59,15 +77,12 @@ const styles = StyleSheet.create({
     webContainer: {
         overflow: 'hidden',
         position: 'relative',
-        backgroundColor: 'rgba(30, 41, 59, 0.7)', // Fallback for dark mode web
-        backdropFilter: 'blur(10px)', // CSS standard blur for web
+        backgroundColor: 'rgba(30, 41, 59, 0.4)', // More transparent to show blur
+        // @ts-ignore - backdropFilter is not typed in React Native but works on Web
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
     } as ViewStyle,
     content: {
         flex: 1,
-    },
-    border: {
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 16, // Default radius, can be overridden by style
     },
 });

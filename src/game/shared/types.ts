@@ -49,11 +49,15 @@ export interface GameState {
   isPaused: boolean;
 }
 
+import { LucideIcon } from 'lucide-react-native';
+
 export interface GameInfo {
   id: GameType;
   name: string;
-  emoji: string;
   description: string;
+  icon: LucideIcon;
+  route: string;
+  gradientKey: 'flipMatch' | 'mathRush' | 'spatialMemory' | 'stroop';
   bestRecordLabel: string;
   bestRecordValue: string | number;
 }

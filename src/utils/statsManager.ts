@@ -112,16 +112,7 @@ export const updateSpatialMemoryRecord = async (
 };
 
 
-// Merge Puzzle 기록 업데이트
-export const updateMergePuzzleRecord = async (
-  moves: number,
-  highestNumber: number,
-  playTime: number
-): Promise<void> => {
-  // Merge Puzzle은 현재 별도 레코드로 관리되지 않거나 타입이 정의되지 않았을 수 있음
-  // 임시로 로그만 남기거나 필요한 경우 구현
-  console.log('Merge Puzzle record update not implemented yet', { moves, highestNumber, playTime });
-};
+
 
 // Stroop Test 기록 업데이트
 export const updateStroopRecord = async (score: number, playTime: number): Promise<void> => {

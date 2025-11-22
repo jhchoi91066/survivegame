@@ -19,6 +19,8 @@ interface SpatialMemoryStore {
   handleTilePress: (tileId: number) => void;
   resetGame: () => void;
   setGameStatus: (status: GameStatus) => void;
+  pauseGame: () => void;
+  resumeGame: () => void;
 }
 
 // 타일 생성
@@ -189,5 +191,14 @@ export const useSpatialMemoryStore = create<SpatialMemoryStore>((set, get) => ({
   // 게임 상태 설정
   setGameStatus: (status) => {
     set({ gameStatus: status });
+  },
+
+  pauseGame: () => {
+    set({ gameStatus: 'paused' });
+  },
+
+  resumeGame: () => {
+    // We only allow pausing during 'input' phase, so we resume to 'input'
+    set({ gameStatus: 'input' });
   },
 }));

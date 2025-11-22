@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, Platform } from
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
+  // Fix duplicate import
   ArrowLeft,
   Palette,
   Play,
@@ -12,10 +13,12 @@ import {
   Timer,
   Award,
   Trophy,
-  Target
+  Target,
+  Pause
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassView } from '../components/shared/GlassView';
+import { PauseMenu } from '../components/shared/PauseMenu';
 import { RootStackParamList } from '../../App';
 import { useStroopStore } from '../game/stroop/store';
 import { hapticPatterns } from '../utils/haptics';
@@ -51,11 +54,12 @@ const StroopTestGameContent: React.FC = () => {
   const { user } = useAuth();
   const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
-    currentProblem, score, timeRemaining, gameStatus, lives, answerProblem, decrementTime, startGame, resetGame,
+    currentProblem, score, timeRemaining, gameStatus, lives, answerProblem, decrementTime, startGame, resetGame, pauseGame, resumeGame
   } = useStroopStore();
 
   const { updateBestRecord } = useGameStore();
   const [isNewRecord, setIsNewRecord] = useState(false);
+  const [isPauseMenuVisible, setIsPauseMenuVisible] = useState(false);
   const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
   const isMounted = React.useRef(true);
@@ -171,6 +175,25 @@ const StroopTestGameContent: React.FC = () => {
     navigation.goBack();
   };
 
+  const handlePause = () => {
+    hapticPatterns.buttonPress();
+    pauseGame();
+    setIsPauseMenuVisible(true);
+  };
+
+  const handleResume = () => {
+    hapticPatterns.buttonPress();
+    resumeGame();
+    setIsPauseMenuVisible(false);
+  };
+
+  const handleQuit = () => {
+    hapticPatterns.buttonPress();
+    setIsPauseMenuVisible(false);
+    resetGame();
+    navigation.goBack();
+  };
+
   const styles = getStyles(theme);
 
   return (
@@ -187,7 +210,15 @@ const StroopTestGameContent: React.FC = () => {
             <Palette size={24} color={theme.colors.text} style={{ marginRight: 8 }} />
             <Text style={styles.title}>Stroop Test</Text>
           </View>
-          <View style={{ width: 40 }} />
+          <View style={{ width: 40 }}>
+            {gameStatus === 'playing' && (
+              <Pressable onPress={handlePause} style={styles.backButton}>
+                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+                  <Pause size={24} color={theme.colors.textSecondary} />
+                </GlassView>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {gameStatus === 'ready' && (
@@ -272,6 +303,21 @@ const StroopTestGameContent: React.FC = () => {
           visible={showAchievementModal}
           achievements={unlockedAchievements}
           onClose={() => setShowAchievementModal(false)}
+        />
+
+        <PauseMenu
+          visible={isPauseMenuVisible}
+          gameStats={[
+            { label: '현재 점수', value: `${score}점` },
+            { label: '남은 시간', value: `${timeRemaining}초` },
+            { label: '남은 기회', value: `${lives}회` },
+          ]}
+          onResume={handleResume}
+          onRestart={() => {
+            setIsPauseMenuVisible(false);
+            handleRestart();
+          }}
+          onQuit={handleQuit}
         />
       </SafeAreaView>
     </View>

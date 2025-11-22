@@ -16,23 +16,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncGameRecords } from '../utils/cloudSync';
 import Toast from '../components/shared/Toast';
 import {
-  Brain,
-  Trophy,
+  // Icons
+  RefreshCw,
+  UserCircle,
   Users,
-  Swords,
-  Medal,
+  Settings,
   BarChart3,
+  Trophy,
+  Medal,
+  Swords,
   Gamepad2,
-  Grid2X2,
-  Calculator,
-  Palette,
-  Rocket,
   Target,
   TrendingUp,
-  Settings,
-  UserCircle,
-  RefreshCw
+  Rocket
 } from 'lucide-react-native';
+import { GAMES } from '../game/shared/config';
 
 type MenuScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
@@ -82,33 +80,35 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
   };
 
   const loadGameData = async () => {
-    const records = await Promise.all([
-      loadGameRecord('flip_match'),
-      loadGameRecord('math_rush'),
-      loadGameRecord('spatial_memory'),
-      loadGameRecord('stroop'),
-    ]);
+    const gameDataPromises = GAMES.map(async (game) => {
+      const record = await loadGameRecord(game.id);
+      let bestRecordValue = '-';
 
-    const games: any[] = [
-      { id: 'flip_match', name: 'Flip & Match', icon: Grid2X2, description: '카드 뒤집기', bestRecordLabel: 'Best', bestRecordValue: records[0]?.bestTime ? `${records[0].bestTime}초` : '-' },
-      { id: 'math_rush', name: 'Math Rush', icon: Calculator, description: '빠른 계산', bestRecordLabel: 'Best', bestRecordValue: records[1]?.highScore ? `${records[1].highScore}점` : '-' },
-      { id: 'spatial_memory', name: 'Spatial Memory', icon: Brain, description: '공간 기억', bestRecordLabel: 'Best', bestRecordValue: records[2]?.highestLevel ? `Lv.${records[2].highestLevel}` : '-' },
-      { id: 'stroop', name: 'Stroop Test', icon: Palette, description: '색상-단어', bestRecordLabel: 'Best', bestRecordValue: records[3]?.highScore ? `${records[3].highScore}점` : '-' },
-    ];
+      if (record) {
+        if ('bestTime' in record) bestRecordValue = `${record.bestTime}초`;
+        else if ('highScore' in record) bestRecordValue = `${record.highScore}점`;
+        else if ('highestLevel' in record) bestRecordValue = `Lv.${record.highestLevel}`;
+      }
+
+      return {
+        ...game,
+        bestRecordLabel: 'Best',
+        bestRecordValue,
+      };
+    });
+
+    const games = await Promise.all(gameDataPromises);
     setGameInfos(games);
   };
 
   const handleGamePress = (gameId: GameType) => {
     hapticPatterns.buttonPress();
     soundManager.playSound('button_press');
-    switch (gameId) {
-      case 'flip_match': navigation.navigate('FlipMatchGame'); break;
-      case 'math_rush': navigation.navigate('MathRushGame'); break;
-      case 'spatial_memory': navigation.navigate('SpatialMemoryGame'); break;
-      case 'stroop': navigation.navigate('StroopTestGame'); break;
+    const gameConfig = GAMES.find(g => g.id === gameId);
+    if (gameConfig) {
+      navigation.navigate(gameConfig.route as any);
     }
   };
-
   const handleManualSync = async () => {
     if (!user) {
       setToastMessage('로그인이 필요합니다');
@@ -132,15 +132,14 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
   };
 
   const getGradientColors = (gameId: GameType): [string, string] => {
-    switch (gameId) {
-      case 'flip_match': return theme.gradients.flipMatch;
-      case 'math_rush': return theme.gradients.mathRush;
-      case 'spatial_memory': return theme.gradients.spatialMemory;
-      case 'stroop': return theme.gradients.stroop;
-      default: return theme.gradients.flipMatch;
-    }
+    // This function is no longer used but kept to avoid breaking changes if referenced elsewhere, 
+    // or we can remove it if we are sure. 
+    // The previous step removed it but lint complained it was missing? 
+    // No, lint complained 'getGradientColors' was missing because I removed the definition but not the usage in the map.
+    // But I updated the map to use theme.gradients[game.gradientKey].
+    // So I don't need this function.
+    return ['#000', '#000'];
   };
-
   const styles = getStyles(theme);
 
   return (
@@ -177,7 +176,13 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
 
           <View style={styles.gamesContainer}>
             {gameInfos.map((game, index) => (
-              <GameCard key={game.id} game={game} onPress={() => handleGamePress(game.id as GameType)} gradientColors={getGradientColors(game.id as GameType)} index={index} />
+              <GameCard
+                key={game.id}
+                game={game}
+                onPress={() => handleGamePress(game.id as GameType)}
+                gradientColors={theme.gradients[game.gradientKey]}
+                index={index}
+              />
             ))}
           </View>
 
