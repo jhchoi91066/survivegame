@@ -161,8 +161,8 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
               </Pressable>
               {user && (
                 <Pressable style={styles.iconButton} onPress={handleManualSync} disabled={isSyncing}>
-                  <GlassView style={styles.gameCardGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                    <RefreshCw size={20} color={theme.colors.text} style={isSyncing ? { opacity: 0.5 } : {}} />
+                  <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+                    <RefreshCw size={24} color={theme.colors.text} style={isSyncing ? { opacity: 0.5 } : {}} />
                   </GlassView>
                 </Pressable>
               )}

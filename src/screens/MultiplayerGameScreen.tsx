@@ -71,6 +71,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
   const [countdown, setCountdown] = useState(3);
   const [opponentReady, setOpponentReady] = useState(false);
   const [isRoomCreator, setIsRoomCreator] = useState(false);
+  const isRoomCreatorRef = React.useRef(false);
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'info' | 'success' | 'warning' | 'error' }>({ visible: false, message: '', type: 'info' });
   const [waitingTime, setWaitingTime] = useState(0);
   const [waitingTimeoutReached, setWaitingTimeoutReached] = useState(false);
@@ -244,7 +245,9 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
         .single();
 
       if (error) throw error;
-      setIsRoomCreator(data.created_by === user?.id);
+      const isCreator = data.created_by === user?.id;
+      setIsRoomCreator(isCreator);
+      isRoomCreatorRef.current = isCreator;
     } catch (error) {
       console.error('Failed to check room creator:', error);
     }
@@ -297,6 +300,29 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
 
       if (error) throw error;
 
+      // Self-healing: If I am not in the game state, insert myself
+      const myState = data?.find((s: any) => s.user_id === user?.id);
+      if (!myState && user) {
+        console.log('Missing game state for current user, inserting...');
+        const { error: insertError } = await supabase
+          .from('multiplayer_game_states')
+          .insert({
+            room_id: roomId,
+            user_id: user.id,
+            username: user.user_metadata?.username || 'Player',
+            status: 'waiting',
+            score: 0,
+            finished: false
+          });
+
+        if (insertError) {
+          console.error('Failed to insert missing game state:', insertError);
+        } else {
+          // The subscription will trigger a reload
+          return;
+        }
+      }
+
       if (data && data.length > 0) {
         const players = data.map((state: any) => ({
           id: state.user_id,
@@ -318,7 +344,8 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
         });
 
         // If all ready and still waiting, room creator triggers countdown
-        if (allReady && newStatus === 'waiting' && isRoomCreator) {
+        // Use ref to ensure we have the latest value inside the subscription callback
+        if (allReady && newStatus === 'waiting' && isRoomCreatorRef.current) {
           startCountdown();
         }
       }
@@ -328,7 +355,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
   };
 
   const startCountdown = async () => {
-    if (!isRoomCreator) return; // Only room creator can start countdown
+    if (!isRoomCreatorRef.current) return; // Only room creator can start countdown
 
     try {
       // Set countdown start time in database (3 seconds from now)

@@ -18,6 +18,17 @@ import { RootStackParamList } from '../../App';
 import { hapticPatterns } from '../utils/haptics';
 import { useTheme } from '../contexts/ThemeContext';
 import { GlassView } from '../components/shared/GlassView';
+import {
+  ArrowLeft,
+  RefreshCw,
+  Users,
+  Plus,
+  Gamepad2,
+  Brain,
+  Calculator,
+  Palette,
+  Grid2X2
+} from 'lucide-react-native';
 
 type MultiplayerLobbyNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -203,7 +214,7 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
 
   const renderGameTypeButton = (
     gameType: string,
-    emoji: string,
+    Icon: React.ElementType,
     name: string,
     colors: string[],
     difficulty?: string
@@ -218,20 +229,26 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
       accessibilityHint={difficulty ? `난이도: ${difficulty}` : '버튼을 눌러 새 방을 생성합니다'}
       accessibilityState={{ disabled: creating }}
     >
-      <LinearGradient colors={colors as any} style={styles.gameButtonGradient}>
-        <Text style={styles.gameEmoji} accessibilityElementsHidden={true}>{emoji}</Text>
+      <GlassView style={styles.gameButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+        <LinearGradient
+          colors={[colors[0] + '40', colors[1] + '20']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <View style={[styles.iconContainer, { backgroundColor: colors[0] + '20', borderColor: colors[0] + '40' }]}>
+          <Icon size={32} color={colors[0]} />
+        </View>
         <Text style={styles.gameName}>{name}</Text>
         {difficulty && <Text style={styles.gameDifficulty}>{difficulty}</Text>}
-      </LinearGradient>
+      </GlassView>
     </Pressable>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={themeMode === 'dark' ? ['#0f172a', '#1e293b'] : ['#f0f9ff', '#e0f2fe']}
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={styles.container}>
+      <LinearGradient colors={theme.gradients.background} style={styles.backgroundGradient} />
+
       {/* 로딩 오버레이 */}
       {creating && (
         <View style={styles.loadingOverlay}>
@@ -242,115 +259,109 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
         </View>
       )}
 
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => {
-            hapticPatterns.buttonPress();
-            navigation.goBack();
-          }}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로 가기"
-          accessibilityHint="이전 화면으로 돌아갑니다"
-        >
-          <Text style={styles.backButtonText}>← 뒤로</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.colors.text }]} accessibilityRole="header">멀티플레이어</Text>
-        <Pressable
-          style={styles.refreshButton}
-          onPress={loadRooms}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="방 목록 새로고침"
-          accessibilityHint="대기 중인 방 목록을 다시 불러옵니다"
-        >
-          <Text style={styles.refreshText} accessibilityElementsHidden={true}>🔄</Text>
-        </Pressable>
-      </View>
-
-      <ScrollView style={styles.scrollView}>
-        {/* 방 만들기 섹션 */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>새 방 만들기</Text>
-          <View style={styles.gameGrid}>
-            {renderGameTypeButton('flip_match', '🎴', 'Flip & Match', theme.gradients.flipMatch)}
-            {renderGameTypeButton(
-              'spatial_memory',
-              '🧠',
-              'Spatial Memory',
-              theme.gradients.spatialMemory
-            )}
-            {renderGameTypeButton('math_rush', '➕', 'Math Rush', theme.gradients.mathRush)}
-            {renderGameTypeButton('stroop', '🎨', 'Stroop Test', theme.gradients.stroop)}
-          </View>
+      <SafeAreaView style={styles.safeArea}>
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <Pressable
+            style={styles.iconButton}
+            onPress={() => {
+              hapticPatterns.buttonPress();
+              navigation.goBack();
+            }}
+          >
+            <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </GlassView>
+          </Pressable>
+          <Text style={[styles.title, { color: theme.colors.text }]}>멀티플레이어</Text>
+          <Pressable
+            style={styles.iconButton}
+            onPress={loadRooms}
+          >
+            <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+              <RefreshCw size={24} color={theme.colors.text} />
+            </GlassView>
+          </Pressable>
         </View>
 
-        {/* 대기 중인 방 */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>대기 중인 방</Text>
-          {loading ? (
-            <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
-          ) : rooms.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>🎮</Text>
-              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>대기 중인 방이 없습니다</Text>
-              <Text style={[styles.emptySubtext, { color: theme.colors.textTertiary }]}>새 방을 만들어보세요!</Text>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* 방 만들기 섹션 */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Plus size={20} color={theme.colors.primary} />
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>새 방 만들기</Text>
             </View>
-          ) : (
-            rooms.map((room) => (
-              <Pressable
-                key={room.id}
-                onPress={() => joinRoom(room.id, room.game_type, room.difficulty)}
-                style={({ pressed }) => [styles.roomCard, pressed && styles.buttonPressed]}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={`${getGameName(room.game_type)} 방 참가하기`}
-                accessibilityHint={`방장: ${room.creator_profile.username}, 플레이어 ${room.current_players}명 중 ${room.max_players}명${room.difficulty ? `, 난이도: ${room.difficulty}` : ''}`}
-              >
-                <GlassView
-                  style={styles.roomCardGradient}
-                  intensity={20}
-                  tint={themeMode === 'dark' ? 'dark' : 'light'}
+            <View style={styles.gameGrid}>
+              {renderGameTypeButton('flip_match', Grid2X2, 'Flip & Match', theme.gradients.flipMatch)}
+              {renderGameTypeButton('spatial_memory', Brain, 'Spatial Memory', theme.gradients.spatialMemory)}
+              {renderGameTypeButton('math_rush', Calculator, 'Math Rush', theme.gradients.mathRush)}
+              {renderGameTypeButton('stroop', Palette, 'Stroop Test', theme.gradients.stroop)}
+            </View>
+          </View>
+
+          {/* 대기 중인 방 */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Gamepad2 size={20} color={theme.colors.success} />
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>대기 중인 방</Text>
+            </View>
+            {loading ? (
+              <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loader} />
+            ) : rooms.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Gamepad2 size={64} color={theme.colors.textTertiary} style={{ opacity: 0.5, marginBottom: 16 }} />
+                <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>대기 중인 방이 없습니다</Text>
+                <Text style={[styles.emptySubtext, { color: theme.colors.textTertiary }]}>새 방을 만들어보세요!</Text>
+              </View>
+            ) : (
+              rooms.map((room) => (
+                <Pressable
+                  key={room.id}
+                  onPress={() => joinRoom(room.id, room.game_type, room.difficulty)}
+                  style={({ pressed }) => [styles.roomCard, pressed && styles.buttonPressed]}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${getGameName(room.game_type)} 방 참가하기`}
+                  accessibilityHint={`방장: ${room.creator_profile.username}, 플레이어 ${room.current_players}명 중 ${room.max_players}명${room.difficulty ? `, 난이도: ${room.difficulty}` : ''}`}
                 >
-                  <View style={styles.roomInfo}>
-                    <Text style={[styles.roomGame, { color: theme.colors.text }]}>
-                      <Text accessibilityElementsHidden={true}>{getGameEmoji(room.game_type)} </Text>
-                      {getGameName(room.game_type)}
-                    </Text>
-                    {room.difficulty && (
-                      <Text style={[styles.roomDifficulty, { color: theme.colors.textSecondary }]}>{room.difficulty}</Text>
-                    )}
-                    <Text style={[styles.roomCreator, { color: theme.colors.textTertiary }]}>
-                      방장: {room.creator_profile.username}
-                    </Text>
-                  </View>
-                  <View style={styles.roomPlayers}>
-                    <Text style={[styles.playersText, { color: theme.colors.primary }]}>
-                      {room.current_players}/{room.max_players}
-                    </Text>
-                    <Text style={styles.playersIcon} accessibilityElementsHidden={true}>👥</Text>
-                  </View>
-                </GlassView>
-              </Pressable>
-            ))
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+                  <GlassView
+                    style={styles.roomCardGlass}
+                    intensity={20}
+                    tint={themeMode === 'dark' ? 'dark' : 'light'}
+                  >
+                    <View style={styles.roomInfo}>
+                      <View style={styles.roomHeader}>
+                        <Text style={[styles.roomGame, { color: theme.colors.text }]}>
+                          {getGameName(room.game_type)}
+                        </Text>
+                        {room.difficulty && (
+                          <View style={[styles.difficultyBadge, { backgroundColor: theme.colors.surfaceSecondary }]}>
+                            <Text style={[styles.roomDifficulty, { color: theme.colors.textSecondary }]}>{room.difficulty}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.roomCreator, { color: theme.colors.textTertiary }]}>
+                        방장: {room.creator_profile.username}
+                      </Text>
+                    </View>
+                    <View style={styles.roomPlayers}>
+                      <Users size={16} color={theme.colors.primary} />
+                      <Text style={[styles.playersText, { color: theme.colors.primary }]}>
+                        {room.current_players}/{room.max_players}
+                      </Text>
+                    </View>
+                  </GlassView>
+                </Pressable>
+              ))
+            )}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
-const getGameEmoji = (gameType: string): string => {
-  const emojis: { [key: string]: string } = {
-    flip_match: '🎴',
-    spatial_memory: '🧠',
-    math_rush: '➕',
-    stroop: '🎨',
-  };
-  return emojis[gameType] || '🎮';
-};
+
 
 const getGameName = (gameType: string): string => {
   const names: { [key: string]: string } = {
@@ -365,54 +376,58 @@ const getGameName = (gameType: string): string => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+  },
+  backgroundGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  safeArea: {
+    flex: 1,
     paddingTop: Platform.OS === 'web' ? 40 : 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  backButton: {
-    padding: 8,
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
+  iconButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  iconButtonGlass: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#3b82f6',
-    fontWeight: '600',
+    justifyContent: 'center',
+    borderRadius: 12,
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  refreshButton: {
-    padding: 8,
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  refreshText: {
-    fontSize: 20,
+    fontWeight: '800',
   },
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   section: {
-    padding: 16,
+    padding: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 16,
+    fontWeight: '700',
   },
   gameGrid: {
     flexDirection: 'row',
@@ -421,31 +436,39 @@ const styles = StyleSheet.create({
   },
   gameButton: {
     width: '48%',
-    height: 100,
-    borderRadius: 16,
+    height: 140,
+    borderRadius: 20,
     overflow: 'hidden',
   },
-  buttonPressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.98 }],
-  },
-  gameButtonGradient: {
+  gameButtonGlass: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    padding: 12,
+    gap: 12,
   },
-  gameEmoji: {
-    fontSize: 32,
+  buttonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   gameName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#fff',
+    textAlign: 'center',
   },
   gameDifficulty: {
     fontSize: 12,
-    color: '#cbd5e1',
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: -4,
   },
   loader: {
     marginVertical: 32,
@@ -453,27 +476,26 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 48,
-  },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderStyle: 'dashed',
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#cbd5e1',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#64748b',
   },
   roomCard: {
     marginBottom: 12,
     borderRadius: 16,
     overflow: 'hidden',
   },
-  roomCardGradient: {
+  roomCardGlass: {
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -481,33 +503,41 @@ const styles = StyleSheet.create({
   },
   roomInfo: {
     flex: 1,
+    gap: 4,
+  },
+  roomHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   roomGame: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
-    marginBottom: 4,
+  },
+  difficultyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   roomDifficulty: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginBottom: 4,
+    fontSize: 11,
+    fontWeight: '600',
   },
   roomCreator: {
-    fontSize: 14,
-    color: '#64748b',
+    fontSize: 13,
   },
   roomPlayers: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   playersText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#3b82f6',
-    marginBottom: 4,
-  },
-  playersIcon: {
-    fontSize: 20,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -517,15 +547,13 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   loadingCard: {
-    // backgroundColor: '#1e293b', // Removed in favor of GlassView
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 32,
     alignItems: 'center',
     gap: 16,
   },
   loadingText: {
     fontSize: 16,
-    color: '#fff',
     fontWeight: '600',
   },
 });
