@@ -60,8 +60,8 @@ const Tile: React.FC<TileProps> = ({ tile, onPress, disabled, cols }) => {
   const backgroundColor = tile.isActive
     ? theme.colors.primary
     : tile.isHighlighted
-    ? theme.colors.success
-    : theme.colors.surfaceSecondary;
+      ? theme.colors.success
+      : theme.colors.surfaceSecondary;
 
   return (
     <Pressable
@@ -83,6 +83,8 @@ const styles = StyleSheet.create({
   },
   grid: {
     width: '100%',
+    maxWidth: 500,
+    alignSelf: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
   },

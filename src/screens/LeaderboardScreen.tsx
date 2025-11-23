@@ -279,7 +279,7 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
   };
 
   const getDifficultiesForGame = (game: GameType): Difficulty[] => {
-    if (game === 'flip_match' || game === 'spatial_memory') {
+    if (game === 'flip_match' || game === 'spatial_memory' || game === 'stroop') {
       return ['easy', 'medium', 'hard'];
     }
     return ['normal'];

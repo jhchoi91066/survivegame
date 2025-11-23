@@ -528,7 +528,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   notLoggedInGlass: { padding: 40, alignItems: 'center', borderRadius: 24, width: '100%' },
   searchContainer: { paddingHorizontal: 20, marginBottom: 16 },
   searchGlass: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 50, borderRadius: 16 },
-  searchInput: { flex: 1, fontSize: 16, color: theme.colors.text, height: '100%' },
+  searchInput: { flex: 1, fontSize: 16, color: theme.colors.text, height: '100%', zIndex: 10, ...Platform.select({ web: { outlineStyle: 'none' } as any }) },
   scrollView: { flex: 1 },
   scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 40 },
   loadingContainer: { paddingVertical: 40 },

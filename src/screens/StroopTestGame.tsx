@@ -14,13 +14,16 @@ import {
   Award,
   Trophy,
   Target,
-  Pause
+  Pause,
+  Zap,
+  Flame
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassView } from '../components/shared/GlassView';
 import { PauseMenu } from '../components/shared/PauseMenu';
 import { RootStackParamList } from '../../App';
 import { useStroopStore } from '../game/stroop/store';
+import { Difficulty } from '../game/stroop/types';
 import { hapticPatterns } from '../utils/haptics';
 import { soundManager } from '../utils/soundManager';
 import { useGameStore } from '../game/shared/store';
@@ -54,12 +57,14 @@ const StroopTestGameContent: React.FC = () => {
   const { user } = useAuth();
   const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
   const {
-    currentProblem, score, timeRemaining, gameStatus, lives, answerProblem, decrementTime, startGame, resetGame, pauseGame, resumeGame
+    currentProblem, score, timeRemaining, gameStatus, lives, difficulty, answerProblem, decrementTime, startGame, resetGame, pauseGame, resumeGame
   } = useStroopStore();
 
   const { updateBestRecord } = useGameStore();
   const [isNewRecord, setIsNewRecord] = useState(false);
   const [isPauseMenuVisible, setIsPauseMenuVisible] = useState(false);
+  const [showDifficultyModal, setShowDifficultyModal] = useState(true);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('medium');
   const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
   const isMounted = React.useRef(true);
@@ -75,6 +80,7 @@ const StroopTestGameContent: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       resetGame();
+      setShowDifficultyModal(true);
       setIsNewRecord(false);
     }, [resetGame])
   );
@@ -115,9 +121,9 @@ const StroopTestGameContent: React.FC = () => {
       setIsNewRecord(true);
     }
 
-    const playTime = 30 - timeRemaining;
-    console.log('🎨 Stroop Test - Saving stats:', { score, playTime });
-    await updateStroopRecord(score, playTime);
+    const playTime = (difficulty === 'easy' ? 60 : difficulty === 'medium' ? 45 : 30) - timeRemaining;
+    console.log('🎨 Stroop Test - Saving stats:', { score, playTime, difficulty });
+    await updateStroopRecord(score, playTime, difficulty);
     updateBestRecord('stroop', score);
     await incrementGameCount();
 
@@ -129,11 +135,12 @@ const StroopTestGameContent: React.FC = () => {
           highScore: record.highScore,
           totalPlays: record.totalPlays,
           totalPlayTime: record.totalPlayTime,
+          difficulty: difficulty,
         });
       }
     }
 
-    const newAchievements = await updateStatsOnGamePlayed('stroop', score, playTime, 'normal');
+    const newAchievements = await updateStatsOnGamePlayed('stroop', score, playTime, difficulty);
     if (!isMounted.current) return;
 
     if (newAchievements.length > 0) {
@@ -160,14 +167,15 @@ const StroopTestGameContent: React.FC = () => {
     setIsNewRecord(false);
     soundManager.playSound('game_start');
     hapticPatterns.buttonPress();
-    startGame();
+    setShowDifficultyModal(false);
+    startGame(selectedDifficulty);
   };
 
   const handleRestart = () => {
     setIsNewRecord(false);
     hapticPatterns.buttonPress();
     resetGame();
-    startGame();
+    setShowDifficultyModal(true);
   };
 
   const handleBackToMenu = () => {
@@ -221,19 +229,45 @@ const StroopTestGameContent: React.FC = () => {
           </View>
         </View>
 
-        {gameStatus === 'ready' && (
-          <View style={styles.startContainer}>
-            <GlassView style={styles.startGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-              <Palette size={80} color={theme.colors.primary} style={{ marginBottom: 24 }} />
-              <Text style={styles.startTitle}>Stroop Test</Text>
-              <Text style={styles.startDescription}>글자의 의미가 아닌, 글자의 색깔을 맞추세요!{`\n`}3번 틀리면 게임이 종료됩니다.</Text>
+        {/* Difficulty Selection Modal */}
+        <Modal visible={showDifficultyModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+              <Palette size={48} color={theme.colors.primary} style={{ marginBottom: 16 }} />
+              <Text style={styles.modalTitle}>난이도 선택</Text>
+              <Text style={styles.modalDescription}>글자의 의미가 아닌, 글자의 색깔을 맞추세요!</Text>
+
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Zap size={20} color={selectedDifficulty === 'easy' ? '#fff' : theme.colors.text} style={{ marginRight: 8 }} />
+                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'easy' && { color: '#fff' }, selectedDifficulty !== 'easy' && { color: theme.colors.text }]}>쉬움</Text>
+                </View>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'easy' && { color: 'rgba(255,255,255,0.8)' }, selectedDifficulty !== 'easy' && { color: theme.colors.textSecondary }]}>4색 · 60초 · 목숨 3개</Text>
+              </Pressable>
+
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'medium' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('medium'); hapticPatterns.buttonPress(); }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Target size={20} color={selectedDifficulty === 'medium' ? '#fff' : theme.colors.text} style={{ marginRight: 8 }} />
+                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'medium' && { color: '#fff' }, selectedDifficulty !== 'medium' && { color: theme.colors.text }]}>보통</Text>
+                </View>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'medium' && { color: 'rgba(255,255,255,0.8)' }, selectedDifficulty !== 'medium' && { color: theme.colors.textSecondary }]}>6색 · 45초 · 목숨 3개</Text>
+              </Pressable>
+
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Flame size={20} color={selectedDifficulty === 'hard' ? '#fff' : theme.colors.text} style={{ marginRight: 8 }} />
+                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'hard' && { color: '#fff' }, selectedDifficulty !== 'hard' && { color: theme.colors.text }]}>어려움</Text>
+                </View>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'hard' && { color: 'rgba(255,255,255,0.8)' }, selectedDifficulty !== 'hard' && { color: theme.colors.textSecondary }]}>8색 · 30초 · 목숨 3개</Text>
+              </Pressable>
+
               <Pressable style={styles.startButton} onPress={handleStart}>
-                <Play size={24} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.startButtonText}>시작하기</Text>
+                <Play size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.startButtonText}>게임 시작</Text>
               </Pressable>
             </GlassView>
           </View>
-        )}
+        </Modal>
 
         {gameStatus === 'playing' && currentProblem && (
           <>
@@ -311,6 +345,7 @@ const StroopTestGameContent: React.FC = () => {
             { label: '현재 점수', value: `${score}점` },
             { label: '남은 시간', value: `${timeRemaining}초` },
             { label: '남은 기회', value: `${lives}회` },
+            { label: '난이도', value: difficulty === 'easy' ? '쉬움' : difficulty === 'medium' ? '보통' : '어려움' },
           ]}
           onResume={handleResume}
           onRestart={() => {
@@ -337,8 +372,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   startEmoji: { fontSize: 80, marginBottom: 24 },
   startTitle: { fontSize: 36, fontWeight: 'bold', color: theme.colors.text, marginBottom: 16 },
   startDescription: { fontSize: 16, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 32, lineHeight: 24 },
-  startButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 48, borderRadius: 16 },
-  startButtonText: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  startButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginTop: 12, alignItems: 'center' },
+  startButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   stats: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 16, marginHorizontal: 16, borderRadius: 20, marginBottom: 16 },
   statItem: { alignItems: 'center', minWidth: 60 },
   statLabel: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4 },
@@ -353,6 +388,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { borderRadius: 24, padding: 32, width: '85%', maxWidth: 400, alignItems: 'center' },
   modalTitle: { fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginBottom: 16 },
+  modalDescription: { fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+  difficultyButton: { width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginBottom: 12, alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row' },
+  difficultyButtonSelected: { backgroundColor: theme.colors.primary },
+  difficultyButtonText: { fontSize: 18, fontWeight: '600', color: theme.colors.text },
+  difficultySubText: { fontSize: 12, color: theme.colors.textSecondary },
   victoryEmoji: { fontSize: 64, marginBottom: 16 },
   finalScore: { fontSize: 24, color: theme.colors.success, marginBottom: 24, fontWeight: 'bold' },
   newRecordContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },

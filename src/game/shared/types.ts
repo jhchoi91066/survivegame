@@ -28,6 +28,7 @@ export interface GameRecord {
   };
   stroop: {
     highScore: number;
+    difficulty: 'easy' | 'medium' | 'hard';
     totalPlays: number;
     totalPlayTime: number;
   };

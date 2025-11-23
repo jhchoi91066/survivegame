@@ -115,10 +115,15 @@ export const updateSpatialMemoryRecord = async (
 
 
 // Stroop Test 기록 업데이트
-export const updateStroopRecord = async (score: number, playTime: number): Promise<void> => {
+export const updateStroopRecord = async (
+  score: number,
+  playTime: number,
+  difficulty: 'easy' | 'medium' | 'hard'
+): Promise<void> => {
   const current = await loadGameRecord('stroop');
   const newRecord = {
     highScore: !current || score > current.highScore ? score : current.highScore,
+    difficulty: !current || score > current.highScore ? difficulty : current.difficulty,
     totalPlays: (current?.totalPlays || 0) + 1,
     totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
