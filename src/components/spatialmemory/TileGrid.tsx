@@ -1,13 +1,20 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withSequence,
+  interpolateColor
+} from 'react-native-reanimated';
 import { useSpatialMemoryStore } from '../../game/spatialmemory/store';
 import { GRID_SIZES } from '../../game/spatialmemory/types';
 import { hapticPatterns } from '../../utils/haptics';
 import { soundManager } from '../../utils/soundManager';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const TILE_GAP = 8;
+const TILE_GAP = 12;
 
 const TileGrid: React.FC = () => {
   const { tiles, settings, gameStatus, handleTilePress } = useSpatialMemoryStore();
@@ -23,9 +30,7 @@ const TileGrid: React.FC = () => {
   const onTilePress = (tileId: number) => {
     if (gameStatus === 'input') {
       hapticPatterns.buttonPress();
-      const result = handleTilePress(tileId);
-      // 정답/오답 사운드는 store에서 직접 처리하는 것이 나을 수 있지만,
-      // 여기서는 간단하게 버튼 클릭 사운드만 재생
+      handleTilePress(tileId);
       soundManager.playSound('button_press');
     }
   };
@@ -40,6 +45,7 @@ const TileGrid: React.FC = () => {
             onPress={() => onTilePress(tile.id)}
             disabled={gameStatus !== 'input'}
             cols={cols}
+            gameStatus={gameStatus}
           />
         ))}
       </View>
@@ -52,16 +58,44 @@ interface TileProps {
   onPress: () => void;
   disabled: boolean;
   cols: number;
+  gameStatus: string;
 }
 
-const Tile: React.FC<TileProps> = ({ tile, onPress, disabled, cols }) => {
+const Tile: React.FC<TileProps> = ({ tile, onPress, disabled, cols, gameStatus }) => {
   const { theme } = useTheme();
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(0.3);
 
-  const backgroundColor = tile.isActive
-    ? theme.colors.primary
-    : tile.isHighlighted
-      ? theme.colors.success
-      : theme.colors.surfaceSecondary;
+  useEffect(() => {
+    if (tile.isActive) {
+      scale.value = withSequence(
+        withSpring(1.1, { damping: 10 }),
+        withSpring(1)
+      );
+      opacity.value = withTiming(1, { duration: 200 });
+    } else if (tile.isHighlighted) {
+      scale.value = withSequence(
+        withSpring(0.9, { damping: 10 }),
+        withSpring(1)
+      );
+      opacity.value = withTiming(1, { duration: 200 });
+    } else {
+      opacity.value = withTiming(0.3, { duration: 300 });
+      scale.value = withTiming(1);
+    }
+  }, [tile.isActive, tile.isHighlighted]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+      opacity: opacity.value,
+      backgroundColor: tile.isActive
+        ? '#fff'
+        : tile.isHighlighted
+          ? '#a855f7' // Purple-500
+          : 'rgba(255,255,255,0.5)',
+    };
+  });
 
   return (
     <Pressable
@@ -69,7 +103,7 @@ const Tile: React.FC<TileProps> = ({ tile, onPress, disabled, cols }) => {
       disabled={disabled}
       style={[styles.tileWrapper, { width: `${100 / cols}%` }]}
     >
-      <View style={[styles.tile, { backgroundColor }]} />
+      <Animated.View style={[styles.tile, animatedStyle]} />
     </Pressable>
   );
 };
@@ -80,10 +114,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: TILE_GAP,
+    width: '100%',
   },
   grid: {
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 400,
     alignSelf: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -94,7 +129,12 @@ const styles = StyleSheet.create({
   },
   tile: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 16,
+    shadowColor: "#a855f7",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 5,
   },
 });
 

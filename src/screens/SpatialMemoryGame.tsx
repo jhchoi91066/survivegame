@@ -14,7 +14,10 @@ import {
   X,
   Activity,
   Layers,
-  Pause
+  Pause,
+  Zap,
+  Target,
+  Flame
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassView } from '../components/shared/GlassView';
@@ -222,12 +225,12 @@ const SpatialMemoryGameContent: React.FC = () => {
 
   const getStatusText = () => {
     switch (gameStatus) {
-      case 'ready': return '준비';
-      case 'showing': return '패턴 기억하기...';
-      case 'input': return '입력하세요!';
-      case 'correct': return '정답!';
-      case 'wrong': return '틀렸습니다';
-      case 'gameover': return '게임 오버';
+      case 'ready': return 'Ready';
+      case 'showing': return 'Watch...';
+      case 'input': return 'Your Turn!';
+      case 'correct': return 'Correct!';
+      case 'wrong': return 'Wrong!';
+      case 'gameover': return 'Game Over';
       default: return '';
     }
   };
@@ -236,42 +239,36 @@ const SpatialMemoryGameContent: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={theme.gradients.spatialMemory} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
           <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-            <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-              <ArrowLeft size={24} color={theme.colors.textSecondary} />
+            <GlassView style={styles.iconButtonGlass} intensity={20} tint="light">
+              <ArrowLeft size={24} color="#fff" />
             </GlassView>
           </Pressable>
           <View style={styles.titleContainer}>
-            <Brain size={24} color={theme.colors.text} style={{ marginRight: 8 }} />
+            <Brain size={24} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.title}>Spatial Memory</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {gameStatus === 'input' ? (
-              <Pressable onPress={handlePause} style={styles.restartButton}>
-                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                  <Pause size={24} color={theme.colors.text} />
-                </GlassView>
-              </Pressable>
-            ) : (
-              <Pressable onPress={handleRestart} style={styles.restartButton}>
-                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                  <RotateCcw size={24} color={theme.colors.text} />
+          <View style={{ width: 40 }}>
+            {gameStatus === 'input' && (
+              <Pressable onPress={handlePause} style={styles.backButton}>
+                <GlassView style={styles.iconButtonGlass} intensity={20} tint="light">
+                  <Pause size={24} color="#fff" />
                 </GlassView>
               </Pressable>
             )}
           </View>
         </View>
 
-        <GlassView style={styles.stats} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+        <GlassView style={styles.stats} intensity={20} tint="light">
           <View style={styles.statItem}>
-            <Layers size={20} color={theme.colors.textSecondary} style={{ marginBottom: 4 }} />
+            <Text style={styles.statLabel}>LEVEL</Text>
             <Text style={styles.statValue}>{currentLevel}</Text>
           </View>
           <View style={styles.statItem}>
-            <Activity size={20} color={theme.colors.textSecondary} style={{ marginBottom: 4 }} />
+            <Text style={styles.statLabel}>STATUS</Text>
             <View style={styles.statusContainer}>
               {getStatusIcon()}
               <Text style={[styles.statValue, styles.statusText, gameStatus === 'wrong' && styles.wrongText, gameStatus === 'correct' && styles.correctText, { marginLeft: getStatusIcon() ? 4 : 0 }]}>
@@ -279,46 +276,46 @@ const SpatialMemoryGameContent: React.FC = () => {
               </Text>
             </View>
           </View>
-          {isMultiplayer ? (
-            <View style={styles.statItem} accessible={true} accessibilityRole="text" accessibilityLabel={`상대방 점수: ${opponentScore}점`}>
-              <Trophy size={20} color={theme.colors.warning} style={{ marginBottom: 4 }} />
-              <Text style={styles.statValue}>{opponentScore}</Text>
-            </View>
-          ) : (
-            <View style={styles.statItem}>
-              <Grid3x3 size={20} color={theme.colors.textSecondary} style={{ marginBottom: 4 }} />
-              <Text style={styles.statValue}>{settings.difficulty === 'easy' ? '쉬움' : settings.difficulty === 'medium' ? '보통' : '어려움'}</Text>
-            </View>
-          )}
         </GlassView>
 
         {gameStatus !== 'ready' && <TileGrid />}
 
         <Modal visible={showDifficultyModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-              <Grid3x3 size={48} color={theme.colors.primary} style={{ marginBottom: 16 }} />
-              <Text style={styles.modalTitle}>난이도 선택</Text>
-              <Text style={styles.modalDescription}>깜빡이는 타일의 순서를 기억하세요!{`\n`}레벨이 올라갈수록 더 많은 타일이 깜빡입니다.</Text>
+            <GlassView style={styles.modalContent} intensity={30} tint="light">
+              <View style={styles.iconContainer}>
+                <Brain size={48} color="#fff" />
+              </View>
+              <Text style={styles.modalTitle}>Spatial Memory</Text>
+              <Text style={styles.modalDescription}>Remember the sequence of flashing tiles!</Text>
 
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
-                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'easy' && { color: '#fff' }, selectedDifficulty !== 'easy' && { color: theme.colors.text }]}>쉬움 (3×3)</Text>
-                <Text style={[styles.difficultySubText, selectedDifficulty === 'easy' && { color: 'rgba(255,255,255,0.8)' }, selectedDifficulty !== 'easy' && { color: theme.colors.textSecondary }]}>레벨 3부터 시작 · 느린 속도</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Zap size={20} color={selectedDifficulty === 'easy' ? theme.colors.primary : '#fff'} style={{ marginRight: 8 }} />
+                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'easy' && { color: theme.colors.primary }]}>Easy</Text>
+                </View>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'easy' && { color: theme.colors.primary }]}>3x3 Grid · Slow</Text>
               </Pressable>
 
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'medium' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('medium'); hapticPatterns.buttonPress(); }}>
-                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'medium' && { color: '#fff' }, selectedDifficulty !== 'medium' && { color: theme.colors.text }]}>보통 (4×4)</Text>
-                <Text style={[styles.difficultySubText, selectedDifficulty === 'medium' && { color: 'rgba(255,255,255,0.8)' }, selectedDifficulty !== 'medium' && { color: theme.colors.textSecondary }]}>레벨 3부터 시작 · 보통 속도</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'medium' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('medium'); hapticPatterns.buttonPress(); }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Target size={20} color={selectedDifficulty === 'medium' ? theme.colors.primary : '#fff'} style={{ marginRight: 8 }} />
+                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'medium' && { color: theme.colors.primary }]}>Medium</Text>
+                </View>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'medium' && { color: theme.colors.primary }]}>4x4 Grid · Medium</Text>
               </Pressable>
 
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
-                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'hard' && { color: '#fff' }, selectedDifficulty !== 'hard' && { color: theme.colors.text }]}>어려움 (5×5)</Text>
-                <Text style={[styles.difficultySubText, selectedDifficulty === 'hard' && { color: 'rgba(255,255,255,0.8)' }, selectedDifficulty !== 'hard' && { color: theme.colors.textSecondary }]}>레벨 4부터 시작 · 빠른 속도</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Flame size={20} color={selectedDifficulty === 'hard' ? theme.colors.primary : '#fff'} style={{ marginRight: 8 }} />
+                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'hard' && { color: theme.colors.primary }]}>Hard</Text>
+                </View>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'hard' && { color: theme.colors.primary }]}>5x5 Grid · Fast</Text>
               </Pressable>
 
               <Pressable style={styles.startButton} onPress={handleStartGame}>
-                <Play size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.startButtonText}>게임 시작</Text>
+                <Play size={20} color={theme.colors.success} style={{ marginRight: 8 }} />
+                <Text style={styles.startButtonText}>Start Game</Text>
               </Pressable>
             </GlassView>
           </View>
@@ -326,25 +323,32 @@ const SpatialMemoryGameContent: React.FC = () => {
 
         <Modal visible={gameStatus === 'gameover'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-              <Brain size={64} color={theme.colors.primary} style={{ marginBottom: 16 }} />
-              <Text style={styles.modalTitle}>게임 오버!</Text>
-              {isNewRecord && (
-                <View style={styles.newRecordContainer}>
-                  <Trophy size={24} color={theme.colors.warning} style={{ marginRight: 8 }} />
-                  <Text style={styles.newRecord}>신기록 달성!</Text>
-                </View>
-              )}
-              <Text style={styles.finalScore}>최종 레벨: {currentLevel - 1}</Text>
-              <Text style={styles.victoryStats}>{currentLevel - 1}개의 타일 순서를 기억했습니다!</Text>
-              <Pressable style={styles.startButton} onPress={handleRestart}>
-                <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.startButtonText}>다시 하기</Text>
-              </Pressable>
-              <Pressable style={[styles.menuButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={handleBackToMenu}>
-                <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
-                <Text style={styles.menuButtonText}>메뉴로</Text>
-              </Pressable>
+            <GlassView style={styles.modalContent} intensity={30} tint="light">
+              <View style={styles.iconContainer}>
+                <Brain size={48} color="#fff" />
+              </View>
+              <Text style={styles.modalTitle}>Game Over!</Text>
+
+              <View style={styles.resultStats}>
+                <Text style={styles.resultLabel}>Final Level</Text>
+                <Text style={styles.resultScore}>{currentLevel - 1}</Text>
+                {isNewRecord && (
+                  <View style={styles.newRecordBadge}>
+                    <Trophy size={14} color="#f59e0b" style={{ marginRight: 4 }} />
+                    <Text style={styles.newRecordText}>New Record!</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.modalButtons}>
+                <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+                  <Text style={styles.menuButtonText}>Menu</Text>
+                </Pressable>
+                <Pressable style={styles.retryButton} onPress={handleRestart}>
+                  <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </Pressable>
+              </View>
             </GlassView>
           </View>
         </Modal>
@@ -377,37 +381,47 @@ const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   backButton: { borderRadius: 12, overflow: 'hidden' },
-  iconButtonGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
-  backButtonText: { color: theme.colors.textSecondary, fontSize: 16 },
+  iconButtonGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)' },
   titleContainer: { flexDirection: 'row', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text },
-  restartButton: { borderRadius: 12, overflow: 'hidden' },
-  restartButtonText: { fontSize: 24, color: theme.colors.text },
-  stats: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 16, marginHorizontal: 16, borderRadius: 20, marginBottom: 16 },
-  statItem: { alignItems: 'center' },
-  statLabel: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4 },
-  statValue: { fontSize: 20, fontWeight: 'bold', color: theme.colors.text },
+  title: { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { borderRadius: 32, padding: 32, width: '100%', maxWidth: 400, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
+  iconContainer: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 24, borderWidth: 4, borderColor: 'rgba(255,255,255,0.1)' },
+  modalTitle: { fontSize: 36, fontWeight: '900', color: '#fff', marginBottom: 8, letterSpacing: -1 },
+  modalDescription: { fontSize: 16, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginBottom: 32, lineHeight: 24 },
+
+  difficultyButton: { width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 20, marginBottom: 12, alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  difficultyButtonSelected: { backgroundColor: '#fff', borderColor: '#fff' },
+  difficultyButtonText: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  difficultySubText: { fontSize: 14, color: 'rgba(255,255,255,0.6)' },
+
+  startButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: '#fff', paddingVertical: 18, borderRadius: 20, marginTop: 12, alignItems: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
+  startButtonText: { fontSize: 20, fontWeight: '900', color: theme.colors.success },
+
+  // Game Styles
+  stats: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 16, marginHorizontal: 16, borderRadius: 24, marginBottom: 24, backgroundColor: 'rgba(15, 23, 42, 0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  statItem: { alignItems: 'flex-start' },
+  statLabel: { fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
+  statValue: { fontSize: 32, fontWeight: '900', color: '#fff' },
   statusContainer: { flexDirection: 'row', alignItems: 'center' },
-  statusText: { fontSize: 16 },
-  wrongText: { color: theme.colors.error },
-  correctText: { color: theme.colors.success },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { borderRadius: 24, padding: 32, width: '85%', maxWidth: 400, alignItems: 'center' },
-  modalTitle: { fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginBottom: 12 },
-  modalDescription: { fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  difficultyButton: { width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginBottom: 12, alignItems: 'center' },
-  difficultyButtonSelected: { backgroundColor: theme.colors.primary },
-  difficultyButtonText: { fontSize: 18, fontWeight: '600', color: theme.colors.text },
-  difficultySubText: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 4 },
-  startButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginTop: 12, alignItems: 'center' },
-  startButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  gameOverEmoji: { fontSize: 64, marginBottom: 16 },
-  finalScore: { fontSize: 32, fontWeight: 'bold', color: theme.colors.primary, marginBottom: 8 },
-  victoryStats: { fontSize: 16, color: theme.colors.textSecondary, marginBottom: 24, textAlign: 'center' },
-  newRecordContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  newRecord: { fontSize: 20, fontWeight: 'bold', color: theme.colors.primary },
-  menuButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginTop: 8, alignItems: 'center' },
-  menuButtonText: { fontSize: 16, fontWeight: '600', color: theme.colors.text },
+  statusText: { fontSize: 24, fontWeight: '900', color: '#fff' },
+  wrongText: { color: '#ef4444' },
+  correctText: { color: '#34d399' },
+
+  // Result Modal
+  resultStats: { alignItems: 'center', marginBottom: 32 },
+  resultLabel: { fontSize: 16, color: 'rgba(255,255,255,0.6)', marginBottom: 4 },
+  resultScore: { fontSize: 64, fontWeight: '900', color: '#a855f7', textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 10 },
+  newRecordBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginTop: 8 },
+  newRecordText: { color: '#f59e0b', fontWeight: '700', fontSize: 12 },
+
+  modalButtons: { flexDirection: 'row', gap: 12, width: '100%' },
+  menuButton: { flex: 1, paddingVertical: 16, borderRadius: 16, backgroundColor: 'rgba(30, 41, 59, 0.8)', alignItems: 'center' },
+  menuButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  retryButton: { flex: 1, paddingVertical: 16, borderRadius: 16, backgroundColor: '#a855f7', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', shadowColor: "#a855f7", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
+  retryButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
 
 export default SpatialMemoryGame;

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Pressable, Text, StyleSheet } from 'react-native';
+import { Pressable, Text, StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,7 +11,7 @@ import Animated, {
 import { Card as CardType } from '../../game/flipmatch/types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { soundManager } from '../../utils/soundManager';
-import { SPRING_CONFIGS } from '../../animations/gameAnimations';
+import { Brain } from 'lucide-react-native';
 
 interface CardProps {
   card: CardType;
@@ -24,8 +24,7 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
   const scale = useSharedValue(1);
 
   useEffect(() => {
-    // Quiet, standard flip without bounce/wobble
-    rotation.value = withTiming(card.isFlipped ? 180 : 0, { duration: 300 });
+    rotation.value = withTiming(card.isFlipped ? 180 : 0, { duration: 400 });
     if (card.isFlipped && !card.isMatched) {
       soundManager.playSound('card_flip');
     }
@@ -33,7 +32,6 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
 
   useEffect(() => {
     if (card.isMatched) {
-      // Simple match pulse without wobble
       scale.value = withSequence(
         withSpring(1.1, { damping: 12, stiffness: 100 }),
         withSpring(1, { damping: 15, stiffness: 100 })
@@ -44,9 +42,8 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
 
   const handlePress = () => {
     if (!card.isFlipped && !card.isMatched) {
-      // Very subtle press effect
       scale.value = withSequence(
-        withTiming(0.96, { duration: 50 }),
+        withTiming(0.95, { duration: 50 }),
         withTiming(1, { duration: 50 })
       );
     }
@@ -54,19 +51,6 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
   };
 
   const frontAnimatedStyle = useAnimatedStyle(() => {
-    const rotateValue = interpolate(rotation.value, [0, 180], [0, 180]);
-    const opacity = interpolate(rotation.value, [0, 90, 180], [1, 0, 0]);
-    return {
-      transform: [
-        { perspective: 1000 },
-        { rotateY: `${rotateValue}deg` },
-        { scale: scale.value },
-      ],
-      opacity,
-    };
-  });
-
-  const backAnimatedStyle = useAnimatedStyle(() => {
     const rotateValue = interpolate(rotation.value, [0, 180], [180, 360]);
     const opacity = interpolate(rotation.value, [0, 90, 180], [0, 0, 1]);
     return {
@@ -76,13 +60,23 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
         { scale: scale.value },
       ],
       opacity,
+      zIndex: card.isFlipped ? 1 : 0,
     };
   });
 
-  const cardMatchedStyle = card.isMatched && {
-    opacity: 0.6,
-    backgroundColor: theme.colors.success,
-  };
+  const backAnimatedStyle = useAnimatedStyle(() => {
+    const rotateValue = interpolate(rotation.value, [0, 180], [0, 180]);
+    const opacity = interpolate(rotation.value, [0, 90, 180], [1, 0, 0]);
+    return {
+      transform: [
+        { perspective: 1000 },
+        { rotateY: `${rotateValue}deg` },
+        { scale: scale.value },
+      ],
+      opacity,
+      zIndex: card.isFlipped ? 0 : 1,
+    };
+  });
 
   return (
     <Pressable
@@ -90,30 +84,37 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
       disabled={card.isFlipped || card.isMatched}
       style={styles.container}
     >
+      {/* Front Face (Content) - Initially Hidden */}
       <Animated.View
         style={[
           styles.card,
-          { backgroundColor: theme.colors.primary },
-          cardMatchedStyle,
+          styles.cardFront,
+          {
+            backgroundColor: card.isMatched ? '#10b981' : '#4f46e5', // Emerald-500 or Indigo-600
+            borderColor: card.isMatched ? '#34d399' : '#818cf8',
+            shadowColor: card.isMatched ? '#10b981' : '#4f46e5',
+          },
           frontAnimatedStyle,
         ]}
       >
-        <Text style={[styles.cardBackText, { color: theme.colors.text }]}>?</Text>
+        <Text style={styles.cardValue}>{card.value}</Text>
       </Animated.View>
 
+      {/* Back Face (Brain Icon) - Initially Visible */}
       <Animated.View
         style={[
           styles.card,
           styles.cardBack,
           {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border
+            backgroundColor: '#1e293b', // Slate-800
+            borderColor: '#334155', // Slate-700
           },
-          cardMatchedStyle,
           backAnimatedStyle,
         ]}
       >
-        <Text style={[styles.cardValue, { color: theme.colors.text }]}>{card.value}</Text>
+        <View style={styles.iconContainer}>
+          <Brain size={20} color="#475569" />
+        </View>
       </Animated.View>
     </Pressable>
   );
@@ -122,6 +123,8 @@ const Card: React.FC<CardProps> = ({ card, onPress }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
   card: {
     position: 'absolute',
@@ -129,23 +132,30 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 16,
     backfaceVisibility: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    borderWidth: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
     elevation: 5,
   },
-  cardBack: {
-    borderWidth: 2,
+  cardFront: {
+    // Dynamic background color
   },
-  cardBackText: {
-    fontSize: 32,
-    fontWeight: 'bold',
+  cardBack: {
+    shadowColor: '#000',
   },
   cardValue: {
-    fontSize: 40,
+    fontSize: 32,
+  },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(51, 65, 85, 0.5)', // Slate-700/50
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

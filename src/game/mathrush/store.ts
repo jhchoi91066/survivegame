@@ -1,181 +1,147 @@
 import { create } from 'zustand';
-import { Question, OperationType, GameStatus } from './types';
+import { Problem, Difficulty, GameStatus } from './types';
 
 interface MathRushStore {
-  currentQuestion: Question | null;
+  currentProblem: Problem | null;
   score: number;
-  combo: number;
-  highestCombo: number;
   timeRemaining: number;
-  totalTime: number;
   gameStatus: GameStatus;
   lives: number;
+  difficulty: Difficulty;
 
-  generateQuestion: (score: number) => void;
-  answerQuestion: (answer: number) => void;
+  generateProblem: () => void;
+  answerProblem: (answer: number) => void;
   decrementTime: () => void;
-  startGame: () => void;
+  startGame: (difficulty: Difficulty) => void;
+  pauseGame: () => void;
+  resumeGame: () => void;
   resetGame: () => void;
 }
 
-const randomInt = (min: number, max: number): number => {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-};
+const generateProblem = (difficulty: Difficulty): Problem => {
+  let num1: number, num2: number, answer: number;
+  let operator: string;
 
-const createQuestion = (score: number): Question => {
-  let num1: number, num2: number, correctAnswer: number;
-  let operation: OperationType;
+  // Difficulty settings
+  const isHard = difficulty === 'hard';
+  const isMedium = difficulty === 'medium';
 
-  if (score <= 4) {
-    // 0-4점: 한 자릿수 덧셈/뺄셈
-    operation = Math.random() > 0.5 ? '+' : '-';
-    if (operation === '+') {
-      num1 = randomInt(1, 9);
-      num2 = randomInt(1, 9);
-      correctAnswer = num1 + num2;
-    } else {
-      num1 = randomInt(5, 9);
-      num2 = randomInt(1, num1 - 1);
-      correctAnswer = num1 - num2;
-    }
-  } else if (score <= 9) {
-    // 5-9점: 두 자릿수 덧셈/뺄셈
-    operation = Math.random() > 0.5 ? '+' : '-';
-    if (operation === '+') {
-      num1 = randomInt(10, 50);
-      num2 = randomInt(10, 50);
-      correctAnswer = num1 + num2;
-    } else {
-      num1 = randomInt(20, 99);
-      num2 = randomInt(10, num1 - 1);
-      correctAnswer = num1 - num2;
-    }
-  } else if (score <= 14) {
-    // 10-14점: 한 자릿수 곱셈, 간단한 나눗셈
-    operation = Math.random() > 0.5 ? '×' : '÷';
-    if (operation === '×') {
-      num1 = randomInt(2, 9);
-      num2 = randomInt(2, 9);
-      correctAnswer = num1 * num2;
-    } else {
-      num2 = randomInt(2, 9);
-      correctAnswer = randomInt(2, 9);
-      num1 = num2 * correctAnswer;
-    }
-  } else {
-    // 15점 이상: 두 자릿수 곱셈, 복잡한 나눗셈
-    operation = Math.random() > 0.5 ? '×' : '÷';
-    if (operation === '×') {
-      num1 = randomInt(10, 25);
-      num2 = randomInt(10, 25);
-      correctAnswer = num1 * num2;
-    } else {
-      num2 = randomInt(2, 15);
-      correctAnswer = randomInt(2, 15);
-      num1 = num2 * correctAnswer;
-    }
+  // Decide operation based on difficulty
+  const operations = ['+', '-'];
+  if (isMedium || isHard) operations.push('×');
+  if (isHard) operations.push('÷');
+
+  operator = operations[Math.floor(Math.random() * operations.length)];
+
+  // Generate numbers
+  if (operator === '+') {
+    num1 = Math.floor(Math.random() * (isHard ? 50 : 20)) + 1;
+    num2 = Math.floor(Math.random() * (isHard ? 50 : 20)) + 1;
+    answer = num1 + num2;
+  } else if (operator === '-') {
+    num1 = Math.floor(Math.random() * (isHard ? 50 : 20)) + 5;
+    num2 = Math.floor(Math.random() * num1) + 1;
+    answer = num1 - num2;
+  } else if (operator === '×') {
+    num1 = Math.floor(Math.random() * (isHard ? 12 : 9)) + 2;
+    num2 = Math.floor(Math.random() * (isHard ? 12 : 9)) + 2;
+    answer = num1 * num2;
+  } else { // Division
+    num2 = Math.floor(Math.random() * 9) + 2;
+    answer = Math.floor(Math.random() * 9) + 2;
+    num1 = num2 * answer;
   }
 
-  const wrongAnswers = new Set<number>();
-  while (wrongAnswers.size < 3) {
-    const offset = randomInt(-10, 10) || 1;
-    const wrong = correctAnswer + offset;
-    if (wrong !== correctAnswer) {
-      wrongAnswers.add(wrong);
+  // Generate options
+  const options = new Set<number>();
+  options.add(answer);
+
+  while (options.size < 4) {
+    const offset = Math.floor(Math.random() * 10) + 1;
+    const wrongAnswer = Math.random() > 0.5 ? answer + offset : answer - offset;
+    if (wrongAnswer >= 0) { // Avoid negative options unless the answer is negative (which shouldn't happen with current logic)
+      options.add(wrongAnswer);
     }
   }
-
-  const options = [correctAnswer, ...Array.from(wrongAnswers)];
-  const shuffledOptions = options.sort(() => Math.random() - 0.5);
 
   return {
-    num1,
-    num2,
-    operation,
-    correctAnswer,
-    options: shuffledOptions,
+    id: Date.now(),
+    text: `${num1} ${operator} ${num2} = ?`,
+    correctAnswer: answer,
+    options: Array.from(options).sort(() => Math.random() - 0.5)
   };
 };
 
 export const useMathRushStore = create<MathRushStore>((set, get) => ({
-  currentQuestion: null,
+  currentProblem: null,
   score: 0,
-  combo: 0,
-  highestCombo: 0,
-  timeRemaining: 30,
-  totalTime: 30,
+  timeRemaining: 60,
   gameStatus: 'ready',
   lives: 3,
+  difficulty: 'medium',
 
-  generateQuestion: (score) => {
-    const question = createQuestion(score);
-    set({ currentQuestion: question });
+  generateProblem: () => {
+    const { difficulty } = get();
+    const problem = generateProblem(difficulty);
+    set({ currentProblem: problem });
   },
 
-  answerQuestion: (answer) => {
-    const state = get();
-    if (!state.currentQuestion) return;
+  answerProblem: (answer: number) => {
+    const { currentProblem, score, lives } = get();
+    if (!currentProblem) return;
 
-    const isCorrect = answer === state.currentQuestion.correctAnswer;
+    const isCorrect = answer === currentProblem.correctAnswer;
 
     if (isCorrect) {
-      const newCombo = state.combo + 1;
-      const newScore = state.score + 1;
-
-      set({
-        score: newScore,
-        combo: newCombo,
-        highestCombo: Math.max(state.highestCombo, newCombo),
-      });
-
-      get().generateQuestion(newScore);
+      set({ score: score + 1 });
+      get().generateProblem();
     } else {
-      const newLives = state.lives - 1;
-      set({
-        lives: newLives,
-        combo: 0, // 콤보 초기화
-        gameStatus: newLives > 0 ? 'playing' : 'finished',
-      });
-
-      if (newLives > 0) {
-        get().generateQuestion(state.score);
+      const newLives = lives - 1;
+      set({ lives: newLives });
+      if (newLives <= 0) {
+        set({ gameStatus: 'finished' });
+      } else {
+        get().generateProblem();
       }
     }
   },
 
   decrementTime: () => {
-    const state = get();
-    const newTime = state.timeRemaining - 1;
+    const { timeRemaining, gameStatus } = get();
+    if (gameStatus !== 'playing') return;
 
-    if (newTime < 0) {
-      set({
-        timeRemaining: 0,
-        gameStatus: 'finished',
-      });
+    if (timeRemaining > 0) {
+      set({ timeRemaining: timeRemaining - 1 });
     } else {
-      set({ timeRemaining: newTime });
+      set({ gameStatus: 'finished' });
     }
   },
 
-  startGame: () => {
+  startGame: (difficulty: Difficulty) => {
+    const timeLimit = difficulty === 'easy' ? 60 : difficulty === 'medium' ? 45 : 30;
     set({
       score: 0,
-      combo: 0,
-      highestCombo: 0,
-      timeRemaining: 30,
-      gameStatus: 'playing',
       lives: 3,
+      timeRemaining: timeLimit,
+      gameStatus: 'playing',
+      difficulty,
     });
-    get().generateQuestion(0);
+    get().generateProblem();
+  },
+
+  pauseGame: () => {
+    set({ gameStatus: 'paused' });
+  },
+
+  resumeGame: () => {
+    set({ gameStatus: 'playing' });
   },
 
   resetGame: () => {
     set({
-      currentQuestion: null,
+      currentProblem: null,
       score: 0,
-      combo: 0,
-      highestCombo: 0,
-      timeRemaining: 30,
+      timeRemaining: 60,
       gameStatus: 'ready',
       lives: 3,
     });

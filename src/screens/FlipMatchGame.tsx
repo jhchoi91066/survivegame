@@ -28,11 +28,12 @@ import {
   RotateCcw,
   Trophy,
   Timer,
-  Flame,
-  Grid3X3,
+  Brain,
   Play,
   Menu,
-  Move
+  Move,
+  Star,
+  RefreshCw
 } from 'lucide-react-native';
 
 type FlipMatchGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FlipMatchGame'>;
@@ -225,99 +226,96 @@ const FlipMatchGameContent: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={theme.gradients.flipMatch} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Pressable onPress={handleBackToMenu} style={styles.backButton}>
-              <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                <ArrowLeft size={24} color={theme.colors.text} />
+        <View style={styles.header}>
+          <Pressable onPress={handleBackToMenu} style={styles.backButton}>
+            <GlassView style={styles.iconButtonGlass} intensity={20} tint="light">
+              <ArrowLeft size={24} color="#fff" />
+            </GlassView>
+          </Pressable>
+          <View style={styles.titleContainer}>
+            <Brain size={24} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.title}>Flip & Match</Text>
+          </View>
+          <View style={styles.headerRight}>
+            <Pressable
+              onPress={togglePause}
+              style={styles.pauseButton}
+              disabled={gameStatus !== 'playing'}
+            >
+              <GlassView style={styles.iconButtonGlass} intensity={20} tint="light">
+                {isPaused ? (
+                  <Play size={24} color="#fff" />
+                ) : (
+                  <Pause size={24} color="#fff" />
+                )}
               </GlassView>
             </Pressable>
-            <Text style={styles.title}>Flip & Match</Text>
-            <View style={styles.headerRight}>
-              <Pressable
-                onPress={togglePause}
-                style={styles.pauseButton}
-                disabled={gameStatus !== 'playing'}
-              >
-                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                  <Pause size={24} color={theme.colors.text} />
-                </GlassView>
-              </Pressable>
-              <Pressable onPress={handleRestart} style={styles.restartButton}>
-                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                  <RotateCcw size={24} color={theme.colors.text} />
-                </GlassView>
-              </Pressable>
-            </View>
+            <Pressable onPress={handleRestart} style={styles.restartButton}>
+              <GlassView style={styles.iconButtonGlass} intensity={20} tint="light">
+                <RotateCcw size={24} color="#fff" />
+              </GlassView>
+            </Pressable>
           </View>
+        </View>
 
-          <GlassView style={styles.stats} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-            <View style={styles.statItem}>
-              <View style={styles.statHeader}>
-                <Timer size={16} color={theme.colors.textSecondary} />
-                <Text style={styles.statLabel}>시간</Text>
+        {gameStatus !== 'ready' && (
+          <View style={styles.gameContent}>
+            <GlassView style={styles.stats} intensity={20} tint="light">
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>MOVES</Text>
+                <Text style={styles.statValue}>{moves}</Text>
               </View>
-              <Text style={[styles.statValue, timeRemaining <= 10 && styles.statValueWarning]}>{formatTime(timeRemaining)}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <View style={styles.statHeader}>
-                <Move size={16} color={theme.colors.textSecondary} />
-                <Text style={styles.statLabel}>이동</Text>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>MATCHES</Text>
+                <Text style={styles.statValue}>
+                  <Text style={{ color: '#34d399' }}>{matchedPairs}</Text>
+                  <Text style={{ fontSize: 20, color: 'rgba(255,255,255,0.5)' }}> / {totalPairs}</Text>
+                </Text>
               </View>
-              <Text style={styles.statValue}>{moves}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <View style={styles.statHeader}>
-                <Grid3X3 size={16} color={theme.colors.textSecondary} />
-                <Text style={styles.statLabel}>진행</Text>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>TIME</Text>
+                <Text style={[styles.statValue, timeRemaining <= 10 && styles.statValueWarning]}>{formatTime(timeRemaining)}</Text>
               </View>
-              <Text style={styles.statValue}>{matchedPairs}/{totalPairs}</Text>
-            </View>
-            {isMultiplayer && (
-              <View
-                style={styles.statItem}
-                accessible={true}
-                accessibilityRole="text"
-                accessibilityLabel={`상대방 점수: ${opponentScore}점`}
-              >
-                <View style={styles.statHeader}>
-                  <Trophy size={16} color={theme.colors.textSecondary} />
-                  <Text style={styles.statLabel}>상대</Text>
-                </View>
-                <Animated.Text style={[styles.statValue, opponentScoreAnimatedStyle]}>{opponentScore}</Animated.Text>
+            </GlassView>
+
+            {gameStatus === 'preview' && (
+              <View style={styles.previewOverlay}>
+                <GlassView style={styles.previewGlass} intensity={40} tint="light">
+                  <Text style={styles.previewText}>Memorize the cards!</Text>
+                </GlassView>
               </View>
             )}
-          </GlassView>
 
-          {gameStatus === 'preview' && (
-            <View style={styles.previewOverlay}>
-              <GlassView style={styles.previewGlass} intensity={40} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                <Text style={styles.previewText}>카드를 기억하세요!</Text>
-              </GlassView>
+            <View style={styles.boardContainer}>
+              <GameBoard />
             </View>
-          )}
-          {gameStatus !== 'ready' && <GameBoard />}
-        </ScrollView>
+          </View>
+        )}
 
         <Modal visible={showDifficultyModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-              <Grid3X3 size={64} color={theme.colors.primary} style={{ marginBottom: 24 }} />
-              <Text style={styles.modalTitle}>난이도 선택</Text>
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
-                <Text style={[styles.difficultyButtonText, { color: theme.colors.text }]}>쉬움 (4x4)</Text>
+            <GlassView style={styles.modalContent} intensity={30} tint="light">
+              <View style={styles.iconContainer}>
+                <Brain size={48} color="#fff" />
+              </View>
+              <Text style={styles.modalTitle}>Flip & Match</Text>
+              <Text style={styles.modalDescription}>Find all matching pairs with the fewest moves possible.</Text>
+
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
+                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'easy' && { color: theme.colors.primary }]}>Easy (4x4)</Text>
               </Pressable>
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'medium' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('medium'); hapticPatterns.buttonPress(); }}>
-                <Text style={[styles.difficultyButtonText, { color: theme.colors.text }]}>보통 (6x4)</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'medium' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('medium'); hapticPatterns.buttonPress(); }}>
+                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'medium' && { color: theme.colors.primary }]}>Medium (6x4)</Text>
               </Pressable>
-              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
-                <Text style={[styles.difficultyButtonText, { color: theme.colors.text }]}>어려움 (8x4)</Text>
+              <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
+                <Text style={[styles.difficultyButtonText, selectedDifficulty === 'hard' && { color: theme.colors.primary }]}>Hard (8x4)</Text>
               </Pressable>
+
               <Pressable style={styles.startButton} onPress={handleStartGame}>
-                <Play size={24} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.startButtonText}>게임 시작</Text>
+                <Play size={24} color={theme.colors.warning} style={{ marginRight: 8 }} />
+                <Text style={styles.startButtonText}>Start Game</Text>
               </Pressable>
             </GlassView>
           </View>
@@ -325,39 +323,54 @@ const FlipMatchGameContent: React.FC = () => {
 
         <Modal visible={gameStatus === 'won'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-              <Trophy size={80} color={theme.colors.warning} style={{ marginBottom: 16 }} />
-              <Text style={styles.modalTitle}>완료!</Text>
-              {isNewRecord && <Text style={styles.newRecord}>🏆 신기록 달성!</Text>}
-              <Text style={styles.victoryStats}>소요 시간: {formatTime(getTimeLimit() - timeRemaining)}</Text>
-              <Text style={styles.victoryStats}>이동 횟수: {moves}</Text>
-              <Pressable style={styles.startButton} onPress={handleRestart}>
-                <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.startButtonText}>다시 하기</Text>
-              </Pressable>
-              <Pressable style={[styles.menuButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={handleBackToMenu}>
-                <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
-                <Text style={styles.menuButtonText}>메뉴로</Text>
-              </Pressable>
+            <GlassView style={styles.modalContent} intensity={30} tint="light">
+              <View style={[styles.iconContainer, { backgroundColor: '#10b981', borderColor: '#059669' }]}>
+                <Star size={48} color="#fff" fill="#fff" />
+              </View>
+              <Text style={styles.modalTitle}>Level Complete!</Text>
+              <Text style={styles.modalDescription}>Perfect memory! You finished in <Text style={{ fontWeight: 'bold', color: '#fff' }}>{moves} moves</Text>.</Text>
+
+              {isNewRecord && (
+                <View style={styles.newRecordBadge}>
+                  <Trophy size={16} color="#f59e0b" style={{ marginRight: 4 }} />
+                  <Text style={styles.newRecordText}>New Record!</Text>
+                </View>
+              )}
+
+              <View style={styles.modalButtons}>
+                <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+                  <Text style={styles.menuButtonText}>Menu</Text>
+                </Pressable>
+                <Pressable style={styles.retryButton} onPress={handleRestart}>
+                  <RefreshCw size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.retryButtonText}>Play Again</Text>
+                </Pressable>
+              </View>
             </GlassView>
           </View>
         </Modal>
 
         <Modal visible={gameStatus === 'lost'} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-              <Timer size={80} color={theme.colors.error} style={{ marginBottom: 16 }} />
-              <Text style={styles.modalTitle}>시간 초과!</Text>
-              <Text style={styles.victoryStats}>완성: {matchedPairs}/{totalPairs} 쌍</Text>
-              <Text style={styles.victoryStats}>이동 횟수: {moves}</Text>
-              <Pressable style={styles.startButton} onPress={handleRestart}>
-                <RotateCcw size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.startButtonText}>다시 하기</Text>
-              </Pressable>
-              <Pressable style={[styles.menuButton, { backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={handleBackToMenu}>
-                <Menu size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
-                <Text style={styles.menuButtonText}>메뉴로</Text>
-              </Pressable>
+            <GlassView style={styles.modalContent} intensity={30} tint="light">
+              <View style={[styles.iconContainer, { backgroundColor: '#ef4444', borderColor: '#b91c1c' }]}>
+                <Timer size={48} color="#fff" />
+              </View>
+              <Text style={styles.modalTitle}>Time's Up!</Text>
+              <Text style={styles.modalDescription}>
+                Matches: {matchedPairs}/{totalPairs}{'\n'}
+                Moves: {moves}
+              </Text>
+
+              <View style={styles.modalButtons}>
+                <Pressable style={styles.menuButton} onPress={handleBackToMenu}>
+                  <Text style={styles.menuButtonText}>Menu</Text>
+                </Pressable>
+                <Pressable style={styles.retryButton} onPress={handleRestart}>
+                  <RefreshCw size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.retryButtonText}>Try Again</Text>
+                </Pressable>
+              </View>
             </GlassView>
           </View>
         </Modal>
@@ -389,35 +402,50 @@ const FlipMatchGameContent: React.FC = () => {
 
 const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background, paddingTop: Platform.OS === 'web' ? 40 : 0 },
-  scrollContent: { flexGrow: 1 },
+  gameContent: { flex: 1, paddingBottom: 20 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   backButton: { borderRadius: 12, overflow: 'hidden' },
-  iconButtonGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
-  title: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text },
+  iconButtonGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)' },
+  titleContainer: { flexDirection: 'row', alignItems: 'center' },
+  title: { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pauseButton: { borderRadius: 12, overflow: 'hidden' },
   restartButton: { borderRadius: 12, overflow: 'hidden' },
-  stats: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 16, marginHorizontal: 16, borderRadius: 20, marginBottom: 16 },
-  statItem: { alignItems: 'center' },
-  statHeader: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
-  statLabel: { fontSize: 12, color: theme.colors.textSecondary },
-  statValue: { fontSize: 20, fontWeight: 'bold', color: theme.colors.text },
-  statValueWarning: { color: theme.colors.error },
-  previewOverlay: { position: 'absolute', top: 120, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
-  previewGlass: { paddingHorizontal: 32, paddingVertical: 16, borderRadius: 16, backgroundColor: 'rgba(59, 130, 246, 0.5)' },
+
+  stats: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 16, marginHorizontal: 16, borderRadius: 24, marginBottom: 24, backgroundColor: 'rgba(15, 23, 42, 0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  statItem: { alignItems: 'flex-start' },
+  statLabel: { fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
+  statValue: { fontSize: 32, fontWeight: '900', color: '#fff' },
+  statValueWarning: { color: '#ef4444' },
+
+  previewOverlay: { position: 'absolute', top: 100, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
+  previewGlass: { paddingHorizontal: 32, paddingVertical: 16, borderRadius: 16, backgroundColor: 'rgba(59, 130, 246, 0.8)' },
   previewText: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { borderRadius: 24, padding: 32, width: '85%', maxWidth: 400, alignItems: 'center' },
-  modalTitle: { fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginBottom: 24 },
-  difficultyButton: { width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginBottom: 12, alignItems: 'center' },
-  difficultyButtonSelected: { backgroundColor: theme.colors.primary },
-  difficultyButtonText: { fontSize: 18, fontWeight: '600', color: theme.colors.text },
-  startButton: { width: '100%', backgroundColor: theme.colors.success, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginTop: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
-  startButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  victoryStats: { fontSize: 16, color: theme.colors.textSecondary, marginBottom: 8 },
-  newRecord: { fontSize: 20, fontWeight: 'bold', color: theme.colors.primary, marginBottom: 16 },
-  menuButton: { width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, marginTop: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
-  menuButtonText: { fontSize: 16, fontWeight: '600', color: theme.colors.text },
+
+  boardContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { borderRadius: 32, padding: 32, width: '100%', maxWidth: 400, alignItems: 'center', backgroundColor: 'rgba(15, 23, 42, 0.9)' },
+  iconContainer: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(249, 115, 22, 0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 24, borderWidth: 4, borderColor: 'rgba(249, 115, 22, 0.1)' },
+  modalTitle: { fontSize: 36, fontWeight: '900', color: '#fff', marginBottom: 8, letterSpacing: -1 },
+  modalDescription: { fontSize: 16, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginBottom: 32, lineHeight: 24 },
+
+  difficultyButton: { width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 20, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  difficultyButtonSelected: { backgroundColor: '#fff', borderColor: '#fff' },
+  difficultyButtonText: { fontSize: 18, fontWeight: '700', color: '#fff' },
+
+  startButton: { flexDirection: 'row', justifyContent: 'center', width: '100%', backgroundColor: '#fff', paddingVertical: 18, borderRadius: 20, marginTop: 12, alignItems: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
+  startButtonText: { fontSize: 20, fontWeight: '900', color: theme.colors.warning },
+
+  newRecordBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginBottom: 24 },
+  newRecordText: { color: '#f59e0b', fontWeight: '700', fontSize: 12 },
+
+  modalButtons: { flexDirection: 'row', gap: 12, width: '100%' },
+  menuButton: { flex: 1, paddingVertical: 16, borderRadius: 16, backgroundColor: 'rgba(30, 41, 59, 0.8)', alignItems: 'center' },
+  menuButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  retryButton: { flex: 1, paddingVertical: 16, borderRadius: 16, backgroundColor: '#10b981', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', shadowColor: "#10b981", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
+  retryButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
 
 export default FlipMatchGame;

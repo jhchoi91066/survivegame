@@ -17,6 +17,7 @@ export interface GameRecord {
   math_rush: {
     highScore: number;
     highestCombo: number;
+    difficulty: 'easy' | 'medium' | 'hard';
     totalPlays: number;
     totalPlayTime: number;
   };

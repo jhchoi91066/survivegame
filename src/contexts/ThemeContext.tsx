@@ -59,11 +59,11 @@ const lightTheme: Theme = {
   },
   gradients: {
     background: ['#f8fafc', '#f1f5f9', '#f8fafc'], // More subtle gradient
-    flipMatch: ['#6366f1', '#8b5cf6'],
-    sequence: ['#06b6d4', '#3b82f6'],
-    spatialMemory: ['#8b5cf6', '#6366f1'],
-    mathRush: ['#f59e0b', '#ef4444'],
-    stroop: ['#ec4899', '#d946ef'],
+    flipMatch: ['#f97316', '#dc2626'], // Orange-Red
+    sequence: ['#06b6d4', '#3b82f6'], // Cyan-blue
+    spatialMemory: ['#a855f7', '#ec4899'], // Purple-Pink
+    mathRush: ['#3b82f6', '#06b6d4'], // Blue-Cyan
+    stroop: ['#10b981', '#14b8a6'], // Emerald-Teal
     glass: ['rgba(255, 255, 255, 0.7)', 'rgba(255, 255, 255, 0.3)'],
     primary: ['#6366f1', '#8b5cf6'],
     success: ['#10b981', '#34d399'],
@@ -93,11 +93,11 @@ const darkTheme: Theme = {
   },
   gradients: {
     background: ['#020617', '#0f172a', '#111827'], // More subtle deep space gradient
-    flipMatch: ['#6366f1', '#a855f7'], // Vibrant purple-indigo
+    flipMatch: ['#f97316', '#dc2626'], // Orange-Red
     sequence: ['#06b6d4', '#3b82f6'], // Cyan-blue
-    spatialMemory: ['#8b5cf6', '#6366f1'], // Violet-indigo
-    mathRush: ['#f59e0b', '#ef4444'], // Amber-red
-    stroop: ['#ec4899', '#d946ef'], // Pink-fuchsia
+    spatialMemory: ['#a855f7', '#ec4899'], // Purple-Pink
+    mathRush: ['#3b82f6', '#06b6d4'], // Blue-Cyan
+    stroop: ['#10b981', '#14b8a6'], // Emerald-Teal
     glass: ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.02)'],
     primary: ['#818cf8', '#6366f1'],
     success: ['#34d399', '#10b981'],

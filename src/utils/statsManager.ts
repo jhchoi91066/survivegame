@@ -81,13 +81,14 @@ export const updateFlipMatchRecord = async (
 // Math Rush 기록 업데이트
 export const updateMathRushRecord = async (
   score: number,
-  combo: number,
-  playTime: number
+  playTime: number,
+  difficulty: 'easy' | 'medium' | 'hard'
 ): Promise<void> => {
   const current = await loadGameRecord('math_rush');
   const newRecord = {
     highScore: !current || score > current.highScore ? score : current.highScore,
-    highestCombo: !current || combo > current.highestCombo ? combo : current.highestCombo,
+    highestCombo: current?.highestCombo || 0, // Combo tracking removed for now
+    difficulty: !current || score > current.highScore ? difficulty : current.difficulty,
     totalPlays: (current?.totalPlays || 0) + 1,
     totalPlayTime: (current?.totalPlayTime || 0) + playTime,
   };
