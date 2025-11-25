@@ -175,6 +175,7 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
         roomId: data.id,
         gameType: gameType,
         difficulty: difficulty,
+        isCreator: true,
       });
     } catch (error) {
       console.error('Failed to create room:', error);
@@ -205,6 +206,7 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
         roomId: roomId,
         gameType: gameType,
         difficulty: difficulty,
+        isCreator: false,
       });
     } catch (error) {
       console.error('Failed to join room:', error);

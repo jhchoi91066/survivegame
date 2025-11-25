@@ -61,7 +61,7 @@ interface GameState {
 }
 
 const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, route }) => {
-  const { roomId, gameType, difficulty } = route.params;
+  const { roomId, gameType, difficulty, isCreator } = route.params;
   const { user } = useAuth();
   const { theme, themeMode } = useTheme();
   const [gameState, setGameState] = useState<GameState>({
@@ -70,8 +70,8 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
   });
   const [countdown, setCountdown] = useState(3);
   const [opponentReady, setOpponentReady] = useState(false);
-  const [isRoomCreator, setIsRoomCreator] = useState(false);
-  const isRoomCreatorRef = React.useRef(false);
+  const [isRoomCreator, setIsRoomCreator] = useState(isCreator || false);
+  const isRoomCreatorRef = React.useRef(isCreator || false);
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'info' | 'success' | 'warning' | 'error' }>({ visible: false, message: '', type: 'info' });
   const [waitingTime, setWaitingTime] = useState(0);
   const [waitingTimeoutReached, setWaitingTimeoutReached] = useState(false);
@@ -116,8 +116,10 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
       return;
     }
 
-    // Check if this is the room creator
-    checkIfRoomCreator();
+    // Check if this is the room creator (fallback if param missing)
+    if (isCreator === undefined) {
+      checkIfRoomCreator();
+    }
 
     // Try to reconnect if coming back from disconnect
     tryReconnect();
@@ -623,6 +625,31 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
 
                 <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
 
+                {/* Manual Controls */}
+                <View style={styles.manualControls}>
+                  <Pressable
+                    onPress={loadGameState}
+                    style={styles.refreshButton}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="새로고침"
+                  >
+                    <Text style={styles.refreshButtonText}>🔄 새로고침</Text>
+                  </Pressable>
+
+                  {isRoomCreator && gameState.players.length >= 2 && (
+                    <Pressable
+                      onPress={startCountdown}
+                      style={styles.forceStartButton}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel="강제 시작"
+                    >
+                      <Text style={styles.forceStartButtonText}>▶️ 강제 시작</Text>
+                    </Pressable>
+                  )}
+                </View>
+
                 {/* Cancel button */}
                 <Pressable
                   onPress={handleLeave}
@@ -1097,6 +1124,38 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#fff',
+  },
+  manualControls: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+    justifyContent: 'center',
+  },
+  refreshButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.5)',
+  },
+  refreshButtonText: {
+    color: '#60a5fa',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  forceStartButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.5)',
+  },
+  forceStartButtonText: {
+    color: '#34d399',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 

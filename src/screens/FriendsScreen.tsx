@@ -374,11 +374,33 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
                     autoCapitalize="none"
                   />
                   {searchQuery.length > 0 && (
-                    <Pressable onPress={() => setSearchQuery('')}>
+                    <Pressable onPress={() => setSearchQuery('')} style={{ marginRight: 8 }}>
                       <X size={18} color={theme.colors.textSecondary} />
                     </Pressable>
                   )}
                 </GlassView>
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    searchUsers();
+                  }}
+                  disabled={!searchQuery.trim() || loading}
+                  style={[styles.searchButtonWrapper, (!searchQuery.trim() || loading) && { opacity: 0.5 }]}
+                >
+                  <LinearGradient
+                    colors={theme.gradients.primary}
+                    style={styles.searchButton}
+                  >
+                    {loading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Search size={20} color="#fff" />
+                        <Text style={styles.searchButtonText}>검색</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </Pressable>
               </View>
             )}
 
@@ -526,8 +548,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   contentContainer: { flex: 1 },
   centerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
   notLoggedInGlass: { padding: 40, alignItems: 'center', borderRadius: 24, width: '100%' },
-  searchContainer: { paddingHorizontal: 20, marginBottom: 16 },
-  searchGlass: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 50, borderRadius: 16 },
+  searchContainer: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 16, alignItems: 'center' },
+  searchGlass: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 50, borderRadius: 16 },
   searchInput: { flex: 1, fontSize: 16, color: theme.colors.text, height: '100%', zIndex: 10, ...Platform.select({ web: { outlineStyle: 'none' } as any }) },
   scrollView: { flex: 1 },
   scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 40 },
@@ -554,6 +576,9 @@ const getStyles = (theme: any) => StyleSheet.create({
   requestActions: { flexDirection: 'row', gap: 12 },
   requestButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   addButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: theme.colors.primary + '20' },
+  searchButtonWrapper: { marginLeft: 12, borderRadius: 16, overflow: 'hidden' },
+  searchButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 8, borderRadius: 16 },
+  searchButtonText: { fontSize: 16, fontWeight: '700', color: '#fff' },
 });
 
 export default FriendsScreen;
