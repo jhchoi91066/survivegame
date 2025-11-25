@@ -287,35 +287,35 @@ const SpatialMemoryGameContent: React.FC = () => {
                 <Brain size={48} color="#fff" />
               </View>
               <Text style={styles.modalTitle}>Spatial Memory</Text>
-              <Text style={styles.modalDescription}>Remember the sequence of flashing tiles!</Text>
+              <Text style={styles.modalDescription}>반짝이는 타일의 순서를 기억하세요!</Text>
 
               <Pressable style={[styles.difficultyButton, selectedDifficulty === 'easy' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('easy'); hapticPatterns.buttonPress(); }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Zap size={20} color={selectedDifficulty === 'easy' ? theme.colors.primary : '#fff'} style={{ marginRight: 8 }} />
-                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'easy' && { color: theme.colors.primary }]}>Easy</Text>
+                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'easy' && { color: theme.colors.primary }]}>쉬움</Text>
                 </View>
-                <Text style={[styles.difficultySubText, selectedDifficulty === 'easy' && { color: theme.colors.primary }]}>3x3 Grid · Slow</Text>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'easy' && { color: theme.colors.primary }]}>3x3 격자 · 느림</Text>
               </Pressable>
 
               <Pressable style={[styles.difficultyButton, selectedDifficulty === 'medium' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('medium'); hapticPatterns.buttonPress(); }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Target size={20} color={selectedDifficulty === 'medium' ? theme.colors.primary : '#fff'} style={{ marginRight: 8 }} />
-                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'medium' && { color: theme.colors.primary }]}>Medium</Text>
+                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'medium' && { color: theme.colors.primary }]}>보통</Text>
                 </View>
-                <Text style={[styles.difficultySubText, selectedDifficulty === 'medium' && { color: theme.colors.primary }]}>4x4 Grid · Medium</Text>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'medium' && { color: theme.colors.primary }]}>4x4 격자 · 보통</Text>
               </Pressable>
 
               <Pressable style={[styles.difficultyButton, selectedDifficulty === 'hard' && styles.difficultyButtonSelected]} onPress={() => { setSelectedDifficulty('hard'); hapticPatterns.buttonPress(); }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Flame size={20} color={selectedDifficulty === 'hard' ? theme.colors.primary : '#fff'} style={{ marginRight: 8 }} />
-                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'hard' && { color: theme.colors.primary }]}>Hard</Text>
+                  <Text style={[styles.difficultyButtonText, selectedDifficulty === 'hard' && { color: theme.colors.primary }]}>어려움</Text>
                 </View>
-                <Text style={[styles.difficultySubText, selectedDifficulty === 'hard' && { color: theme.colors.primary }]}>5x5 Grid · Fast</Text>
+                <Text style={[styles.difficultySubText, selectedDifficulty === 'hard' && { color: theme.colors.primary }]}>5x5 격자 · 빠름</Text>
               </Pressable>
 
               <Pressable style={styles.startButton} onPress={handleStartGame}>
                 <Play size={20} color={theme.colors.success} style={{ marginRight: 8 }} />
-                <Text style={styles.startButtonText}>Start Game</Text>
+                <Text style={styles.startButtonText}>게임 시작</Text>
               </Pressable>
             </GlassView>
           </View>

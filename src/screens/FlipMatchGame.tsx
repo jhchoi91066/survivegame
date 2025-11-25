@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Modal, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -227,7 +228,7 @@ const FlipMatchGameContent: React.FC = () => {
   return (
     <View style={styles.container}>
       <LinearGradient colors={theme.gradients.flipMatch} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.header}>
           <Pressable onPress={handleBackToMenu} style={styles.backButton}>
             <GlassView style={styles.iconButtonGlass} intensity={20} tint="light">
@@ -283,7 +284,7 @@ const FlipMatchGameContent: React.FC = () => {
             {gameStatus === 'preview' && (
               <View style={styles.previewOverlay}>
                 <GlassView style={styles.previewGlass} intensity={40} tint="light">
-                  <Text style={styles.previewText}>Memorize the cards!</Text>
+                  <Text style={styles.previewText}>카드의 위치를 기억하세요!</Text>
                 </GlassView>
               </View>
             )}
@@ -418,9 +419,9 @@ const getStyles = (theme: any) => StyleSheet.create({
   statValue: { fontSize: 32, fontWeight: '900', color: '#fff' },
   statValueWarning: { color: '#ef4444' },
 
-  previewOverlay: { position: 'absolute', top: 100, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
-  previewGlass: { paddingHorizontal: 32, paddingVertical: 16, borderRadius: 16, backgroundColor: 'rgba(59, 130, 246, 0.8)' },
-  previewText: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
+  previewOverlay: { alignItems: 'center', marginBottom: 16, zIndex: 10 },
+  previewGlass: { paddingHorizontal: 32, paddingVertical: 12, borderRadius: 16, backgroundColor: 'rgba(59, 130, 246, 0.8)' },
+  previewText: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
 
   boardContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
 

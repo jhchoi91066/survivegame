@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
   },
   cardValue: {
-    fontSize: 32,
+    fontSize: 48,
   },
   iconContainer: {
     width: 32,

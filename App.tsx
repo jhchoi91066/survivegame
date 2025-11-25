@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import MenuScreen from './src/screens/MenuScreen';
@@ -114,9 +115,11 @@ export default function App() {
     <AuthProvider>
       <AccessibilityProvider>
         <ThemeProvider>
-          <ErrorBoundary>
-            <AppNavigator />
-          </ErrorBoundary>
+          <SafeAreaProvider>
+            <ErrorBoundary>
+              <AppNavigator />
+            </ErrorBoundary>
+          </SafeAreaProvider>
         </ThemeProvider>
       </AccessibilityProvider>
     </AuthProvider>

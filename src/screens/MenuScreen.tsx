@@ -7,7 +7,7 @@ import { soundManager } from '../utils/soundManager';
 import { GameType, GameInfo } from '../game/shared/types';
 import { loadGameRecord } from '../utils/statsManager';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay, withTiming, interpolate, interpolateColor } from 'react-native-reanimated';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Tutorial } from '../components/shared/Tutorial';
@@ -16,7 +16,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncGameRecords } from '../utils/cloudSync';
 import Toast from '../components/shared/Toast';
 import {
-  // Icons
   RefreshCw,
   UserCircle,
   Users,
@@ -131,15 +130,6 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
     }
   };
 
-  const getGradientColors = (gameId: GameType): [string, string] => {
-    // This function is no longer used but kept to avoid breaking changes if referenced elsewhere, 
-    // or we can remove it if we are sure. 
-    // The previous step removed it but lint complained it was missing? 
-    // No, lint complained 'getGradientColors' was missing because I removed the definition but not the usage in the map.
-    // But I updated the map to use theme.gradients[game.gradientKey].
-    // So I don't need this function.
-    return ['#000', '#000'];
-  };
   const styles = getStyles(theme);
 
   return (
@@ -154,23 +144,30 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
               <Text style={styles.subtitle}>두뇌를 깨우는 즐거운 시간</Text>
             </View>
             <View style={styles.headerButtons}>
-              <Pressable style={styles.iconButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate(user ? 'Profile' : 'Login'); }}>
-                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                  <UserCircle size={24} color={theme.colors.text} />
-                </GlassView>
-              </Pressable>
+              <HoverableIconButton
+                onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate(user ? 'Profile' : 'Login'); }}
+                icon={<UserCircle size={24} color={theme.colors.text} />}
+                theme={theme}
+                themeMode={themeMode}
+                styles={styles}
+              />
               {user && (
-                <Pressable style={styles.iconButton} onPress={handleManualSync} disabled={isSyncing}>
-                  <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                    <RefreshCw size={24} color={theme.colors.text} style={isSyncing ? { opacity: 0.5 } : {}} />
-                  </GlassView>
-                </Pressable>
+                <HoverableIconButton
+                  onPress={handleManualSync}
+                  disabled={isSyncing}
+                  icon={<RefreshCw size={24} color={theme.colors.text} style={isSyncing ? { opacity: 0.5 } : {}} />}
+                  theme={theme}
+                  themeMode={themeMode}
+                  styles={styles}
+                />
               )}
-              <Pressable style={styles.iconButton} onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate('Settings'); }}>
-                <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                  <Settings size={24} color={theme.colors.text} />
-                </GlassView>
-              </Pressable>
+              <HoverableIconButton
+                onPress={() => { hapticPatterns.buttonPress(); soundManager.playSound('button_press'); navigation.navigate('Settings'); }}
+                icon={<Settings size={24} color={theme.colors.text} />}
+                theme={theme}
+                themeMode={themeMode}
+                styles={styles}
+              />
             </View>
           </View>
 
@@ -187,36 +184,41 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
           </View>
 
           <View style={styles.bottomButtonsGrid}>
-            <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Stats'); }}>
-              <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                <BarChart3 size={24} color={theme.colors.text} />
-                <Text style={styles.bottomButtonText}>통계</Text>
-              </GlassView>
-            </Pressable>
-            <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Leaderboard'); }}>
-              <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                <Trophy size={24} color={theme.colors.warning} />
-                <Text style={styles.bottomButtonText}>리더보드</Text>
-              </GlassView>
-            </Pressable>
-            <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Friends'); }}>
-              <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                <Users size={24} color={theme.colors.success} />
-                <Text style={styles.bottomButtonText}>친구</Text>
-              </GlassView>
-            </Pressable>
-            <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); user ? navigation.navigate('MultiplayerLobby') : navigation.navigate('Login'); }}>
-              <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                <Swords size={24} color={theme.colors.error} />
-                <Text style={styles.bottomButtonText}>대전</Text>
-              </GlassView>
-            </Pressable>
-            <Pressable style={styles.bottomButton} onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Achievements'); }}>
-              <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
-                <Medal size={24} color={theme.colors.primary} />
-                <Text style={styles.bottomButtonText}>업적</Text>
-              </GlassView>
-            </Pressable>
+            <BottomButton
+              onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Stats'); }}
+              icon={<BarChart3 size={24} color={theme.colors.text} />}
+              label="통계"
+              theme={theme}
+              themeMode={themeMode}
+            />
+            <BottomButton
+              onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Leaderboard'); }}
+              icon={<Trophy size={24} color={theme.colors.warning} />}
+              label="리더보드"
+              theme={theme}
+              themeMode={themeMode}
+            />
+            <BottomButton
+              onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Friends'); }}
+              icon={<Users size={24} color={theme.colors.success} />}
+              label="친구"
+              theme={theme}
+              themeMode={themeMode}
+            />
+            <BottomButton
+              onPress={() => { hapticPatterns.buttonPress(); user ? navigation.navigate('MultiplayerLobby') : navigation.navigate('Login'); }}
+              icon={<Swords size={24} color={theme.colors.error} />}
+              label="대전"
+              theme={theme}
+              themeMode={themeMode}
+            />
+            <BottomButton
+              onPress={() => { hapticPatterns.buttonPress(); navigation.navigate('Achievements'); }}
+              icon={<Medal size={24} color={theme.colors.primary} />}
+              label="업적"
+              theme={theme}
+              themeMode={themeMode}
+            />
           </View>
 
           <Text style={styles.version}>v2.2.0</Text>
@@ -227,12 +229,54 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
   );
 };
 
+// --- Components ---
+
+interface HoverableIconButtonProps {
+  onPress: () => void;
+  icon: React.ReactNode;
+  theme: any;
+  themeMode: any;
+  disabled?: boolean;
+  styles: any;
+}
+
+const HoverableIconButton: React.FC<HoverableIconButtonProps> = ({ onPress, icon, theme, themeMode, disabled, styles }) => {
+  const scale = useSharedValue(1);
+  const hover = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    backgroundColor: interpolateColor(hover.value, [0, 1], ['transparent', 'rgba(255,255,255,0.1)']),
+    borderRadius: 12,
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      onPressIn={() => { scale.value = withSpring(0.9); }}
+      onPressOut={() => { scale.value = withSpring(1); }}
+      // @ts-ignore - Web only props
+      onHoverIn={() => { hover.value = withTiming(1); scale.value = withSpring(1.1); }}
+      // @ts-ignore
+      onHoverOut={() => { hover.value = withTiming(0); scale.value = withSpring(1); }}
+    >
+      <Animated.View style={[styles.iconButton, animatedStyle]}>
+        <GlassView style={styles.iconButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+          {icon}
+        </GlassView>
+      </Animated.View>
+    </Pressable>
+  );
+};
+
 interface GameCardProps { game: any; onPress: () => void; gradientColors: [string, string]; index: number; }
 
 const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, index }) => {
   const { theme, themeMode } = useTheme();
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
+  const hoverScale = useSharedValue(1);
   const Icon = game.icon;
 
   useEffect(() => {
@@ -240,15 +284,28 @@ const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, inde
     opacity.value = withDelay(index * 70, withSpring(1));
   }, []);
 
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }], opacity: opacity.value }));
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value * hoverScale.value }],
+    opacity: opacity.value
+  }));
+
   const styles = getStyles(theme);
 
   return (
     <Animated.View style={[styles.gameCardWrapper, animatedStyle]}>
-      <Pressable style={({ pressed }) => [styles.gameCard, pressed && styles.gameCardPressed]} onPress={onPress}>
+      <Pressable
+        style={({ pressed }) => [styles.gameCard, pressed && styles.gameCardPressed]}
+        onPress={onPress}
+        onPressIn={() => { hoverScale.value = withSpring(0.95); }}
+        onPressOut={() => { hoverScale.value = withSpring(1); }}
+        // @ts-ignore
+        onHoverIn={() => { hoverScale.value = withSpring(1.05); }}
+        // @ts-ignore
+        onHoverOut={() => { hoverScale.value = withSpring(1); }}
+      >
         <GlassView style={styles.gameCardGlass} intensity={40} tint={themeMode === 'dark' ? 'dark' : 'light'}>
           <LinearGradient
-            colors={[gradientColors[0] + '80', gradientColors[1] + '40']} // Semi-transparent gradient
+            colors={[gradientColors[0] + '80', gradientColors[1] + '40']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -268,6 +325,37 @@ const GameCard: React.FC<GameCardProps> = ({ game, onPress, gradientColors, inde
               <Text style={styles.recordValue}>{game.bestRecordValue}</Text>
             </View>
           </View>
+        </GlassView>
+      </Pressable>
+    </Animated.View>
+  );
+};
+
+interface BottomButtonProps { onPress: () => void; icon: React.ReactNode; label: string; theme: any; themeMode: any; }
+
+const BottomButton: React.FC<BottomButtonProps> = ({ onPress, icon, label, theme, themeMode }) => {
+  const hoverScale = useSharedValue(1);
+  const styles = getStyles(theme);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: hoverScale.value }]
+  }));
+
+  return (
+    <Animated.View style={[styles.bottomButton, animatedStyle]}>
+      <Pressable
+        style={{ flex: 1 }}
+        onPress={onPress}
+        onPressIn={() => { hoverScale.value = withSpring(0.95); }}
+        onPressOut={() => { hoverScale.value = withSpring(1); }}
+        // @ts-ignore
+        onHoverIn={() => { hoverScale.value = withSpring(1.05); }}
+        // @ts-ignore
+        onHoverOut={() => { hoverScale.value = withSpring(1); }}
+      >
+        <GlassView style={styles.bottomButtonGlass} intensity={30} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+          {icon}
+          <Text style={styles.bottomButtonText}>{label}</Text>
         </GlassView>
       </Pressable>
     </Animated.View>
