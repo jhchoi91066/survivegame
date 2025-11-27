@@ -33,13 +33,20 @@ import {
   Crown,
   Clock,
   Hash,
-  Target
+  Target,
+  Shield
 } from 'lucide-react-native';
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const CACHE_KEY_PREFIX = '@leaderboard_cache_';
 
-type LeaderboardScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
+
+type LeaderboardScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<any, 'Leaderboard'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 interface LeaderboardScreenProps {
   navigation: LeaderboardScreenNavigationProp;
@@ -311,6 +318,21 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
           </View>
         </View>
 
+        {/* Your Rank Card (New) */}
+        {user && myRank && (
+          <View style={styles.yourRankContainer}>
+            <GlassView style={styles.yourRankGlass} intensity={20} tint="dark">
+              <View style={styles.yourRankIcon}>
+                <Crown size={24} color="#FACC15" fill="#FACC15" />
+              </View>
+              <View>
+                <Text style={styles.yourRankLabel}>MY RANK</Text>
+                <Text style={styles.yourRankValue}>#{myRank}</Text>
+              </View>
+            </GlassView>
+          </View>
+        )}
+
         {/* Game Selector */}
         <ScrollView
           horizontal
@@ -410,69 +432,91 @@ const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ navigation }) => 
             </View>
           ) : (
             <>
-              {leaderboard.map((entry) => (
-                <View key={entry.user_id} style={styles.rankCardWrapper}>
-                  <GlassView
-                    style={styles.rankCardGlass}
-                    intensity={entry.user_id === user?.id ? 40 : 20}
-                    tint={themeMode === 'dark' ? 'dark' : 'light'}
-                  >
-                    <View style={styles.rankBadgeContainer}>
-                      <LinearGradient
-                        colors={
-                          entry.rank === 1
-                            ? ['#fbbf24', '#f59e0b']
-                            : entry.rank === 2
-                              ? ['#94a3b8', '#64748b']
-                              : entry.rank === 3
-                                ? ['#cd7f32', '#b87333']
-                                : ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']
-                        }
-                        style={styles.rankBadge}
-                      >
-                        {entry.rank && entry.rank <= 3 ? (
-                          <Crown size={20} color="#fff" />
-                        ) : (
-                          <Text style={styles.rankBadgeText}>{entry.rank}</Text>
-                        )}
-                      </LinearGradient>
-                    </View>
-
-                    <View style={styles.rankInfo}>
-                      <Text
-                        style={[
-                          styles.username,
-                          entry.user_id === user?.id && styles.usernameHighlight,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {entry.username}
-                        {entry.user_id === user?.id && ' (나)'}
-                      </Text>
-                      <View style={styles.dateContainer}>
-                        <Calendar size={12} color={theme.colors.textTertiary} style={{ marginRight: 4 }} />
-                        <Text style={styles.updateTime}>
-                          {new Date(entry.last_updated).toLocaleDateString('ko-KR')}
-                        </Text>
+              {/* Podium for Top 3 */}
+              {leaderboard.length > 0 && (
+                <View style={styles.podiumContainer}>
+                  {/* Rank 2 */}
+                  {leaderboard[1] && (
+                    <View style={styles.podiumItem}>
+                      <View style={styles.podiumAvatarContainer}>
+                        <LinearGradient colors={['#94a3b8', '#64748b']} style={styles.podiumAvatar}>
+                          <Text style={styles.podiumAvatarText}>{leaderboard[1].username[0].toUpperCase()}</Text>
+                        </LinearGradient>
+                        <View style={[styles.podiumBadge, { backgroundColor: '#94a3b8' }]}>
+                          <Text style={styles.podiumBadgeText}>2</Text>
+                        </View>
                       </View>
+                      <Text style={styles.podiumName} numberOfLines={1}>{leaderboard[1].username}</Text>
+                      <Text style={styles.podiumScore}>{formatScore(leaderboard[1])}</Text>
+                      <View style={[styles.podiumBar, { height: 100, backgroundColor: '#94a3b8', opacity: 0.3 }]} />
                     </View>
+                  )}
 
-                    <Text style={styles.score}>{formatScore(entry)}</Text>
-                  </GlassView>
-                </View>
-              ))}
+                  {/* Rank 1 */}
+                  {leaderboard[0] && (
+                    <View style={styles.podiumItem}>
+                      <View style={styles.podiumAvatarContainer}>
+                        <LinearGradient colors={['#FACC15', '#EAB308']} style={[styles.podiumAvatar, { width: 80, height: 80, borderRadius: 40 }]}>
+                          <Text style={[styles.podiumAvatarText, { fontSize: 32 }]}>{leaderboard[0].username[0].toUpperCase()}</Text>
+                        </LinearGradient>
+                        <View style={[styles.podiumBadge, { backgroundColor: '#FACC15', width: 28, height: 28, bottom: -5 }]}>
+                          <Text style={styles.podiumBadgeText}>1</Text>
+                        </View>
+                        <Crown size={32} color="#FACC15" fill="#FACC15" style={{ position: 'absolute', top: -36 }} />
+                      </View>
+                      <Text style={[styles.podiumName, { fontSize: 16, fontWeight: '800' }]} numberOfLines={1}>{leaderboard[0].username}</Text>
+                      <Text style={[styles.podiumScore, { color: '#FACC15', fontSize: 16 }]}>{formatScore(leaderboard[0])}</Text>
+                      <View style={[styles.podiumBar, { height: 140, backgroundColor: '#FACC15', opacity: 0.3 }]} />
+                    </View>
+                  )}
 
-              {/* My Rank Summary */}
-              {user && myRank && (
-                <View style={styles.myRankWrapper}>
-                  <GlassView style={styles.myRankGlass} intensity={30} tint={themeMode === 'dark' ? 'light' : 'dark'}>
-                    <Medal size={20} color={themeMode === 'dark' ? theme.colors.primary : '#fff'} style={{ marginRight: 8 }} />
-                    <Text style={[styles.myRankText, { color: themeMode === 'dark' ? theme.colors.primary : '#fff' }]}>
-                      내 순위: #{myRank} / {leaderboard.length}명
-                    </Text>
-                  </GlassView>
+                  {/* Rank 3 */}
+                  {leaderboard[2] && (
+                    <View style={styles.podiumItem}>
+                      <View style={styles.podiumAvatarContainer}>
+                        <LinearGradient colors={['#fb923c', '#ea580c']} style={styles.podiumAvatar}>
+                          <Text style={styles.podiumAvatarText}>{leaderboard[2].username[0].toUpperCase()}</Text>
+                        </LinearGradient>
+                        <View style={[styles.podiumBadge, { backgroundColor: '#fb923c' }]}>
+                          <Text style={styles.podiumBadgeText}>3</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.podiumName} numberOfLines={1}>{leaderboard[2].username}</Text>
+                      <Text style={styles.podiumScore}>{formatScore(leaderboard[2])}</Text>
+                      <View style={[styles.podiumBar, { height: 80, backgroundColor: '#fb923c', opacity: 0.3 }]} />
+                    </View>
+                  )}
                 </View>
               )}
+
+              {/* List for Rank 4+ */}
+              <View style={styles.listContainer}>
+                <GlassView style={styles.listGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+                  <View style={styles.listHeader}>
+                    <Text style={[styles.listHeaderTitle, { flex: 0.15, textAlign: 'center' }]}>Rank</Text>
+                    <Text style={[styles.listHeaderTitle, { flex: 0.55 }]}>Player</Text>
+                    <Text style={[styles.listHeaderTitle, { flex: 0.3, textAlign: 'right' }]}>Score</Text>
+                  </View>
+
+                  {leaderboard.map((entry) => (
+                    <View key={entry.user_id} style={[
+                      styles.listItem,
+                      entry.user_id === user?.id && styles.listItemHighlight
+                    ]}>
+                      <Text style={[styles.listRank, { flex: 0.15 }]}>#{entry.rank}</Text>
+                      <View style={{ flex: 0.55, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={styles.listAvatar}>
+                          <Text style={styles.listAvatarText}>{entry.username[0].toUpperCase()}</Text>
+                        </View>
+                        <Text style={[styles.listName, entry.user_id === user?.id && { color: theme.colors.primary }]} numberOfLines={1}>
+                          {entry.username}
+                        </Text>
+                      </View>
+                      <Text style={[styles.listScore, { flex: 0.3 }]}>{formatScore(entry)}</Text>
+                    </View>
+                  ))}
+                </GlassView>
+              </View>
             </>
           )}
         </ScrollView>
@@ -504,26 +548,39 @@ const getStyles = (theme: any) => StyleSheet.create({
   warningGlass: { padding: 16, alignItems: 'center', borderRadius: 16 },
   warningText: { fontSize: 14, color: theme.colors.warning, fontWeight: '600', textAlign: 'center' },
   scrollView: { flex: 1 },
-  scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 40 },
+  scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 100 },
   loadingContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   loadingText: { marginTop: 16, fontSize: 16, color: theme.colors.textSecondary },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   emptyText: { fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 8 },
   emptySubtext: { fontSize: 14, color: theme.colors.textSecondary },
-  rankCardWrapper: { marginBottom: 12, borderRadius: 16, overflow: 'hidden' },
-  rankCardGlass: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16 },
-  rankBadgeContainer: { marginRight: 16 },
-  rankBadge: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  rankBadgeText: { fontSize: 16, fontWeight: '800', color: '#fff' },
-  rankInfo: { flex: 1 },
-  username: { fontSize: 16, fontWeight: '700', color: theme.colors.text, marginBottom: 4 },
-  usernameHighlight: { color: theme.colors.primary },
-  dateContainer: { flexDirection: 'row', alignItems: 'center' },
-  updateTime: { fontSize: 12, color: theme.colors.textTertiary },
-  score: { fontSize: 18, fontWeight: '800', color: theme.colors.text },
-  myRankWrapper: { marginTop: 16, borderRadius: 16, overflow: 'hidden' },
-  myRankGlass: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16 },
-  myRankText: { fontSize: 16, fontWeight: '700', color: theme.colors.primary },
+
+  yourRankContainer: { paddingHorizontal: 20, marginBottom: 24 },
+  yourRankGlass: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 20, backgroundColor: 'rgba(250, 204, 21, 0.1)', borderWidth: 1, borderColor: 'rgba(250, 204, 21, 0.2)' },
+  yourRankIcon: { marginRight: 12 },
+  yourRankLabel: { fontSize: 12, fontWeight: '800', color: '#FDE047', letterSpacing: 1 },
+  yourRankValue: { fontSize: 24, fontWeight: '900', color: '#FACC15' },
+  podiumContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', height: 280, marginBottom: 20, paddingHorizontal: 20, gap: 12 },
+  podiumItem: { alignItems: 'center', flex: 1 },
+  podiumAvatarContainer: { alignItems: 'center', marginBottom: 12, position: 'relative' },
+  podiumAvatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: theme.colors.background },
+  podiumAvatarText: { fontSize: 24, fontWeight: '800', color: '#fff' },
+  podiumBadge: { position: 'absolute', bottom: -4, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: theme.colors.background },
+  podiumBadgeText: { fontSize: 12, fontWeight: '800', color: '#1e293b' },
+  podiumName: { fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 4, textAlign: 'center' },
+  podiumScore: { fontSize: 12, fontWeight: '700', color: theme.colors.primary, marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+  podiumBar: { width: '100%', borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+  listContainer: { paddingHorizontal: 20, marginBottom: 20 },
+  listGlass: { borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  listHeader: { flexDirection: 'row', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  listHeaderTitle: { fontSize: 12, fontWeight: '700', color: theme.colors.textSecondary, textTransform: 'uppercase' },
+  listItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  listItemHighlight: { backgroundColor: theme.colors.primary + '10', borderLeftWidth: 4, borderLeftColor: theme.colors.primary },
+  listRank: { fontSize: 14, fontWeight: '800', color: theme.colors.textSecondary, textAlign: 'center' },
+  listAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.border },
+  listAvatarText: { fontSize: 12, fontWeight: '700', color: theme.colors.text },
+  listName: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
+  listScore: { fontSize: 14, fontWeight: '700', color: theme.colors.primary, textAlign: 'right', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
 });
 
 export default LeaderboardScreen;

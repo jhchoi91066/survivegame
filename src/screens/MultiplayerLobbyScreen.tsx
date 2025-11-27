@@ -30,13 +30,16 @@ import {
   Grid2X2
 } from 'lucide-react-native';
 
-type MultiplayerLobbyNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'MultiplayerLobby'
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
+
+type MultiplayerLobbyScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<any, 'Multiplayer'>,
+  NativeStackNavigationProp<RootStackParamList>
 >;
 
 interface MultiplayerLobbyProps {
-  navigation: MultiplayerLobbyNavigationProp;
+  navigation: MultiplayerLobbyScreenNavigationProp;
 }
 
 interface Room {
@@ -416,7 +419,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    padding: 20,
+    paddingBottom: 100,
   },
   section: {
     padding: 20,

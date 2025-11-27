@@ -21,7 +21,13 @@ import { useTheme } from '../contexts/ThemeContext';
 import { GlassView } from '../components/shared/GlassView';
 import { ArrowLeft, User, Mail, Calendar, Globe, LogOut, Trash2, Edit2, Check, X } from 'lucide-react-native';
 
-type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
+
+type ProfileScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<any, 'Profile'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 interface ProfileScreenProps {
   navigation: ProfileScreenNavigationProp;
@@ -137,7 +143,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       if (window.confirm('정말 로그아웃하시겠습니까?')) {
         try {
           await signOut();
-          navigation.navigate('Menu');
+          navigation.navigate('MainTabs');
         } catch (error) {
           window.alert('로그아웃 중 문제가 발생했습니다.');
         }
@@ -154,7 +160,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             onPress: async () => {
               try {
                 await signOut();
-                navigation.navigate('Menu');
+                navigation.navigate('MainTabs');
               } catch (error) {
                 Alert.alert('오류', '로그아웃 중 문제가 발생했습니다.');
               }
@@ -177,7 +183,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           if (error) throw error;
 
           await signOut();
-          navigation.navigate('Menu');
+          navigation.navigate('MainTabs');
           window.alert('계정이 삭제되었습니다.');
         } catch (error) {
           console.error('계정 삭제 오류:', error);
@@ -203,7 +209,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 if (error) throw error;
 
                 await signOut();
-                navigation.navigate('Menu');
+                navigation.navigate('MainTabs');
                 Alert.alert('완료', '계정이 삭제되었습니다.');
               } catch (error) {
                 console.error('계정 삭제 오류:', error);
@@ -416,7 +422,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',

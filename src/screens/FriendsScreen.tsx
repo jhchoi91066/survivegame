@@ -34,7 +34,13 @@ import {
   Trash2
 } from 'lucide-react-native';
 
-type FriendsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
+
+type FriendsScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<any, 'Friends'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 interface FriendsScreenProps {
   navigation: FriendsScreenNavigationProp;
@@ -552,7 +558,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   searchGlass: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 50, borderRadius: 16 },
   searchInput: { flex: 1, fontSize: 16, color: theme.colors.text, height: '100%', zIndex: 10, ...Platform.select({ web: { outlineStyle: 'none' } as any }) },
   scrollView: { flex: 1 },
-  scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 40 },
+  scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 100 },
   loadingContainer: { paddingVertical: 40 },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   emptyText: { fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 8 },

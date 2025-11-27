@@ -37,9 +37,9 @@ import {
   Zap
 } from 'lucide-react-native';
 
-type AchievementsScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Achievements'
+type AchievementsScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<any, 'Achievements'>,
+  NativeStackNavigationProp<RootStackParamList>
 >;
 
 const CATEGORIES: { key: AchievementCategory | 'all'; label: string; icon: React.ElementType }[] = [
@@ -234,7 +234,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   categoryButtonGlass: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
   categoryButtonText: { fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary },
   scrollView: { flex: 1 },
-  scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 40 },
+  scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 100 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 16, fontSize: 16, color: theme.colors.textSecondary },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
