@@ -14,6 +14,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { GlassView } from '../components/shared/GlassView';
+import Toast from 'react-native-toast-message'; // [H8] Login error handling
 import {
   Gamepad2,
   Trophy,
@@ -47,32 +48,53 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
     }
   }, [user, navigation]);
 
+  // [H8] Google 로그인 with error handling
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
       await signInWithGoogle();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Google 로그인 실패:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Google 로그인 실패',
+        text2: error?.message || '다시 시도해주세요.',
+        visibilityTime: 4000,
+      });
       setLoading(false);
     }
   };
 
+  // [H8] Apple 로그인 with error handling
   const handleAppleLogin = async () => {
     setLoading(true);
     try {
       await signInWithApple();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Apple 로그인 실패:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Apple 로그인 실패',
+        text2: error?.message || '다시 시도해주세요.',
+        visibilityTime: 4000,
+      });
       setLoading(false);
     }
   };
 
+  // [H8] 익명 로그인 with error handling
   const handleAnonymousLogin = async () => {
     setLoading(true);
     try {
       await signInAnonymously();
-    } catch (error) {
+    } catch (error: any) {
       console.error('익명 로그인 실패:', error);
+      Toast.show({
+        type: 'error',
+        text1: '익명 로그인 실패',
+        text2: error?.message || '다시 시도해주세요.',
+        visibilityTime: 4000,
+      });
       setLoading(false);
     }
   };

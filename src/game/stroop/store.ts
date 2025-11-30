@@ -8,10 +8,16 @@ interface StroopStore {
   gameStatus: GameStatus;
   lives: number;
   difficulty: Difficulty;
+  // [H2] Timer accuracy improvement
+  gameStartTime: number | null;
+  pausedAt: number | null;
+  totalPausedTime: number;
+  timeLimit: number;
 
   generateProblem: () => void;
   answerProblem: (answer: string) => void;
-  decrementTime: () => void;
+  decrementTime: () => void; // Deprecated, use updateTimeRemaining
+  updateTimeRemaining: () => void; // [H2] Date.now() based timer
   startGame: (difficulty: Difficulty) => void;
   pauseGame: () => void;
   resumeGame: () => void;
@@ -61,6 +67,11 @@ export const useStroopStore = create<StroopStore>((set, get) => ({
   gameStatus: 'ready',
   lives: 3,
   difficulty: 'medium',
+  // [H2] Timer accuracy fields
+  gameStartTime: null,
+  pausedAt: null,
+  totalPausedTime: 0,
+  timeLimit: 30,
 
   generateProblem: () => {
     const { difficulty } = get();
@@ -94,6 +105,21 @@ export const useStroopStore = create<StroopStore>((set, get) => ({
     }
   },
 
+  // [H2] Date.now() based accurate timer
+  updateTimeRemaining: () => {
+    const { gameStartTime, totalPausedTime, timeLimit, gameStatus } = get();
+    if (gameStatus !== 'playing' || !gameStartTime) return;
+
+    const elapsed = Math.floor((Date.now() - gameStartTime - totalPausedTime) / 1000);
+    const remaining = Math.max(0, timeLimit - elapsed);
+
+    set({ timeRemaining: remaining });
+
+    if (remaining <= 0) {
+      set({ gameStatus: 'finished' });
+    }
+  },
+
   startGame: (difficulty: Difficulty) => {
     let timeLimit = 45;
 
@@ -112,22 +138,46 @@ export const useStroopStore = create<StroopStore>((set, get) => ({
     set({
       score: 0,
       timeRemaining: timeLimit,
+      timeLimit,
       gameStatus: 'playing',
       lives: 3, // Always 3 lives
-      difficulty
+      difficulty,
+      // [H2] Initialize timer tracking
+      gameStartTime: Date.now(),
+      pausedAt: null,
+      totalPausedTime: 0,
     });
     get().generateProblem();
   },
 
   pauseGame: () => {
-    set({ gameStatus: 'paused' });
+    set({ gameStatus: 'paused', pausedAt: Date.now() });
   },
 
   resumeGame: () => {
-    set({ gameStatus: 'playing' });
+    const { pausedAt, totalPausedTime } = get();
+    if (pausedAt) {
+      const pauseDuration = Date.now() - pausedAt;
+      set({
+        gameStatus: 'playing',
+        pausedAt: null,
+        totalPausedTime: totalPausedTime + pauseDuration,
+      });
+    }
   },
 
   resetGame: () => {
-    set({ currentProblem: null, score: 0, timeRemaining: 30, gameStatus: 'ready', lives: 3 });
+    set({
+      currentProblem: null,
+      score: 0,
+      timeRemaining: 30,
+      gameStatus: 'ready',
+      lives: 3,
+      // [H2] Reset timer tracking
+      gameStartTime: null,
+      pausedAt: null,
+      totalPausedTime: 0,
+      timeLimit: 30,
+    });
   },
 }));

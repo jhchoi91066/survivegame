@@ -43,28 +43,19 @@ export async function uploadGameStats(
       return { success: false, error: 'Not authenticated' };
     }
 
-    // Upsert to game_records (update if exists, insert if not)
-    const { error } = await supabase
-      .from('game_records')
-      .upsert({
-        user_id: user.id,
-        game_type: gameType,
-        difficulty: stats.difficulty || null,
-        best_time: stats.bestTime || null,
-        best_time_seconds: stats.bestTime || null,
-        highest_level: stats.highestLevel || null,
-        best_level: stats.highestLevel || null,
-        high_score: stats.highScore || null,
-        best_score: stats.highScore || null,
-        highest_combo: stats.highestCombo || null,
-        best_moves: stats.bestMoves || null,
-        highest_number: stats.highestNumber || null,
-        total_plays: stats.totalPlays,
-        total_play_time: stats.totalPlayTime,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id,game_type,difficulty',
-      });
+    // [C3] 검증된 함수를 통해 게임 기록 제출
+    const { error } = await supabase.rpc('submit_game_record', {
+      p_game_type: gameType,
+      p_difficulty: stats.difficulty || 'easy',
+      p_best_time: stats.bestTime || null,
+      p_high_score: stats.highScore || null,
+      p_highest_level: stats.highestLevel || null,
+      p_highest_combo: stats.highestCombo || null,
+      p_best_moves: stats.bestMoves || null,
+      p_highest_number: stats.highestNumber || null,
+      p_total_plays: stats.totalPlays || 1,
+      p_total_play_time: stats.totalPlayTime || 0,
+    });
 
     if (error) {
       console.error('Upload stats error:', error);

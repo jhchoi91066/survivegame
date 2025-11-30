@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameType, GameState, GlobalStats, GameStats } from './types';
 
 interface GameStore extends GameState {
@@ -29,7 +31,9 @@ const initialGlobalStats: GlobalStats = {
   },
 };
 
-export const useGameStore = create<GameStore>((set, get) => ({
+export const useGameStore = create<GameStore>()(
+  persist(
+    (set, get) => ({
   currentGame: null,
   isPlaying: false,
   isPaused: false,
@@ -51,18 +55,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  // [H4] Single set() call to prevent double render
   incrementTotalPlays: (game) => {
-    const state = get();
-    const currentStats = state.globalStats.gamesStats[game];
-    state.updateGameStats(game, { totalPlays: currentStats.totalPlays + 1, lastPlayed: Date.now() });
-    set((s) => ({ globalStats: { ...s.globalStats, totalGamesPlayed: s.globalStats.totalGamesPlayed + 1 } }));
+    set((state) => {
+      const currentStats = state.globalStats.gamesStats[game];
+      return {
+        globalStats: {
+          ...state.globalStats,
+          totalGamesPlayed: state.globalStats.totalGamesPlayed + 1,
+          gamesStats: {
+            ...state.globalStats.gamesStats,
+            [game]: {
+              ...currentStats,
+              totalPlays: currentStats.totalPlays + 1,
+              lastPlayed: Date.now(),
+            },
+          },
+        },
+      };
+    });
   },
 
+  // [H4] Single set() call to prevent double render
   addPlayTime: (game, seconds) => {
-    const state = get();
-    const currentStats = state.globalStats.gamesStats[game];
-    state.updateGameStats(game, { totalPlayTime: currentStats.totalPlayTime + seconds });
-    set((s) => ({ globalStats: { ...s.globalStats, totalPlayTime: s.globalStats.totalPlayTime + seconds } }));
+    set((state) => {
+      const currentStats = state.globalStats.gamesStats[game];
+      return {
+        globalStats: {
+          ...state.globalStats,
+          totalPlayTime: state.globalStats.totalPlayTime + seconds,
+          gamesStats: {
+            ...state.globalStats.gamesStats,
+            [game]: {
+              ...currentStats,
+              totalPlayTime: currentStats.totalPlayTime + seconds,
+            },
+          },
+        },
+      };
+    });
   },
 
   updateBestRecord: (game, record) => {
@@ -91,4 +122,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   resetGame: () => set({ currentGame: null, isPlaying: false, isPaused: false }),
-}));
+    }),
+    {
+      name: 'game-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        globalStats: state.globalStats,
+      }),
+      version: 1,
+    }
+  )
+);

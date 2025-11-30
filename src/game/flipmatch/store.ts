@@ -105,36 +105,42 @@ export const useFlipMatchStore = create<FlipMatchStore>((set, get) => ({
 
   // 카드 뒤집기
   flipCard: (cardId) => {
-    const state = get();
+    // [C7] Race condition 방지를 위해 set 함수 내에서 상태 체크
+    set((state) => {
+      // 게임이 진행중이 아니면 무시
+      if (state.gameStatus !== 'playing') return state;
 
-    // 게임이 진행중이 아니면 무시
-    if (state.gameStatus !== 'playing') return;
+      // [C7] 이미 2장이 뒤집혀있으면 무시 (최신 상태 기준)
+      if (state.flippedCards.length >= 2) return state;
 
-    // 이미 2장이 뒤집혀있으면 무시
-    if (state.flippedCards.length >= 2) return;
+      // 해당 카드 찾기
+      const card = state.cards.find((c) => c.id === cardId);
+      if (!card || card.isFlipped || card.isMatched) return state;
 
-    // 해당 카드 찾기
-    const card = state.cards.find((c) => c.id === cardId);
-    if (!card || card.isFlipped || card.isMatched) return;
+      // 카드 뒤집기
+      const updatedCards = state.cards.map((c) =>
+        c.id === cardId ? { ...c, isFlipped: true } : c
+      );
 
-    // 카드 뒤집기
-    const updatedCards = state.cards.map((c) =>
-      c.id === cardId ? { ...c, isFlipped: true } : c
-    );
+      const newFlippedCards = [...state.flippedCards, cardId];
 
-    const newFlippedCards = [...state.flippedCards, cardId];
+      // 2장이 뒤집혔으면 매칭 체크 예약
+      if (newFlippedCards.length === 2) {
+        setTimeout(() => {
+          const currentState = get();
+          // [C7] setTimeout 실행 시점에도 여전히 2장인지 재확인
+          if (currentState.flippedCards.length === 2) {
+            get().checkMatch();
+          }
+        }, 800);
+      }
 
-    set({
-      cards: updatedCards,
-      flippedCards: newFlippedCards,
+      return {
+        ...state,
+        cards: updatedCards,
+        flippedCards: newFlippedCards,
+      };
     });
-
-    // 2장이 뒤집혔으면 매칭 체크
-    if (newFlippedCards.length === 2) {
-      setTimeout(() => {
-        get().checkMatch();
-      }, 800);
-    }
   },
 
   // 매칭 체크

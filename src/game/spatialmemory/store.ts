@@ -12,6 +12,7 @@ interface SpatialMemoryStore {
   currentFlashIndex: number; // 현재 깜빡이는 인덱스
   totalRounds: number; // 총 라운드 수
   accuracy: number; // 정확도 (%)
+  activeTimers: ReturnType<typeof setInterval>[]; // [C6] 메모리 누수 방지용
 
   // 액션
   initializeGame: (settings: GameSettings) => void;
@@ -21,6 +22,7 @@ interface SpatialMemoryStore {
   setGameStatus: (status: GameStatus) => void;
   pauseGame: () => void;
   resumeGame: () => void;
+  cleanup: () => void; // [C6] 타이머 정리 함수
 }
 
 // 타일 생성
@@ -55,6 +57,7 @@ export const useSpatialMemoryStore = create<SpatialMemoryStore>((set, get) => ({
   currentFlashIndex: 0,
   totalRounds: 0,
   accuracy: 100,
+  activeTimers: [], // [C6] 타이머 배열 초기화
 
   // 게임 초기화
   initializeGame: (settings) => {
@@ -76,6 +79,10 @@ export const useSpatialMemoryStore = create<SpatialMemoryStore>((set, get) => ({
   // 라운드 시작 (시퀀스 보여주기)
   startRound: () => {
     const state = get();
+
+    // [C6] 이전 타이머 정리
+    state.cleanup();
+
     const tiles = createTiles(state.settings.difficulty);
     const sequence = generateSequence(state.currentLevel, tiles.length);
 
@@ -119,6 +126,9 @@ export const useSpatialMemoryStore = create<SpatialMemoryStore>((set, get) => ({
 
       flashIndex++;
     }, state.settings.flashSpeed);
+
+    // [C6] 타이머 ID 저장
+    set((s) => ({ activeTimers: [...s.activeTimers, flashInterval] }));
   },
 
   // 타일 클릭 처리
@@ -200,5 +210,12 @@ export const useSpatialMemoryStore = create<SpatialMemoryStore>((set, get) => ({
   resumeGame: () => {
     // We only allow pausing during 'input' phase, so we resume to 'input'
     set({ gameStatus: 'input' });
+  },
+
+  // [C6] 모든 활성 타이머 정리
+  cleanup: () => {
+    const { activeTimers } = get();
+    activeTimers.forEach(timer => clearInterval(timer));
+    set({ activeTimers: [] });
   },
 }));

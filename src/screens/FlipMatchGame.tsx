@@ -10,7 +10,7 @@ import GameBoard from '../components/flipmatch/GameBoard';
 import { hapticPatterns } from '../utils/haptics';
 import { soundManager } from '../utils/soundManager';
 import { useGameStore } from '../game/shared/store';
-import { updateFlipMatchRecord, loadGameRecord } from '../utils/statsManager';
+// [C5] statsManager 제거 - Zustand persist로 대체
 import { incrementGameCount } from '../utils/reviewManager';
 import { useTheme } from '../contexts/ThemeContext';
 import { updateStatsOnGamePlayed } from '../utils/achievementManager';
@@ -20,6 +20,7 @@ import { uploadGameStats } from '../utils/cloudSync';
 import { useAuth } from '../contexts/AuthContext';
 import { PauseMenu } from '../components/shared/PauseMenu';
 import { MultiplayerProvider, useMultiplayer } from '../contexts/MultiplayerContext';
+import Toast from 'react-native-toast-message'; // [H7] Network error handling
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassView } from '../components/shared/GlassView';
@@ -36,6 +37,7 @@ import {
   Star,
   RefreshCw
 } from 'lucide-react-native';
+import { useShallow } from 'zustand/react/shallow'; // [H3] Prevent unnecessary re-renders
 
 type FlipMatchGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FlipMatchGame'>;
 
@@ -57,11 +59,25 @@ const FlipMatchGameContent: React.FC = () => {
   const { theme, themeMode } = useTheme();
   const { user } = useAuth();
   const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
+
+  // [H3] Use shallow comparison to prevent unnecessary re-renders
   const {
     gameStatus, moves, matchedPairs, totalPairs, timeRemaining, initializeGame, resetGame, decrementTime, settings,
-  } = useFlipMatchStore();
+  } = useFlipMatchStore(
+    useShallow(state => ({
+      gameStatus: state.gameStatus,
+      moves: state.moves,
+      matchedPairs: state.matchedPairs,
+      totalPairs: state.totalPairs,
+      timeRemaining: state.timeRemaining,
+      initializeGame: state.initializeGame,
+      resetGame: state.resetGame,
+      decrementTime: state.decrementTime,
+      settings: state.settings,
+    }))
+  );
 
-  const { updateBestRecord } = useGameStore();
+  const { updateBestRecord, incrementTotalPlays, addPlayTime } = useGameStore();
 
   const [showDifficultyModal, setShowDifficultyModal] = useState(true);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
@@ -132,26 +148,38 @@ const FlipMatchGameContent: React.FC = () => {
       soundManager.playSound('game_win');
       const timeTaken = getTimeLimit() - timeRemaining;
 
-      const oldRecord = await loadGameRecord('flip_match');
+      // [C5] Zustand에서 이전 기록 확인
+      const currentBest = useGameStore.getState().globalStats.gamesStats.flip_match.bestRecord;
       if (!isMounted.current) return;
 
-      if (!oldRecord || !oldRecord.bestTime || timeTaken < oldRecord.bestTime) {
+      if (!currentBest || timeTaken < (currentBest as number)) {
         setIsNewRecord(true);
       }
 
-      await updateFlipMatchRecord(timeTaken, settings.difficulty, timeTaken);
+      // [C5] Zustand에 업데이트 (persist가 자동 저장)
       updateBestRecord('flip_match', timeTaken);
+      incrementTotalPlays('flip_match');
+      addPlayTime('flip_match', Math.floor(timeTaken));
 
-      // 클라우드 동기화 (로그인 상태일 때만)
+      // [H7] 클라우드 동기화 with error handling (로그인 상태일 때만)
       if (user) {
-        const record = await loadGameRecord('flip_match');
-        if (record) {
+        try {
+          const stats = useGameStore.getState().globalStats.gamesStats.flip_match;
           await uploadGameStats('flip_match', {
-            bestTime: record.bestTime,
-            totalPlays: record.totalPlays,
-            totalPlayTime: record.totalPlayTime,
+            bestTime: stats.bestRecord as number,
+            totalPlays: stats.totalPlays,
+            totalPlayTime: stats.totalPlayTime,
             difficulty: settings.difficulty,
           });
+        } catch (error) {
+          console.error('Failed to upload game stats:', error);
+          Toast.show({
+            type: 'error',
+            text1: '저장 실패',
+            text2: '게임 기록을 클라우드에 저장하지 못했습니다.',
+            visibilityTime: 3000,
+          });
+          // 로컬에는 이미 저장됨 (Zustand persist)
         }
       }
 

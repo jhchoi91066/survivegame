@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, Pressable, Platform, 
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { loadGameRecord } from '../utils/statsManager';
+// [C5] statsManager 제거 - Zustand persist로 대체
 import { GameRecord } from '../game/shared/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -172,18 +172,45 @@ const StatsScreen: React.FC = () => {
   );
 
   const loadAllStats = async () => {
-    const [flipMatch, mathRush, spatialMemory, stroop] = await Promise.all([
-      loadGameRecord('flip_match'),
-      loadGameRecord('math_rush'),
-      loadGameRecord('spatial_memory'),
-      loadGameRecord('stroop'),
-    ]);
+    // [C5] Zustand에서 직접 읽기
+    const { useGameStore } = await import('../game/shared/store');
+    const globalStats = useGameStore.getState().globalStats.gamesStats;
+
+    // Convert Zustand stats to GameRecord format
+    const flipMatch = globalStats.flip_match.bestRecord !== null ? {
+      bestTime: globalStats.flip_match.bestRecord as number,
+      totalPlays: globalStats.flip_match.totalPlays,
+      totalPlayTime: globalStats.flip_match.totalPlayTime,
+      difficulty: 'easy' as const,
+    } : undefined;
+
+    const mathRush = globalStats.math_rush.bestRecord !== null ? {
+      highScore: globalStats.math_rush.bestRecord as number,
+      totalPlays: globalStats.math_rush.totalPlays,
+      totalPlayTime: globalStats.math_rush.totalPlayTime,
+      highestCombo: 0,
+      difficulty: 'medium' as const,
+    } : undefined;
+
+    const spatialMemory = globalStats.spatial_memory.bestRecord !== null ? {
+      highestLevel: globalStats.spatial_memory.bestRecord as number,
+      totalPlays: globalStats.spatial_memory.totalPlays,
+      totalPlayTime: globalStats.spatial_memory.totalPlayTime,
+      difficulty: 'medium' as const,
+    } : undefined;
+
+    const stroop = globalStats.stroop.bestRecord !== null ? {
+      highScore: globalStats.stroop.bestRecord as number,
+      totalPlays: globalStats.stroop.totalPlays,
+      totalPlayTime: globalStats.stroop.totalPlayTime,
+      difficulty: 'medium' as const,
+    } : undefined;
 
     const newRecords = {
-      flip_match: flipMatch || undefined,
-      math_rush: mathRush || undefined,
-      spatial_memory: spatialMemory || undefined,
-      stroop: stroop || undefined
+      flip_match: flipMatch,
+      math_rush: mathRush,
+      spatial_memory: spatialMemory,
+      stroop: stroop
     };
     setRecords(newRecords);
 

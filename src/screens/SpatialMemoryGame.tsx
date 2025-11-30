@@ -29,7 +29,7 @@ import TileGrid from '../components/spatialmemory/TileGrid';
 import { hapticPatterns } from '../utils/haptics';
 import { soundManager } from '../utils/soundManager';
 import { useGameStore } from '../game/shared/store';
-import { updateSpatialMemoryRecord, loadGameRecord } from '../utils/statsManager';
+// [C5] statsManager 제거 - Zustand persist로 대체
 import { incrementGameCount } from '../utils/reviewManager';
 import { updateStatsOnGamePlayed } from '../utils/achievementManager';
 import { useTheme } from '../contexts/ThemeContext';
@@ -38,6 +38,8 @@ import AchievementUnlockModal from '../components/shared/AchievementUnlockModal'
 import { uploadGameStats } from '../utils/cloudSync';
 import { useAuth } from '../contexts/AuthContext';
 import { MultiplayerProvider, useMultiplayer } from '../contexts/MultiplayerContext';
+import Toast from 'react-native-toast-message'; // [H7] Network error handling
+import { useShallow } from 'zustand/react/shallow'; // [H3] Prevent unnecessary re-renders
 
 type SpatialMemoryGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SpatialMemoryGame'>;
 
@@ -58,11 +60,25 @@ const SpatialMemoryGameContent: React.FC = () => {
   const { theme, themeMode } = useTheme();
   const { user } = useAuth();
   const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
-  const {
-    gameStatus, currentLevel, initializeGame, startRound, resetGame, settings, pauseGame, resumeGame
-  } = useSpatialMemoryStore();
 
-  const { updateBestRecord } = useGameStore();
+  // [H3] Use shallow comparison to prevent unnecessary re-renders
+  const {
+    gameStatus, currentLevel, initializeGame, startRound, resetGame, settings, pauseGame, resumeGame, cleanup
+  } = useSpatialMemoryStore(
+    useShallow(state => ({
+      gameStatus: state.gameStatus,
+      currentLevel: state.currentLevel,
+      initializeGame: state.initializeGame,
+      startRound: state.startRound,
+      resetGame: state.resetGame,
+      settings: state.settings,
+      pauseGame: state.pauseGame,
+      resumeGame: state.resumeGame,
+      cleanup: state.cleanup,
+    }))
+  );
+
+  const { updateBestRecord, incrementTotalPlays, addPlayTime } = useGameStore();
 
   const [showDifficultyModal, setShowDifficultyModal] = useState(true);
   const [isPauseMenuVisible, setIsPauseMenuVisible] = useState(false);
@@ -78,8 +94,10 @@ const SpatialMemoryGameContent: React.FC = () => {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
+      // [C6] 컴포넌트 언마운트 시 모든 타이머 정리
+      cleanup();
     };
-  }, []);
+  }, [cleanup]);
 
   // 화면이 포커스될 때마다 게임 상태 리셋
   useFocusEffect(
@@ -124,30 +142,42 @@ const SpatialMemoryGameContent: React.FC = () => {
       await finishGame();
     }
 
-    const oldRecord = await loadGameRecord('spatial_memory');
+    // [C5] Zustand에서 이전 기록 확인
+    const currentBest = useGameStore.getState().globalStats.gamesStats.spatial_memory.bestRecord;
     if (!isMounted.current) return;
 
-    if (!oldRecord || !oldRecord.highestLevel || finalLevel > oldRecord.highestLevel) {
+    if (!currentBest || finalLevel > (currentBest as number)) {
       setIsNewRecord(true);
     }
 
     const playTime = startTime > 0 ? Math.floor((Date.now() - startTime) / 1000) : 0;
     console.log('🧠 Spatial Memory - Saving stats:', { finalLevel, difficulty: settings.difficulty, playTime, startTime, now: Date.now() });
 
-    await updateSpatialMemoryRecord(finalLevel, settings.difficulty, playTime);
+    // [C5] Zustand에 업데이트 (persist가 자동 저장)
     updateBestRecord('spatial_memory', finalLevel);
+    incrementTotalPlays('spatial_memory');
+    addPlayTime('spatial_memory', Math.floor(playTime));
     await incrementGameCount();
 
-    // 클라우드 동기화 (로그인 상태일 때만)
+    // [H7] 클라우드 동기화 with error handling (로그인 상태일 때만)
     if (user) {
-      const record = await loadGameRecord('spatial_memory');
-      if (record) {
+      try {
+        const stats = useGameStore.getState().globalStats.gamesStats.spatial_memory;
         await uploadGameStats('spatial_memory', {
-          highestLevel: record.highestLevel,
-          totalPlays: record.totalPlays,
-          totalPlayTime: record.totalPlayTime,
+          highestLevel: stats.bestRecord as number,
+          totalPlays: stats.totalPlays,
+          totalPlayTime: stats.totalPlayTime,
           difficulty: settings.difficulty,
         });
+      } catch (error) {
+        console.error('Failed to upload game stats:', error);
+        Toast.show({
+          type: 'error',
+          text1: '저장 실패',
+          text2: '게임 기록을 클라우드에 저장하지 못했습니다.',
+          visibilityTime: 3000,
+        });
+        // 로컬에는 이미 저장됨 (Zustand persist)
       }
     }
 

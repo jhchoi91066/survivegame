@@ -5,7 +5,7 @@ import { RootStackParamList } from '../../App';
 import { hapticPatterns } from '../utils/haptics';
 import { soundManager } from '../utils/soundManager';
 import { GameType, GameInfo } from '../game/shared/types';
-import { loadGameRecord } from '../utils/statsManager';
+// [C5] statsManager 제거 - Zustand persist로 대체
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay, withTiming, interpolate, interpolateColor } from 'react-native-reanimated';
 import { useTheme } from '../contexts/ThemeContext';
@@ -86,14 +86,23 @@ const MenuScreen: React.FC<MenuScreenProps> = ({ navigation }) => {
   };
 
   const loadGameData = async () => {
+    // [C5] Zustand에서 직접 읽기
+    const { useGameStore } = await import('../game/shared/store');
+    const globalStats = useGameStore.getState().globalStats.gamesStats;
+
     const gameDataPromises = GAMES.map(async (game) => {
-      const record = await loadGameRecord(game.id);
+      const gameStats = globalStats[game.id as GameType];
       let bestRecordValue = '-';
 
-      if (record) {
-        if ('bestTime' in record) bestRecordValue = `${record.bestTime}초`;
-        else if ('highScore' in record) bestRecordValue = `${record.highScore}점`;
-        else if ('highestLevel' in record) bestRecordValue = `Lv.${record.highestLevel}`;
+      if (gameStats && gameStats.bestRecord !== undefined && gameStats.bestRecord !== null) {
+        // flip_match는 시간(초), 나머지는 점수/레벨
+        if (game.id === 'flip_match') {
+          bestRecordValue = `${gameStats.bestRecord}초`;
+        } else if (game.id === 'spatial_memory') {
+          bestRecordValue = `Lv.${gameStats.bestRecord}`;
+        } else {
+          bestRecordValue = `${gameStats.bestRecord}점`;
+        }
       }
 
       return {

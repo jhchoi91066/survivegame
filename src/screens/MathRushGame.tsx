@@ -24,7 +24,7 @@ import { Difficulty } from '../game/mathrush/types';
 import { hapticPatterns } from '../utils/haptics';
 import { soundManager } from '../utils/soundManager';
 import { useGameStore } from '../game/shared/store';
-import { updateMathRushRecord, loadGameRecord } from '../utils/statsManager';
+// [C5] statsManager 제거 - Zustand persist로 대체
 import { incrementGameCount } from '../utils/reviewManager';
 import { useTheme } from '../contexts/ThemeContext';
 import { updateStatsOnGamePlayed } from '../utils/achievementManager';
@@ -33,6 +33,7 @@ import AchievementUnlockModal from '../components/shared/AchievementUnlockModal'
 import { uploadGameStats } from '../utils/cloudSync';
 import { useAuth } from '../contexts/AuthContext';
 import { MultiplayerProvider, useMultiplayer } from '../contexts/MultiplayerContext';
+import Toast from 'react-native-toast-message'; // [H7] Network error handling
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -42,6 +43,7 @@ import Animated, {
   FadeInDown,
   FadeOutUp
 } from 'react-native-reanimated';
+import { useShallow } from 'zustand/react/shallow'; // [H3] Prevent unnecessary re-renders
 
 type MathRushGameNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MathRushGame'>;
 
@@ -64,11 +66,28 @@ const MathRushGameContent: React.FC = () => {
   const { theme, themeMode } = useTheme();
   const { user } = useAuth();
   const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
-  const {
-    currentProblem, score, timeRemaining, gameStatus, lives, difficulty, answerProblem, decrementTime, startGame, resetGame, pauseGame, resumeGame
-  } = useMathRushStore();
 
-  const { updateBestRecord } = useGameStore();
+  // [H3] Use shallow comparison to prevent unnecessary re-renders
+  const {
+    currentProblem, score, timeRemaining, gameStatus, lives, difficulty, answerProblem, updateTimeRemaining, startGame, resetGame, pauseGame, resumeGame
+  } = useMathRushStore(
+    useShallow(state => ({
+      currentProblem: state.currentProblem,
+      score: state.score,
+      timeRemaining: state.timeRemaining,
+      gameStatus: state.gameStatus,
+      lives: state.lives,
+      difficulty: state.difficulty,
+      answerProblem: state.answerProblem,
+      updateTimeRemaining: state.updateTimeRemaining,
+      startGame: state.startGame,
+      resetGame: state.resetGame,
+      pauseGame: state.pauseGame,
+      resumeGame: state.resumeGame,
+    }))
+  );
+
+  const { updateBestRecord, incrementTotalPlays, addPlayTime } = useGameStore();
   const [isNewRecord, setIsNewRecord] = useState(false);
   const [isPauseMenuVisible, setIsPauseMenuVisible] = useState(false);
   const [showDifficultyModal, setShowDifficultyModal] = useState(true);
@@ -109,12 +128,19 @@ const MathRushGameContent: React.FC = () => {
     }, [resetGame])
   );
 
+  // [H1][H2] Accurate timer with pause support
   useEffect(() => {
     if (gameStatus === 'playing') {
-      const interval = setInterval(() => decrementTime(), 1000);
+      const interval = setInterval(() => {
+        // Re-check current state to prevent timer ticking during pause transition
+        const currentState = useMathRushStore.getState();
+        if (currentState.gameStatus === 'playing') {
+          updateTimeRemaining(); // [H2] Use Date.now() based timer
+        }
+      }, 100); // [H2] Check every 100ms for accuracy
       return () => clearInterval(interval);
     }
-  }, [gameStatus]);
+  }, [gameStatus, updateTimeRemaining]);
 
   // Time warning animation
   useEffect(() => {
@@ -158,27 +184,41 @@ const MathRushGameContent: React.FC = () => {
       await finishGame();
     }
 
-    const oldRecord = await loadGameRecord('math_rush');
+    // [C5] Zustand에서 이전 기록 확인
+    const currentBest = useGameStore.getState().globalStats.gamesStats.math_rush.bestRecord;
     if (!isMounted.current) return;
 
-    if (!oldRecord || !oldRecord.highScore || score > oldRecord.highScore) {
+    if (!currentBest || score > (currentBest as number)) {
       setIsNewRecord(true);
     }
 
     const playTime = (difficulty === 'easy' ? 60 : difficulty === 'medium' ? 45 : 30) - timeRemaining;
-    await updateMathRushRecord(score, playTime, difficulty);
+
+    // [C5] Zustand에 업데이트 (persist가 자동 저장)
     updateBestRecord('math_rush', score);
+    incrementTotalPlays('math_rush');
+    addPlayTime('math_rush', Math.floor(playTime));
     await incrementGameCount();
 
+    // [H7] 클라우드 동기화 with error handling (로그인 상태일 때만)
     if (user) {
-      const record = await loadGameRecord('math_rush');
-      if (record) {
+      try {
+        const stats = useGameStore.getState().globalStats.gamesStats.math_rush;
         await uploadGameStats('math_rush', {
-          highScore: record.highScore,
-          totalPlays: record.totalPlays,
-          totalPlayTime: record.totalPlayTime,
+          highScore: stats.bestRecord as number,
+          totalPlays: stats.totalPlays,
+          totalPlayTime: stats.totalPlayTime,
           difficulty: difficulty,
         });
+      } catch (error) {
+        console.error('Failed to upload game stats:', error);
+        Toast.show({
+          type: 'error',
+          text1: '저장 실패',
+          text2: '게임 기록을 클라우드에 저장하지 못했습니다.',
+          visibilityTime: 3000,
+        });
+        // 로컬에는 이미 저장됨 (Zustand persist)
       }
     }
 
