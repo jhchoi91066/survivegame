@@ -35,7 +35,7 @@ import AchievementUnlockModal from '../components/shared/AchievementUnlockModal'
 import { uploadGameStats } from '../utils/cloudSync';
 import { useAuth } from '../contexts/AuthContext';
 import { MultiplayerProvider, useMultiplayer } from '../contexts/MultiplayerContext';
-import Toast from 'react-native-toast-message'; // [H7] Network error handling
+import { showToast } from '../utils/toast'; // [H7][H8] Platform-safe toast
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring } from 'react-native-reanimated';
 import { useShallow } from 'zustand/react/shallow'; // [H3] Prevent unnecessary re-renders
 
@@ -203,7 +203,7 @@ const StroopTestGameContent: React.FC = () => {
         });
       } catch (error) {
         console.error('Failed to upload game stats:', error);
-        Toast.show({
+        showToast({
           type: 'error',
           text1: '저장 실패',
           text2: '게임 기록을 클라우드에 저장하지 못했습니다.',

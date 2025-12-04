@@ -14,7 +14,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { GlassView } from '../components/shared/GlassView';
-import Toast from 'react-native-toast-message'; // [H8] Login error handling
+import { showToast } from '../utils/toast'; // [H7][H8] Platform-safe toast
 import {
   Gamepad2,
   Trophy,
@@ -27,7 +27,7 @@ import {
   LucideIcon
 } from 'lucide-react-native';
 
-type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
+type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
 interface LoginScreenProps {
   navigation: LoginScreenNavigationProp;
@@ -44,7 +44,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
   // 로그인 성공 시 자동으로 Menu로 이동
   useEffect(() => {
     if (user) {
-      navigation.replace('Menu');
+      navigation.replace('MainTabs');
     }
   }, [user, navigation]);
 
@@ -55,7 +55,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
       await signInWithGoogle();
     } catch (error: any) {
       console.error('Google 로그인 실패:', error);
-      Toast.show({
+      showToast({
         type: 'error',
         text1: 'Google 로그인 실패',
         text2: error?.message || '다시 시도해주세요.',
@@ -72,7 +72,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
       await signInWithApple();
     } catch (error: any) {
       console.error('Apple 로그인 실패:', error);
-      Toast.show({
+      showToast({
         type: 'error',
         text1: 'Apple 로그인 실패',
         text2: error?.message || '다시 시도해주세요.',
@@ -89,7 +89,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
       await signInAnonymously();
     } catch (error: any) {
       console.error('익명 로그인 실패:', error);
-      Toast.show({
+      showToast({
         type: 'error',
         text1: '익명 로그인 실패',
         text2: error?.message || '다시 시도해주세요.',
@@ -103,7 +103,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onSkip }) => {
     if (onSkip) {
       onSkip();
     } else {
-      navigation.navigate('Menu');
+      navigation.navigate('MainTabs');
     }
   };
 

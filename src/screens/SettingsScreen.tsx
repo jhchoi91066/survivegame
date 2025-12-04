@@ -177,7 +177,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               Alert.alert('완료', '계정이 삭제되었습니다.');
-              navigation.navigate('Menu');
+              navigation.navigate('MainTabs');
             } catch (error: any) {
               console.error('Delete account error:', error);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

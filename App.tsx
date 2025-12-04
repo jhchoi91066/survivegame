@@ -17,6 +17,7 @@ import { ThemeProvider } from './src/contexts/ThemeContext';
 import { AccessibilityProvider } from './src/contexts/AccessibilityContext';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { syncGameRecords } from './src/utils/cloudSync';
+import { ToastProvider } from './src/components/ToastProvider';
 
 export type RootStackParamList = {
   MainTabs: undefined;
@@ -92,6 +93,8 @@ const styles = StyleSheet.create({
   },
 });
 
+
+
 export default function App() {
   return (
     <AuthProvider>
@@ -100,6 +103,7 @@ export default function App() {
           <SafeAreaProvider>
             <ErrorBoundary>
               <AppNavigator />
+              <ToastProvider />
             </ErrorBoundary>
           </SafeAreaProvider>
         </ThemeProvider>
