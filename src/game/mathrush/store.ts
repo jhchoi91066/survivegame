@@ -22,6 +22,7 @@ interface MathRushStore {
   pauseGame: () => void;
   resumeGame: () => void;
   resetGame: () => void;
+  setGameStatus: (status: GameStatus) => void;
 }
 
 const generateProblem = (difficulty: Difficulty): Problem => {
@@ -79,6 +80,7 @@ const generateProblem = (difficulty: Difficulty): Problem => {
 };
 
 export const useMathRushStore = create<MathRushStore>((set, get) => ({
+  // ... (other initial state)
   currentProblem: null,
   score: 0,
   timeRemaining: 60,
@@ -189,5 +191,9 @@ export const useMathRushStore = create<MathRushStore>((set, get) => ({
       totalPausedTime: 0,
       timeLimit: 60,
     });
+  },
+
+  setGameStatus: (status: GameStatus) => {
+    set({ gameStatus: status });
   },
 }));

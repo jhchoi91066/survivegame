@@ -22,6 +22,7 @@ interface StroopStore {
   pauseGame: () => void;
   resumeGame: () => void;
   resetGame: () => void;
+  setGameStatus: (status: GameStatus) => void;
 }
 
 const ALL_COLORS = {
@@ -179,5 +180,9 @@ export const useStroopStore = create<StroopStore>((set, get) => ({
       totalPausedTime: 0,
       timeLimit: 30,
     });
+  },
+
+  setGameStatus: (status: GameStatus) => {
+    set({ gameStatus: status });
   },
 }));

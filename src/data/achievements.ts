@@ -22,18 +22,18 @@ export interface Achievement {
 
 export interface AchievementRequirement {
   type:
-    | 'games_played'        // 게임 플레이 횟수
-    | 'game_score'          // 특정 게임 점수
-    | 'total_score'         // 전체 게임 총점
-    | 'perfect_score'       // 만점
-    | 'streak'              // 연속 플레이
-    | 'all_difficulties'    // 모든 난이도 플레이
-    | 'speed_play'          // 빠른 플레이
-    | 'mastery'             // 특정 게임 마스터
-    | 'friend_count'        // 친구 수 (온라인)
-    | 'leaderboard_rank'    // 리더보드 순위 (온라인)
-    | 'all_games_rank_one'  // 모든 게임 1위 (온라인)
-    | 'friend_wins';        // 친구와 비교 승리
+  | 'games_played'        // 게임 플레이 횟수
+  | 'game_score'          // 특정 게임 점수
+  | 'total_score'         // 전체 게임 총점
+  | 'perfect_score'       // 만점
+  | 'streak'              // 연속 플레이
+  | 'all_difficulties'    // 모든 난이도 플레이
+  | 'speed_play'          // 빠른 플레이
+  | 'mastery'             // 특정 게임 마스터
+  | 'friend_count'        // 친구 수 (온라인)
+  | 'leaderboard_rank'    // 리더보드 순위 (온라인)
+  | 'all_games_rank_one'  // 모든 게임 1위 (온라인)
+  | 'friend_wins';        // 친구와 비교 승리
 
   value: number | string | string[];
   count?: number; // 필요 횟수
@@ -93,6 +93,50 @@ export const ACHIEVEMENTS: Achievement[] = [
     requirement: {
       type: 'games_played',
       value: 100,
+    },
+  },
+  {
+    id: 'veteran_player',
+    name: '베테랑 플레이어',
+    description: '200게임을 플레이하세요',
+    category: 'progress',
+    emoji: '🏅',
+    requirement: {
+      type: 'games_played',
+      value: 200,
+    },
+  },
+  {
+    id: 'legendary_player',
+    name: '전설적인 플레이어',
+    description: '500게임을 플레이하세요',
+    category: 'progress',
+    emoji: '👑',
+    requirement: {
+      type: 'games_played',
+      value: 500,
+    },
+  },
+  {
+    id: 'score_hunter',
+    name: '점수 사냥꾼',
+    description: '총점 1000점을 달성하세요',
+    category: 'progress',
+    emoji: '🎯',
+    requirement: {
+      type: 'total_score',
+      value: 1000,
+    },
+  },
+  {
+    id: 'score_millionaire',
+    name: '점수 백만장자',
+    description: '총점 2000점을 달성하세요',
+    category: 'progress',
+    emoji: '💎',
+    requirement: {
+      type: 'total_score',
+      value: 2000,
     },
   },
 
@@ -169,6 +213,30 @@ export const ACHIEVEMENTS: Achievement[] = [
       value: 'spatial_memory',
     },
   },
+  {
+    id: 'memory_master',
+    name: '기억력 마스터',
+    description: 'Flip & Match에서 레벨 20 달성',
+    category: 'skill',
+    emoji: '🧠',
+    requirement: {
+      type: 'game_score',
+      value: 20,
+      gameType: 'flip_match',
+    },
+  },
+  {
+    id: 'spatial_wizard',
+    name: '공간 마법사',
+    description: 'Spatial Memory에서 레벨 15 달성',
+    category: 'skill',
+    emoji: '✨',
+    requirement: {
+      type: 'game_score',
+      value: 15,
+      gameType: 'spatial_memory',
+    },
+  },
 
   // === 스킬 업적 - Math Rush ===
   {
@@ -221,14 +289,48 @@ export const ACHIEVEMENTS: Achievement[] = [
       gameType: 'stroop',
     },
   },
-
-  // === 도전 업적 ===
   {
-    id: 'quick_thinker',
-    name: '빠른 사고자',
-    description: '1분 이내에 게임 완료 (3회)',
-    category: 'challenge',
-    emoji: '⚡',
+    id: 'math_master',
+    name: '수학 마스터',
+    description: 'Math Rush에서 150점 달성',
+    category: 'skill',
+    emoji: '➕',
+    requirement: {
+      type: 'game_score',
+      value: 150,
+      gameType: 'math_rush',
+    },
+  },
+  {
+    id: 'math_god',
+    name: '수학의 신',
+    description: 'Math Rush에서 200점 달성',
+    category: 'skill',
+    emoji: '♾️',
+    requirement: {
+      type: 'game_score',
+      value: 200,
+      gameType: 'math_rush',
+    },
+  },
+  {
+    id: 'color_expert',
+    name: '색상 전문가',
+    description: 'Stroop Test에서 60점 달성',
+    category: 'skill',
+    emoji: '🎨',
+    requirement: {
+      type: 'game_score',
+      value: 60,
+      gameType: 'stroop',
+    },
+  },
+  {
+    id: 'color_legend',
+    name: '색상 전설',
+    description: 'Stroop Test에서 80점 달성',
+    category: 'skill',
+    emoji: '🌈',
     requirement: {
       type: 'speed_play',
       value: 60,
@@ -236,16 +338,19 @@ export const ACHIEVEMENTS: Achievement[] = [
     },
   },
   {
-    id: 'all_rounder',
-    name: '올라운더',
-    description: '모든 게임을 플레이하세요',
+    id: 'speed_demon',
+    name: '스피드 데몬',
+    description: '1분 이내에 게임 완료 (10회)',
     category: 'challenge',
-    emoji: '🌟',
+    emoji: '🚀',
     requirement: {
-      type: 'mastery',
-      value: 4, // 4개 게임
+      type: 'speed_play',
+      value: 60,
+      count: 10,
     },
   },
+
+  // === 도전 업적 ===
   {
     id: 'dedicated_learner',
     name: '열정적인 학습자',
@@ -266,6 +371,28 @@ export const ACHIEVEMENTS: Achievement[] = [
     requirement: {
       type: 'streak',
       value: 7,
+    },
+  },
+  {
+    id: 'habit_builder',
+    name: '습관 형성가',
+    description: '14일 연속 플레이하세요',
+    category: 'challenge',
+    emoji: '📅',
+    requirement: {
+      type: 'streak',
+      value: 14,
+    },
+  },
+  {
+    id: 'marathon_runner',
+    name: '마라톤 러너',
+    description: '30일 연속 플레이하세요',
+    category: 'challenge',
+    emoji: '🏃',
+    requirement: {
+      type: 'streak',
+      value: 30,
     },
   },
 
@@ -297,9 +424,9 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'perfect_memory',
     name: '완벽한 기억력',
-    description: '???',
+    description: 'Flip & Match에서 15점 이상 달성하세요',
     category: 'hidden',
-    emoji: '��',
+    emoji: '🤫',
     isHidden: true,
     requirement: {
       type: 'game_score',
@@ -314,7 +441,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'ultimate_brain',
     name: '궁극의 두뇌',
-    description: '???',
+    description: '모든 게임의 총점 500점을 달성하세요',
     category: 'hidden',
     emoji: '🧩',
     isHidden: true,
@@ -393,6 +520,39 @@ export const ACHIEVEMENTS: Achievement[] = [
     requirement: {
       type: 'all_games_rank_one',
       value: 4, // 4개 게임
+    },
+  },
+  {
+    id: 'popular',
+    name: '인기인',
+    description: '친구 20명을 추가하세요',
+    category: 'online',
+    emoji: '🎉',
+    requirement: {
+      type: 'friend_count',
+      value: 20,
+    },
+  },
+  {
+    id: 'unbeatable',
+    name: '무적의 플레이어',
+    description: '친구를 20회 이기세요',
+    category: 'online',
+    emoji: '⚔️',
+    requirement: {
+      type: 'friend_wins',
+      value: 20,
+    },
+  },
+  {
+    id: 'top_ranker',
+    name: '탑 랭커',
+    description: '리더보드 Top 3에 진입하세요',
+    category: 'online',
+    emoji: '🏆',
+    requirement: {
+      type: 'leaderboard_rank',
+      value: 3,
     },
   },
 ];

@@ -58,11 +58,11 @@ const FlipMatchGameContent: React.FC = () => {
   const navigation = useNavigation<FlipMatchGameNavigationProp>();
   const { theme, themeMode } = useTheme();
   const { user } = useAuth();
-  const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
+  const { isMultiplayer, opponentScore, opponentFinished, updateMyScore, finishGame } = useMultiplayer();
 
   // [H3] Use shallow comparison to prevent unnecessary re-renders
   const {
-    gameStatus, moves, matchedPairs, totalPairs, timeRemaining, initializeGame, resetGame, decrementTime, settings,
+    gameStatus, moves, matchedPairs, totalPairs, timeRemaining, initializeGame, resetGame, decrementTime, settings, setGameStatus
   } = useFlipMatchStore(
     useShallow(state => ({
       gameStatus: state.gameStatus,
@@ -74,6 +74,7 @@ const FlipMatchGameContent: React.FC = () => {
       resetGame: state.resetGame,
       decrementTime: state.decrementTime,
       settings: state.settings,
+      setGameStatus: state.setGameStatus,
     }))
   );
 
@@ -85,6 +86,7 @@ const FlipMatchGameContent: React.FC = () => {
   const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [opponentWon, setOpponentWon] = useState(false);
 
   // Animation values for score updates
   const opponentScoreScale = useSharedValue(1);
@@ -111,12 +113,24 @@ const FlipMatchGameContent: React.FC = () => {
     }
   }, [opponentScore, isMultiplayer]);
 
+  // Handle opponent finish
+  useEffect(() => {
+    if (isMultiplayer && opponentFinished && gameStatus === 'playing') {
+      setOpponentWon(true);
+      setGameStatus('lost'); // Force game end
+      hapticPatterns.errorAction();
+      soundManager.playSound('game_lose');
+      finishGame(); // Mark myself as finished too
+    }
+  }, [isMultiplayer, opponentFinished, gameStatus, setGameStatus, finishGame]);
+
   // 화면이 포커스될 때마다 게임 상태 리셋
   useFocusEffect(
     useCallback(() => {
       resetGame();
       setShowDifficultyModal(true);
       setIsNewRecord(false);
+      setOpponentWon(false);
     }, [resetGame])
   );
 
@@ -197,8 +211,11 @@ const FlipMatchGameContent: React.FC = () => {
         await finishGame();
       }
     } else {
-      hapticPatterns.errorAction();
-      soundManager.playSound('game_lose');
+      // Game Lost (Time up or Opponent won)
+      if (!opponentWon) {
+        hapticPatterns.errorAction();
+        soundManager.playSound('game_lose');
+      }
 
       // Also finish multiplayer game on loss
       if (isMultiplayer) {
@@ -385,10 +402,14 @@ const FlipMatchGameContent: React.FC = () => {
               <View style={[styles.iconContainer, { backgroundColor: '#ef4444', borderColor: '#b91c1c' }]}>
                 <Timer size={48} color="#fff" />
               </View>
-              <Text style={styles.modalTitle}>Time's Up!</Text>
+              <Text style={styles.modalTitle}>
+                {opponentWon ? 'Opponent Won!' : "Time's Up!"}
+              </Text>
               <Text style={styles.modalDescription}>
-                Matches: {matchedPairs}/{totalPairs}{'\n'}
-                Moves: {moves}
+                {opponentWon
+                  ? '상대방이 먼저 게임을 끝냈습니다.'
+                  : `Matches: ${matchedPairs}/${totalPairs}\nMoves: ${moves}`
+                }
               </Text>
 
               <View style={styles.modalButtons}>

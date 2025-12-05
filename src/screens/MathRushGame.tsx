@@ -65,11 +65,11 @@ const MathRushGameContent: React.FC = () => {
   const navigation = useNavigation<MathRushGameNavigationProp>();
   const { theme, themeMode } = useTheme();
   const { user } = useAuth();
-  const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
+  const { isMultiplayer, opponentScore, opponentFinished, updateMyScore, finishGame } = useMultiplayer();
 
   // [H3] Use shallow comparison to prevent unnecessary re-renders
   const {
-    currentProblem, score, timeRemaining, gameStatus, lives, difficulty, answerProblem, updateTimeRemaining, startGame, resetGame, pauseGame, resumeGame
+    currentProblem, score, timeRemaining, gameStatus, lives, difficulty, answerProblem, updateTimeRemaining, startGame, resetGame, pauseGame, resumeGame, setGameStatus
   } = useMathRushStore(
     useShallow(state => ({
       currentProblem: state.currentProblem,
@@ -84,6 +84,7 @@ const MathRushGameContent: React.FC = () => {
       resetGame: state.resetGame,
       pauseGame: state.pauseGame,
       resumeGame: state.resumeGame,
+      setGameStatus: state.setGameStatus,
     }))
   );
 
@@ -94,6 +95,7 @@ const MathRushGameContent: React.FC = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('medium');
   const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [opponentWon, setOpponentWon] = useState(false);
   const isMounted = React.useRef(true);
 
   // Animation values
@@ -120,11 +122,21 @@ const MathRushGameContent: React.FC = () => {
     };
   }, []);
 
+  // Handle opponent finish
+  useEffect(() => {
+    if (isMultiplayer && opponentFinished && gameStatus === 'playing') {
+      setOpponentWon(true);
+      setGameStatus('finished'); // Force game end
+      finishGame(); // Mark myself as finished too
+    }
+  }, [isMultiplayer, opponentFinished, gameStatus, setGameStatus, finishGame]);
+
   useFocusEffect(
     useCallback(() => {
       resetGame();
       setShowDifficultyModal(true);
       setIsNewRecord(false);
+      setOpponentWon(false);
     }, [resetGame])
   );
 
@@ -368,6 +380,12 @@ const MathRushGameContent: React.FC = () => {
                 <Text style={styles.statLabel}>SCORE</Text>
                 <Animated.Text style={[styles.statValue, scoreAnimatedStyle]}>{score}</Animated.Text>
               </View>
+              {isMultiplayer && (
+                <View style={styles.statItem}>
+                  <Text style={styles.statLabel}>OPPONENT</Text>
+                  <Text style={[styles.statValue, { color: '#fbbf24' }]}>{opponentScore}</Text>
+                </View>
+              )}
               <View style={styles.statItem}>
                 <Text style={styles.statLabel}>TIME</Text>
                 <Animated.Text style={[styles.statValue, timeRemaining <= 5 && styles.timeWarning, timeAnimatedStyle]}>
@@ -408,18 +426,22 @@ const MathRushGameContent: React.FC = () => {
           </>
         )}
 
-        <Modal visible={gameStatus === 'finished'} transparent animationType="fade">
+        <Modal visible={gameStatus === 'finished' || opponentWon} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <GlassView style={styles.modalContent} intensity={30} tint="light">
               <View style={styles.iconContainer}>
                 <Timer size={48} color="#fff" />
               </View>
-              <Text style={styles.modalTitle}>Time's Up!</Text>
+              <Text style={styles.modalTitle}>
+                {opponentWon ? 'Opponent Won!' : "Time's Up!"}
+              </Text>
 
               <View style={styles.resultStats}>
-                <Text style={styles.resultLabel}>Final Score</Text>
+                <Text style={styles.resultLabel}>
+                  {opponentWon ? '상대방이 먼저 끝냈습니다' : 'Final Score'}
+                </Text>
                 <Text style={styles.resultScore}>{score}</Text>
-                {isNewRecord && (
+                {isNewRecord && !opponentWon && (
                   <View style={styles.newRecordBadge}>
                     <Trophy size={14} color="#f59e0b" style={{ marginRight: 4 }} />
                     <Text style={styles.newRecordText}>New Record!</Text>

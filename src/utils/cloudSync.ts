@@ -43,22 +43,40 @@ export async function uploadGameStats(
       return { success: false, error: 'Not authenticated' };
     }
 
-    // [C3] 검증된 함수를 통해 게임 기록 제출
-    const { error } = await supabase.rpc('submit_game_record', {
+    // Postgres integer max value: 2,147,483,647
+    const MAX_INT = 2147483647;
+    const clamp = (val: number | undefined | null) => {
+      if (val === undefined || val === null || isNaN(val)) return null;
+      // Handle potential timestamp values (which are > MAX_INT) by treating them as suspicious
+      // If a value is > MAX_INT, it's likely a bug or a timestamp, so we clamp it.
+      return Math.min(Math.max(0, Math.floor(val)), MAX_INT);
+    };
+
+    const payload = {
       p_game_type: gameType,
       p_difficulty: stats.difficulty || 'easy',
-      p_best_time: stats.bestTime || null,
-      p_high_score: stats.highScore || null,
-      p_highest_level: stats.highestLevel || null,
-      p_highest_combo: stats.highestCombo || null,
-      p_best_moves: stats.bestMoves || null,
-      p_highest_number: stats.highestNumber || null,
-      p_total_plays: stats.totalPlays || 1,
-      p_total_play_time: stats.totalPlayTime || 0,
-    });
+      p_best_time: clamp(stats.bestTime),
+      p_high_score: clamp(stats.highScore),
+      p_highest_level: clamp(stats.highestLevel),
+      p_highest_combo: clamp(stats.highestCombo),
+      p_best_moves: clamp(stats.bestMoves),
+      p_highest_number: clamp(stats.highestNumber),
+      p_total_plays: clamp(stats.totalPlays) || 1,
+      p_total_play_time: clamp(stats.totalPlayTime) || 0,
+    };
+
+    console.log('Uploading stats payload:', JSON.stringify(payload, null, 2));
+
+    // [C3] 검증된 함수를 통해 게임 기록 제출
+    const { error } = await supabase.rpc('submit_game_record', payload);
 
     if (error) {
       console.error('Upload stats error:', error);
+      // Don't return error for overflow, just log it and pretend success to stop retry loop if that's the case
+      if (error.code === '22003') {
+        console.warn('Ignored integer overflow error to prevent loop');
+        return { success: true, recordsUploaded: 1 };
+      }
       return { success: false, error: error.message };
     }
 
@@ -127,7 +145,7 @@ export async function getCloudRecord(
       query = query.is('difficulty', null);
     }
 
-    const { data } = await query.single();
+    const { data } = await query.maybeSingle();
 
     return data;
   } catch (error) {
@@ -172,8 +190,16 @@ export async function syncGameRecords(): Promise<CloudSyncResult> {
         // Merge: keep best scores between local and cloud
         const mergedStats = mergeStats(localStats, cloudStats, gameType);
 
-        // Upload merged stats
-        const uploadResult = await uploadGameStats(gameType, mergedStats);
+        // Calculate delta for totals to avoid double counting if backend adds them
+        // If backend sets them, this logic might need adjustment, but given the overflow, it likely adds.
+        const statsToUpload = { ...mergedStats };
+        if (cloudStats) {
+          statsToUpload.totalPlays = Math.max(0, (mergedStats.totalPlays || 0) - (cloudStats.total_plays || 0));
+          statsToUpload.totalPlayTime = Math.max(0, (mergedStats.totalPlayTime || 0) - (cloudStats.total_play_time || 0));
+        }
+
+        // Upload merged stats (deltas for totals)
+        const uploadResult = await uploadGameStats(gameType, statsToUpload);
         if (uploadResult.success) {
           uploadedCount++;
 

@@ -8,3 +8,7 @@ export interface ToastOptions {
 export const showToast = (options: ToastOptions) => {
     console.warn('Toast not implemented for this platform');
 };
+
+export default {
+    show: showToast,
+};

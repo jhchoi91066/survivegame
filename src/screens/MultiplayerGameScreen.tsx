@@ -162,7 +162,16 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
           handleRoomUpdate(payload.new);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Room subscription status: ${status}`);
+        if (status === 'SUBSCRIBED') {
+          console.log(`Successfully subscribed to room_${roomId}`);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`Failed to subscribe to room_${roomId}`);
+        } else if (status === 'TIMED_OUT') {
+          console.error(`Subscription to room_${roomId} timed out`);
+        }
+      });
 
     // Cleanup
     return () => {
@@ -238,6 +247,42 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
     }
   }, [gameState.status, countdown]);
 
+  // [Fallback] Polling for room status in case Realtime fails
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+
+    if (gameState.status === 'waiting') {
+      pollInterval = setInterval(async () => {
+        try {
+          const { data, error } = await supabase
+            .from('multiplayer_rooms')
+            .select('status, game_started_at')
+            .eq('id', roomId)
+            .single();
+
+          if (error) throw error;
+
+          // Log what we found for debugging
+          // console.log('Polling status:', data?.status); 
+
+          if (data && (data.status === 'countdown' || data.status === 'playing')) {
+            console.log('Polling found updated status:', data.status);
+            handleRoomUpdate(data);
+          } else {
+            // Log occasionally or if status is unexpected
+            if (Math.random() < 0.1) console.log('Still waiting, polled status:', data?.status);
+          }
+        } catch (error) {
+          console.error('Polling error:', error);
+        }
+      }, 500); // Poll every 0.5 second
+    }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [gameState.status, roomId]);
+
   const checkIfRoomCreator = async () => {
     try {
       const { data, error } = await supabase
@@ -271,6 +316,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
   };
 
   const handleRoomUpdate = (roomData: any) => {
+    console.log('Room update received:', roomData);
     // Handle synchronized countdown
     if (roomData.status === 'countdown' && roomData.game_started_at) {
       const startTime = new Date(roomData.game_started_at).getTime();
@@ -289,11 +335,16 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
         // Already past start time, start immediately
         startGame();
       }
+    } else if (roomData.status === 'playing') {
+      // If game is already playing (we missed countdown), join immediately
+      console.log('Game is already playing, joining immediately');
+      startGame();
     }
   };
 
   const loadGameState = async () => {
     try {
+      // Fetch game state (players)
       const { data, error } = await supabase
         .from('multiplayer_game_states')
         .select('*')
@@ -301,6 +352,23 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
         .order('created_at', { ascending: true });
 
       if (error) throw error;
+
+      console.log('Loaded game state:', data);
+
+      // [New] Also fetch room status to catch up if we missed updates
+      const { data: roomData, error: roomError } = await supabase
+        .from('multiplayer_rooms')
+        .select('status, game_started_at')
+        .eq('id', roomId)
+        .single();
+
+      if (!roomError && roomData) {
+        console.log('Loaded room status:', roomData.status);
+        if (roomData.status === 'countdown' || roomData.status === 'playing') {
+          // If room is already started, handle it (this will trigger startGame)
+          handleRoomUpdate(roomData);
+        }
+      }
 
       // Self-healing: If I am not in the game state, insert myself
       const myState = data?.find((s: any) => s.user_id === user?.id);
@@ -336,6 +404,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
 
         const allReady = players.length >= 2;
         setOpponentReady(allReady);
+        console.log('Players:', players.length, 'All Ready:', allReady, 'Is Creator:', isRoomCreatorRef.current);
 
         const newStatus = data[0].status || 'waiting';
 
@@ -347,8 +416,21 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
 
         // If all ready and still waiting, room creator triggers countdown
         // Use ref to ensure we have the latest value inside the subscription callback
-        if (allReady && newStatus === 'waiting' && isRoomCreatorRef.current) {
-          startCountdown();
+        // Also check if we are the creator by querying DB if needed
+        if (allReady && newStatus === 'waiting') {
+          // Double check creator status if not sure
+          if (isRoomCreatorRef.current) {
+            console.log('All players ready, starting countdown as creator');
+            startCountdown();
+          } else {
+            // Fallback: Check if I am the creator in the room data
+            checkIfRoomCreator().then(() => {
+              if (isRoomCreatorRef.current) {
+                console.log('All players ready, starting countdown as creator (delayed check)');
+                startCountdown();
+              }
+            });
+          }
         }
       }
     } catch (error) {
@@ -357,19 +439,32 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
   };
 
   const startCountdown = async () => {
+    console.log('Attempting to start countdown. Is Creator:', isRoomCreatorRef.current);
     if (!isRoomCreatorRef.current) return; // Only room creator can start countdown
 
     try {
       // Set countdown start time in database (3 seconds from now)
       const startTime = new Date(Date.now() + 3000).toISOString();
+      console.log('Updating room status to countdown:', startTime);
 
-      await supabase
+      const { error } = await supabase
         .from('multiplayer_rooms')
         .update({
           status: 'countdown',
           game_started_at: startTime,
         })
         .eq('id', roomId);
+
+      if (error) {
+        console.error('Error updating room status:', error);
+      } else {
+        console.log('Room status updated to countdown successfully');
+        // [Optimistic Update] Immediately handle the update locally
+        handleRoomUpdate({
+          status: 'countdown',
+          game_started_at: startTime
+        });
+      }
     } catch (error) {
       console.error('Failed to start countdown:', error);
     }
@@ -748,7 +843,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
                   </View>
 
                   <Pressable
-                    onPress={() => navigation.navigate('MultiplayerLobby')}
+                    onPress={() => navigation.navigate('MultiplayerLobby' as never)}
                     style={styles.backToLobbyButton}
                     accessible={true}
                     accessibilityRole="button"

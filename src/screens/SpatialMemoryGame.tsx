@@ -59,7 +59,7 @@ const SpatialMemoryGameContent: React.FC = () => {
   const navigation = useNavigation<SpatialMemoryGameNavigationProp>();
   const { theme, themeMode } = useTheme();
   const { user } = useAuth();
-  const { isMultiplayer, opponentScore, updateMyScore, finishGame } = useMultiplayer();
+  const { isMultiplayer, opponentScore, opponentFinished, updateMyScore, finishGame } = useMultiplayer();
 
   // [H3] Use shallow comparison to prevent unnecessary re-renders
   const {
@@ -88,6 +88,7 @@ const SpatialMemoryGameContent: React.FC = () => {
   const [hasRecordedStats, setHasRecordedStats] = useState(false);
   const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [opponentWon, setOpponentWon] = useState(false);
   const isMounted = React.useRef(true);
 
   useEffect(() => {
@@ -99,6 +100,20 @@ const SpatialMemoryGameContent: React.FC = () => {
     };
   }, [cleanup]);
 
+  // Handle opponent finish
+  useEffect(() => {
+    if (isMultiplayer && opponentFinished && gameStatus !== 'gameover') {
+      setOpponentWon(true);
+      // Force game over logic
+      // Spatial Memory doesn't have a direct "setGameStatus" exposed via store for this, 
+      // but we can trigger handleGameOver directly or use cleanup/reset.
+      // However, we want to show the modal.
+      // Let's assume we can just show the modal and stop the game.
+      cleanup(); // Stop the game
+      handleGameOver();
+    }
+  }, [isMultiplayer, opponentFinished, gameStatus, cleanup]);
+
   // 화면이 포커스될 때마다 게임 상태 리셋
   useFocusEffect(
     useCallback(() => {
@@ -107,6 +122,7 @@ const SpatialMemoryGameContent: React.FC = () => {
       setStartTime(0);
       setIsNewRecord(false);
       setHasRecordedStats(false);
+      setOpponentWon(false);
     }, [resetGame])
   );
 
@@ -297,6 +313,12 @@ const SpatialMemoryGameContent: React.FC = () => {
             <Text style={styles.statLabel}>LEVEL</Text>
             <Text style={styles.statValue}>{currentLevel}</Text>
           </View>
+          {isMultiplayer && (
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>OPPONENT</Text>
+              <Text style={[styles.statValue, { color: '#fbbf24' }]}>{opponentScore}</Text>
+            </View>
+          )}
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>STATUS</Text>
             <View style={styles.statusContainer}>
@@ -351,18 +373,22 @@ const SpatialMemoryGameContent: React.FC = () => {
           </View>
         </Modal>
 
-        <Modal visible={gameStatus === 'gameover'} transparent animationType="fade">
+        <Modal visible={gameStatus === 'gameover' || opponentWon} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <GlassView style={styles.modalContent} intensity={30} tint="light">
               <View style={styles.iconContainer}>
                 <Brain size={48} color="#fff" />
               </View>
-              <Text style={styles.modalTitle}>Game Over!</Text>
+              <Text style={styles.modalTitle}>
+                {opponentWon ? 'Opponent Won!' : 'Game Over!'}
+              </Text>
 
               <View style={styles.resultStats}>
-                <Text style={styles.resultLabel}>Final Level</Text>
+                <Text style={styles.resultLabel}>
+                  {opponentWon ? '상대방이 먼저 끝냈습니다' : 'Final Level'}
+                </Text>
                 <Text style={styles.resultScore}>{currentLevel - 1}</Text>
-                {isNewRecord && (
+                {isNewRecord && !opponentWon && (
                   <View style={styles.newRecordBadge}>
                     <Trophy size={14} color="#f59e0b" style={{ marginRight: 4 }} />
                     <Text style={styles.newRecordText}>New Record!</Text>
