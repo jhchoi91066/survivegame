@@ -72,11 +72,13 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [searchResults, setSearchResults] = useState<Friend[]>([]);
+  const [sentRequestIds, setSentRequestIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) {
       loadFriends();
       loadRequests();
+      loadSentRequests();
     }
   }, [user, activeTab]);
 
@@ -166,6 +168,24 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
     }
   };
 
+  const loadSentRequests = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('friendships')
+        .select('friend_id')
+        .eq('user_id', user.id)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      const ids = new Set(data.map(r => r.friend_id));
+      setSentRequestIds(ids);
+    } catch (error) {
+      console.error('Error loading sent requests:', error);
+    }
+  };
+
   const searchUsers = async () => {
     if (!searchQuery.trim() || !user) return;
 
@@ -228,8 +248,10 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
       Alert.alert('성공', '친구 요청을 보냈습니다.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Remove from search results
-      setSearchResults(prev => prev.filter(p => p.id !== friendId));
+      // Add directly to sentRequests state for immediate feedback
+      setSentRequestIds(prev => new Set(prev).add(friendId));
+
+      // Don't remove from results, just let UI update to show "Sent"
     } catch (error) {
       console.error('Error sending request:', error);
       Alert.alert('오류', '친구 요청 실패');
@@ -515,12 +537,19 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
                             <View style={styles.friendInfo}>
                               <Text style={styles.friendName}>{user.username}</Text>
                             </View>
-                            <Pressable
-                              onPress={() => sendFriendRequest(user.id)}
-                              style={styles.addButton}
-                            >
-                              <UserPlus size={20} color={theme.colors.primary} />
-                            </Pressable>
+                            {sentRequestIds.has(user.id) ? (
+                              <View style={styles.sentButton}>
+                                <Clock size={20} color={theme.colors.textSecondary} />
+                                <Text style={styles.sentButtonText}>요청됨</Text>
+                              </View>
+                            ) : (
+                              <Pressable
+                                onPress={() => sendFriendRequest(user.id)}
+                                style={styles.addButton}
+                              >
+                                <UserPlus size={20} color={theme.colors.primary} />
+                              </Pressable>
+                            )}
                           </GlassView>
                         </View>
                       ))
@@ -582,6 +611,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   requestActions: { flexDirection: 'row', gap: 12 },
   requestButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   addButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: theme.colors.primary + '20' },
+  sentButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: theme.colors.surface || '#f1f5f9' },
+  sentButtonText: { fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary },
   searchButtonWrapper: { marginLeft: 12, borderRadius: 16, overflow: 'hidden' },
   searchButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 8, borderRadius: 16 },
   searchButtonText: { fontSize: 16, fontWeight: '700', color: '#fff' },
