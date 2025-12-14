@@ -33,6 +33,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Update last_seen timestamp
+  const updateLastSeen = async (userId: string) => {
+    try {
+      await supabase
+        .from('profiles')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('id', userId);
+    } catch (error) {
+      console.error('Failed to update last_seen:', error);
+    }
+  };
+
   useEffect(() => {
     // 웹에서 OAuth 리다이렉트 처리
     if (Platform.OS === 'web') {
@@ -86,10 +98,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('인증 상태 변경:', event, session?.user?.email || 'null');
       setSession(session);
       setUser(session?.user ?? null);
+
+      // Update last_seen on sign in
+      if (event === 'SIGNED_IN' && session?.user?.id) {
+        updateLastSeen(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Periodically update last_seen for active users
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Update immediately
+    updateLastSeen(user.id);
+
+    // Update every 3 minutes
+    const interval = setInterval(() => {
+      updateLastSeen(user.id);
+    }, 3 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [user?.id]);
 
   const signInWithGoogle = async () => {
     try {
