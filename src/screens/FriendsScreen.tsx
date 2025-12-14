@@ -61,7 +61,7 @@ interface FriendRequest {
   created_at: string;
 }
 
-type TabType = 'friends' | 'requests' | 'search';
+type TabType = 'friends' | 'requests' | 'search' | 'rankings';
 
 const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
@@ -73,12 +73,16 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [searchResults, setSearchResults] = useState<Friend[]>([]);
   const [sentRequestIds, setSentRequestIds] = useState<Set<string>>(new Set());
+  const [rankings, setRankings] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
       loadFriends();
       loadRequests();
       loadSentRequests();
+      if (activeTab === 'rankings') {
+        loadRankings();
+      }
     }
   }, [user, activeTab]);
 
@@ -183,6 +187,100 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
       setSentRequestIds(ids);
     } catch (error) {
       console.error('Error loading sent requests:', error);
+    }
+  };
+
+  const loadRankings = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+
+      // Get friend IDs
+      const { data: friendships, error: friendError } = await supabase
+        .from('friendships')
+        .select('friend_id, user_id')
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+        .eq('status', 'accepted');
+
+      if (friendError) throw friendError;
+
+      const friendIds = friendships.map(f =>
+        f.user_id === user.id ? f.friend_id : f.user_id
+      );
+
+      // Include current user in the ranking
+      const allUserIds = [...friendIds, user.id];
+
+      if (allUserIds.length === 0) {
+        setRankings([]);
+        return;
+      }
+
+      // Get game records for all users (friends + me)
+      const { data: records, error: recordsError } = await supabase
+        .from('game_records')
+        .select(`
+          user_id,
+          game_type,
+          difficulty,
+          best_time,
+          highest_level,
+          high_score,
+          profiles!game_records_user_id_fkey (
+            username
+          )
+        `)
+        .in('user_id', allUserIds);
+
+      if (recordsError) throw recordsError;
+
+      // Group by game type and create rankings
+      const gameTypes = [
+        { type: 'flip_match', name: 'Flip & Match', emoji: '🎴', difficulties: ['easy', 'medium', 'hard'], metric: 'best_time', lowerIsBetter: true },
+        { type: 'sequence', name: 'Sequence Memory', emoji: '🧠', difficulties: ['easy', 'medium', 'hard'], metric: 'highest_level', lowerIsBetter: false },
+        { type: 'math_rush', name: 'Math Rush', emoji: '➕', difficulties: ['easy', 'medium', 'hard'], metric: 'high_score', lowerIsBetter: false },
+      ];
+
+      const rankingsData = gameTypes.map(game => {
+        const difficultyRankings = game.difficulties.map(difficulty => {
+          const gameRecords = records
+            .filter((r: any) => r.game_type === game.type && r.difficulty === difficulty)
+            .map((r: any) => ({
+              user_id: r.user_id,
+              username: r.profiles?.username || 'Unknown',
+              score: r[game.metric] || (game.lowerIsBetter ? Infinity : 0),
+            }))
+            .sort((a, b) => {
+              if (game.lowerIsBetter) {
+                return a.score - b.score;
+              } else {
+                return b.score - a.score;
+              }
+            })
+            .filter(r => r.score !== Infinity && r.score !== 0)
+            .map((r, index) => ({ ...r, rank: index + 1 }));
+
+          const myRank = gameRecords.find(r => r.user_id === user.id);
+
+          return {
+            difficulty,
+            rankings: gameRecords.slice(0, 5), // Top 5
+            myRank,
+            totalPlayers: gameRecords.length,
+          };
+        });
+
+        return {
+          ...game,
+          difficultyRankings,
+        };
+      });
+
+      setRankings(rankingsData);
+    } catch (error) {
+      console.error('Error loading rankings:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -373,6 +471,22 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
                 </Text>
               </GlassView>
             </Pressable>
+
+            <Pressable
+              onPress={() => setActiveTab('rankings')}
+              style={styles.tabWrapper}
+            >
+              <GlassView
+                style={styles.tabGlass}
+                intensity={activeTab === 'rankings' ? 40 : 20}
+                tint={activeTab === 'rankings' ? (themeMode === 'dark' ? 'light' : 'dark') : (themeMode === 'dark' ? 'dark' : 'light')}
+              >
+                <Text style={{ fontSize: 18 }}>🏆</Text>
+                <Text style={[styles.tabText, activeTab === 'rankings' && { color: themeMode === 'dark' ? theme.colors.text : '#fff', fontWeight: '700' }]}>
+                  친구 랭킹
+                </Text>
+              </GlassView>
+            </Pressable>
           </ScrollView>
         </View>
 
@@ -555,6 +669,81 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
                       ))
                     )
                   )}
+
+                  {activeTab === 'rankings' && (
+                    rankings.length === 0 && friends.length === 0 ? (
+                      <View style={styles.emptyContainer}>
+                        <Text style={{ fontSize: 48, marginBottom: 16 }}>🏆</Text>
+                        <Text style={styles.emptyText}>친구가 없습니다</Text>
+                        <Text style={styles.emptySubtext}>친구를 추가하고 랭킹을 확인하세요!</Text>
+                      </View>
+                    ) : (
+                      rankings.map((game: any) => (
+                        <View key={game.type} style={styles.rankingSection}>
+                          <View style={styles.rankingSectionHeader}>
+                            <Text style={styles.rankingEmoji}>{game.emoji}</Text>
+                            <Text style={[styles.rankingSectionTitle, { color: theme.colors.text }]}>{game.name}</Text>
+                          </View>
+
+                          {game.difficultyRankings.map((diffRanking: any) => (
+                            <View key={diffRanking.difficulty} style={styles.difficultyRankingContainer}>
+                              <GlassView style={styles.difficultyHeader} intensity={15} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+                                <Text style={[styles.difficultyName, { color: theme.colors.primary }]}>
+                                  {diffRanking.difficulty === 'easy' ? 'Easy' : diffRanking.difficulty === 'medium' ? 'Medium' : 'Hard'}
+                                </Text>
+                                {diffRanking.myRank && (
+                                  <Text style={[styles.myRankBadge, { color: theme.colors.text }]}>
+                                    내 순위: #{diffRanking.myRank.rank} / {diffRanking.totalPlayers}
+                                  </Text>
+                                )}
+                              </GlassView>
+
+                              {diffRanking.rankings.length > 0 ? (
+                                diffRanking.rankings.map((ranking: any, index: number) => (
+                                  <GlassView
+                                    key={ranking.user_id}
+                                    style={[
+                                      styles.rankingCard,
+                                      ranking.user_id === user?.id && styles.rankingCardHighlight
+                                    ]}
+                                    intensity={ranking.user_id === user?.id ? 30 : 20}
+                                    tint={themeMode === 'dark' ? 'dark' : 'light'}
+                                  >
+                                    <View style={styles.rankingRank}>
+                                      <Text style={[
+                                        styles.rankNumber,
+                                        { color: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#cd7f32' : theme.colors.text }
+                                      ]}>
+                                        #{ranking.rank}
+                                      </Text>
+                                      {index === 0 && <Text style={styles.medalEmoji}>🥇</Text>}
+                                      {index === 1 && <Text style={styles.medalEmoji}>🥈</Text>}
+                                      {index === 2 && <Text style={styles.medalEmoji}>🥉</Text>}
+                                    </View>
+                                    <View style={styles.rankingInfo}>
+                                      <Text style={[styles.rankingUsername, { color: theme.colors.text }]}>
+                                        {ranking.username}
+                                        {ranking.user_id === user?.id && <Text style={[styles.youBadge, { color: theme.colors.primary }]}> (나)</Text>}
+                                      </Text>
+                                      <Text style={[styles.rankingScore, { color: theme.colors.textSecondary }]}>
+                                        {game.lowerIsBetter ? `${ranking.score}초` : `${ranking.score}${game.type === 'sequence' ? '레벨' : '점'}`}
+                                      </Text>
+                                    </View>
+                                  </GlassView>
+                                ))
+                              ) : (
+                                <View style={styles.noRankingsContainer}>
+                                  <Text style={[styles.noRankingsText, { color: theme.colors.textTertiary }]}>
+                                    아직 기록이 없습니다
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                          ))}
+                        </View>
+                      ))
+                    )
+                  )}
                 </>
               )}
             </ScrollView>
@@ -616,6 +805,26 @@ const getStyles = (theme: any) => StyleSheet.create({
   searchButtonWrapper: { marginLeft: 12, borderRadius: 16, overflow: 'hidden' },
   searchButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 8, borderRadius: 16 },
   searchButtonText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  // Rankings styles
+  rankingSection: { marginBottom: 32 },
+  rankingSectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  rankingEmoji: { fontSize: 28, marginRight: 12 },
+  rankingSectionTitle: { fontSize: 22, fontWeight: '800' },
+  difficultyRankingContainer: { marginBottom: 20 },
+  difficultyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 12, marginBottom: 8 },
+  difficultyName: { fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  myRankBadge: { fontSize: 13, fontWeight: '600' },
+  rankingCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 8 },
+  rankingCardHighlight: { borderWidth: 2, borderColor: theme.colors.primary },
+  rankingRank: { flexDirection: 'row', alignItems: 'center', marginRight: 16, minWidth: 60 },
+  rankNumber: { fontSize: 18, fontWeight: '900' },
+  medalEmoji: { fontSize: 20, marginLeft: 6 },
+  rankingInfo: { flex: 1 },
+  rankingUsername: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  youBadge: { fontSize: 14, fontWeight: '600' },
+  rankingScore: { fontSize: 14, fontWeight: '600' },
+  noRankingsContainer: { padding: 20, alignItems: 'center' },
+  noRankingsText: { fontSize: 14, fontWeight: '600' },
 });
 
 export default FriendsScreen;
