@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Platform } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../App';
+import { RootStackParamList } from '../types/navigation';
 import { useFlipMatchStore } from '../game/flipmatch/store';
 import { Difficulty } from '../game/flipmatch/types';
 import GameBoard from '../components/flipmatch/GameBoard';
@@ -58,7 +58,7 @@ const FlipMatchGameContent: React.FC = () => {
   const navigation = useNavigation<FlipMatchGameNavigationProp>();
   const { theme, themeMode } = useTheme();
   const { user } = useAuth();
-  const { isMultiplayer, opponentScore, opponentFinished, updateMyScore, finishGame } = useMultiplayer();
+  const { isMultiplayer, opponentScore, opponentFinished, gameResult, elapsedTime, updateMyScore, finishGame } = useMultiplayer();
 
   // [H3] Use shallow comparison to prevent unnecessary re-renders
   const {
@@ -96,12 +96,39 @@ const FlipMatchGameContent: React.FC = () => {
 
   const isMounted = React.useRef(true);
 
+  // Helper function to get time limit based on difficulty
+  const getTimeLimit = (): number => {
+    const limits = { easy: 120, medium: 90, hard: 60 };
+    return limits[settings.difficulty];
+  };
+
+  // Calculate display time: use synchronized time in multiplayer, local time otherwise
+  const displayTime = isMultiplayer && gameStatus === 'playing'
+    ? Math.max(0, getTimeLimit() - elapsedTime)
+    : timeRemaining;
+
   useEffect(() => {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
     };
   }, []);
+
+  // Prevent refresh during multiplayer game
+  useEffect(() => {
+    if (!isMultiplayer) return;
+
+    if (Platform.OS === 'web') {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = '멀티플레이어 게임 중입니다. 정말로 나가시겠습니까?';
+        return '멀티플레이어 게임 중입니다. 정말로 나가시겠습니까?';
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
+  }, [isMultiplayer]);
 
   // Animate opponent score when it changes
   useEffect(() => {
@@ -135,11 +162,19 @@ const FlipMatchGameContent: React.FC = () => {
   );
 
   useEffect(() => {
-    if (gameStatus === 'playing' && !isPaused) {
+    if (gameStatus === 'playing' && !isPaused && !isMultiplayer) {
+      // Only use local timer for single player
       const interval = setInterval(() => { decrementTime(); }, 1000);
       return () => clearInterval(interval);
     }
-  }, [gameStatus, isPaused]);
+  }, [gameStatus, isPaused, isMultiplayer]);
+
+  // Handle multiplayer timer timeout
+  useEffect(() => {
+    if (isMultiplayer && gameStatus === 'playing' && displayTime <= 0) {
+      setGameStatus('lost');
+    }
+  }, [isMultiplayer, gameStatus, displayTime, setGameStatus]);
 
   useEffect(() => {
     if (gameStatus === 'won' || gameStatus === 'lost') {
@@ -149,12 +184,11 @@ const FlipMatchGameContent: React.FC = () => {
 
   // Update multiplayer score when pairs are matched
   useEffect(() => {
-    if (isMultiplayer && gameStatus === 'playing' && matchedPairs > 0) {
-      // Calculate score: pairs matched * 100 - moves * 5
-      const score = matchedPairs * 100 - moves * 5;
-      updateMyScore(score);
+    if (isMultiplayer && gameStatus === 'playing') {
+      // Use matchedPairs directly for real-time progress tracking
+      updateMyScore(matchedPairs);
     }
-  }, [isMultiplayer, matchedPairs, moves, gameStatus]);
+  }, [isMultiplayer, matchedPairs, gameStatus, updateMyScore]);
 
   const handleGameEnd = async () => {
     if (gameStatus === 'won') {
@@ -223,11 +257,6 @@ const FlipMatchGameContent: React.FC = () => {
       }
     }
     await incrementGameCount();
-  };
-
-  const getTimeLimit = (): number => {
-    const limits = { easy: 120, medium: 90, hard: 60 };
-    return limits[settings.difficulty];
   };
 
   const handleStartGame = () => {
@@ -322,9 +351,26 @@ const FlipMatchGameContent: React.FC = () => {
               </View>
               <View style={styles.statItem}>
                 <Text style={styles.statLabel}>TIME</Text>
-                <Text style={[styles.statValue, timeRemaining <= 10 && styles.statValueWarning]}>{formatTime(timeRemaining)}</Text>
+                <Text style={[styles.statValue, displayTime <= 10 && styles.statValueWarning]}>{formatTime(displayTime)}</Text>
               </View>
             </GlassView>
+
+            {isMultiplayer && (
+              <Animated.View style={[opponentScoreAnimatedStyle, { marginHorizontal: 16, marginBottom: 16 }]}>
+                <GlassView style={styles.opponentScore} intensity={25} tint="light">
+                  <View style={styles.opponentScoreContent}>
+                    <Text style={styles.opponentLabel}>상대방 진행률</Text>
+                    <Text style={styles.opponentValue}>
+                      <Text style={{ color: '#fbbf24' }}>{opponentScore}</Text>
+                      <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }}> / {totalPairs}</Text>
+                    </Text>
+                    {opponentFinished && (
+                      <Text style={styles.opponentFinishedBadge}>✓ 완료</Text>
+                    )}
+                  </View>
+                </GlassView>
+              </Animated.View>
+            )}
 
             {gameStatus === 'preview' && (
               <View style={styles.previewOverlay}>
@@ -373,10 +419,19 @@ const FlipMatchGameContent: React.FC = () => {
               <View style={[styles.iconContainer, { backgroundColor: '#10b981', borderColor: '#059669' }]}>
                 <Star size={48} color="#fff" fill="#fff" />
               </View>
-              <Text style={styles.modalTitle}>Level Complete!</Text>
-              <Text style={styles.modalDescription}>Perfect memory! You finished in <Text style={{ fontWeight: 'bold', color: '#fff' }}>{moves} moves</Text>.</Text>
+              <Text style={styles.modalTitle}>
+                {isMultiplayer && gameResult === 'win' ? 'YOU WIN! 🏆' : isMultiplayer && gameResult === 'tie' ? "IT'S A TIE! 🤝" : 'Level Complete!'}
+              </Text>
+              <Text style={styles.modalDescription}>
+                {isMultiplayer && gameResult === 'win'
+                  ? '상대방보다 먼저 완성했습니다!'
+                  : isMultiplayer && gameResult === 'tie'
+                    ? '동시에 완성했습니다!'
+                    : `Perfect memory! You finished in ${moves} moves.`
+                }
+              </Text>
 
-              {isNewRecord && (
+              {isNewRecord && !isMultiplayer && (
                 <View style={styles.newRecordBadge}>
                   <Trophy size={16} color="#f59e0b" style={{ marginRight: 4 }} />
                   <Text style={styles.newRecordText}>New Record!</Text>
@@ -403,12 +458,14 @@ const FlipMatchGameContent: React.FC = () => {
                 <Timer size={48} color="#fff" />
               </View>
               <Text style={styles.modalTitle}>
-                {opponentWon ? 'Opponent Won!' : "Time's Up!"}
+                {isMultiplayer && gameResult === 'lose' ? 'YOU LOSE! 💔' : opponentWon ? 'Opponent Won!' : "Time's Up!"}
               </Text>
               <Text style={styles.modalDescription}>
-                {opponentWon
-                  ? '상대방이 먼저 게임을 끝냈습니다.'
-                  : `Matches: ${matchedPairs}/${totalPairs}\nMoves: ${moves}`
+                {isMultiplayer && gameResult === 'lose'
+                  ? '상대방이 먼저 완성했습니다.'
+                  : opponentWon
+                    ? '상대방이 먼저 게임을 끝냈습니다.'
+                    : `Matches: ${matchedPairs}/${totalPairs}\nMoves: ${moves}`
                 }
               </Text>
 
@@ -434,7 +491,7 @@ const FlipMatchGameContent: React.FC = () => {
         <PauseMenu
           visible={isPaused && gameStatus === 'playing'}
           gameStats={[
-            { label: '남은 시간', value: formatTime(timeRemaining) },
+            { label: '남은 시간', value: formatTime(displayTime) },
             { label: '이동', value: moves },
             { label: '진행', value: `${matchedPairs}/${totalPairs}` },
           ]}
@@ -496,6 +553,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   menuButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   retryButton: { flex: 1, paddingVertical: 16, borderRadius: 16, backgroundColor: '#10b981', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', shadowColor: "#10b981", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
   retryButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  opponentScore: { borderRadius: 16, padding: 16, backgroundColor: 'rgba(15, 23, 42, 0.6)', borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.3)' },
+  opponentScoreContent: { alignItems: 'center' },
+  opponentLabel: { fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginBottom: 4 },
+  opponentValue: { fontSize: 24, fontWeight: '900', color: '#fff' },
+  opponentFinishedBadge: { fontSize: 14, color: '#10b981', fontWeight: '700', marginTop: 4 },
 });
 
 export default FlipMatchGame;

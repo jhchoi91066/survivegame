@@ -22,7 +22,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassView } from '../components/shared/GlassView';
 import { PauseMenu } from '../components/shared/PauseMenu';
-import { RootStackParamList } from '../../App';
+import { RootStackParamList } from '../types/navigation';
 import { useSpatialMemoryStore } from '../game/spatialmemory/store';
 import { Difficulty } from '../game/spatialmemory/types';
 import TileGrid from '../components/spatialmemory/TileGrid';

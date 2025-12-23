@@ -10,6 +10,9 @@ interface MultiplayerContextValue {
   opponentScore: number;
   opponentFinished: boolean;
   myScore: number;
+  gameResult: 'none' | 'win' | 'lose' | 'tie';
+  gameTimeRemaining: number | null;
+  elapsedTime: number; // Synchronized elapsed time in seconds
   updateMyScore: (score: number) => Promise<void>;
   finishGame: () => Promise<void>;
 }
@@ -24,6 +27,12 @@ export const MultiplayerProvider: React.FC<{
   const [opponentScore, setOpponentScore] = useState(0);
   const [opponentFinished, setOpponentFinished] = useState(false);
   const [myScore, setMyScore] = useState(0);
+  const [gameResult, setGameResult] = useState<'none' | 'win' | 'lose' | 'tie'>('none');
+  const [gameTimeRemaining, setGameTimeRemaining] = useState<number | null>(null);
+  const [opponentFinishTime, setOpponentFinishTime] = useState<string | null>(null);
+  const [myFinishTime, setMyFinishTime] = useState<string | null>(null);
+  const [gameStartedAt, setGameStartedAt] = useState<string | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'info' | 'success' | 'warning' | 'error' }>({ visible: false, message: '', type: 'info' });
 
   // Integrate presence management
@@ -45,6 +54,45 @@ export const MultiplayerProvider: React.FC<{
     },
   });
 
+  // Fetch room data to get game_started_at
+  useEffect(() => {
+    if (!roomId) return;
+
+    const fetchRoomData = async () => {
+      const { data } = await supabase
+        .from('multiplayer_rooms')
+        .select('game_started_at')
+        .eq('id', roomId)
+        .single();
+
+      if (data?.game_started_at) {
+        setGameStartedAt(data.game_started_at);
+      }
+    };
+
+    fetchRoomData();
+  }, [roomId]);
+
+  // Update elapsed time based on game_started_at
+  useEffect(() => {
+    if (!gameStartedAt) return;
+
+    const updateElapsedTime = () => {
+      const now = new Date().getTime();
+      const startTime = new Date(gameStartedAt).getTime();
+      const elapsed = Math.floor((now - startTime) / 1000);
+      setElapsedTime(elapsed >= 0 ? elapsed : 0);
+    };
+
+    // Update immediately
+    updateElapsedTime();
+
+    // Then update every second
+    const interval = setInterval(updateElapsedTime, 1000);
+
+    return () => clearInterval(interval);
+  }, [gameStartedAt]);
+
   useEffect(() => {
     if (!roomId || !user) return;
 
@@ -64,6 +112,9 @@ export const MultiplayerProvider: React.FC<{
           if (payload.new.user_id !== user.id) {
             setOpponentScore(payload.new.score || 0);
             setOpponentFinished(payload.new.finished || false);
+            if (payload.new.finished && payload.new.finish_time) {
+              setOpponentFinishTime(payload.new.finish_time);
+            }
           }
         }
       )
@@ -73,6 +124,32 @@ export const MultiplayerProvider: React.FC<{
       subscription.unsubscribe();
     };
   }, [roomId, user]);
+
+  // Determine game result when both players finish
+  useEffect(() => {
+    if (!myFinishTime || !opponentFinishTime) return;
+
+    // For time-based games (Flip & Match), lower time wins
+    // For score-based games, higher score wins
+    // We'll use finish_time to determine who finished first
+    const myFinish = new Date(myFinishTime).getTime();
+    const opponentFinish = new Date(opponentFinishTime).getTime();
+
+    if (myFinish < opponentFinish) {
+      setGameResult('win');
+    } else if (myFinish > opponentFinish) {
+      setGameResult('lose');
+    } else {
+      // If same time, compare scores
+      if (myScore > opponentScore) {
+        setGameResult('win');
+      } else if (myScore < opponentScore) {
+        setGameResult('lose');
+      } else {
+        setGameResult('tie');
+      }
+    }
+  }, [myFinishTime, opponentFinishTime, myScore, opponentScore]);
 
   const updateMyScore = async (score: number) => {
     if (!roomId || !user) return;
@@ -88,11 +165,14 @@ export const MultiplayerProvider: React.FC<{
   const finishGame = async () => {
     if (!roomId || !user) return;
 
+    const finishTime = new Date().toISOString();
+    setMyFinishTime(finishTime);
+
     await supabase
       .from('multiplayer_game_states')
       .update({
         finished: true,
-        finish_time: new Date().toISOString(),
+        finish_time: finishTime,
         status: 'finished',
       })
       .eq('room_id', roomId)
@@ -107,6 +187,9 @@ export const MultiplayerProvider: React.FC<{
         opponentScore,
         opponentFinished,
         myScore,
+        gameResult,
+        gameTimeRemaining,
+        elapsedTime,
         updateMyScore,
         finishGame,
       }}
@@ -132,6 +215,9 @@ export const useMultiplayer = () => {
       opponentScore: 0,
       opponentFinished: false,
       myScore: 0,
+      gameResult: 'none' as const,
+      gameTimeRemaining: null,
+      elapsedTime: 0,
       updateMyScore: async () => { },
       finishGame: async () => { },
     };

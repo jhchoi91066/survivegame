@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../App';
+import { RootStackParamList } from '../types/navigation';
 import { GlassView } from '../components/shared/GlassView';
 import { showToast } from '../utils/toast'; // [H7][H8] Platform-safe toast
 import {

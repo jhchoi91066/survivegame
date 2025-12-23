@@ -9,12 +9,13 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../App';
+import { RootStackParamList } from '../types/navigation';
 import { hapticPatterns } from '../utils/haptics';
 import { useTheme } from '../contexts/ThemeContext';
 import { GlassView } from '../components/shared/GlassView';
@@ -63,6 +64,8 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
   const [loading, setLoading] = useState(true);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [creating, setCreating] = useState(false);
+  const [showDifficultyModal, setShowDifficultyModal] = useState(false);
+  const [selectedGameType, setSelectedGameType] = useState<string>('');
 
   useEffect(() => {
     if (!user) {
@@ -221,17 +224,19 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
     gameType: string,
     Icon: React.ElementType,
     name: string,
-    colors: string[],
-    difficulty?: string
+    colors: string[]
   ) => (
     <Pressable
-      onPress={() => createRoom(gameType, difficulty)}
+      onPress={() => {
+        setSelectedGameType(gameType);
+        setShowDifficultyModal(true);
+      }}
       disabled={creating}
       style={({ pressed }) => [styles.gameButton, pressed && styles.buttonPressed]}
       accessible={true}
       accessibilityRole="button"
       accessibilityLabel={`${name} 게임 방 만들기`}
-      accessibilityHint={difficulty ? `난이도: ${difficulty}` : '버튼을 눌러 새 방을 생성합니다'}
+      accessibilityHint="버튼을 눌러 난이도를 선택하고 방을 생성합니다"
       accessibilityState={{ disabled: creating }}
     >
       <GlassView style={styles.gameButtonGlass} intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'}>
@@ -245,10 +250,19 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
           <Icon size={32} color={colors[0]} />
         </View>
         <Text style={styles.gameName}>{name}</Text>
-        {difficulty && <Text style={styles.gameDifficulty}>{difficulty}</Text>}
       </GlassView>
     </Pressable>
   );
+
+  const handleDifficultySelect = (difficulty: 'easy' | 'medium' | 'hard') => {
+    // Close modal first
+    setShowDifficultyModal(false);
+
+    // Wait for modal animation to complete before navigation
+    setTimeout(() => {
+      createRoom(selectedGameType, difficulty);
+    }, 300);
+  };
 
   return (
     <View style={styles.container}>
@@ -361,6 +375,53 @@ const MultiplayerLobbyScreen: React.FC<MultiplayerLobbyProps> = ({ navigation })
             )}
           </View>
         </ScrollView>
+
+        {/* Difficulty Selection Modal */}
+        <Modal
+          visible={showDifficultyModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDifficultyModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setShowDifficultyModal(false)}
+            />
+            <GlassView style={styles.difficultyModal} intensity={40} tint={themeMode === 'dark' ? 'dark' : 'light'}>
+              <Text style={[styles.difficultyModalTitle, { color: theme.colors.text }]}>난이도 선택</Text>
+              <Text style={[styles.difficultyModalSubtitle, { color: theme.colors.textSecondary }]}>게임 난이도를 선택하세요</Text>
+
+              <Pressable
+                onPress={() => handleDifficultySelect('easy')}
+                style={[styles.difficultyOption, { backgroundColor: '#10b981' }]}
+              >
+                <Text style={styles.difficultyText}>Easy</Text>
+                <Text style={styles.difficultyDesc}>초보자에게 적합</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => handleDifficultySelect('medium')}
+                style={[styles.difficultyOption, { backgroundColor: '#f59e0b' }]}
+              >
+                <Text style={styles.difficultyText}>Medium</Text>
+                <Text style={styles.difficultyDesc}>적당한 도전</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => handleDifficultySelect('hard')}
+                style={[styles.difficultyOption, { backgroundColor: '#ef4444' }]}
+              >
+                <Text style={styles.difficultyText}>Hard</Text>
+                <Text style={styles.difficultyDesc}>고수를 위한 난이도</Text>
+              </Pressable>
+
+              <Pressable onPress={() => setShowDifficultyModal(false)} style={styles.difficultyCancel}>
+                <Text style={[styles.difficultyCancelText, { color: theme.colors.textSecondary }]}>취소</Text>
+              </Pressable>
+            </GlassView>
+          </View>
+        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -559,6 +620,53 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  difficultyModal: {
+    width: 320,
+    padding: 24,
+    borderRadius: 24,
+    gap: 16,
+  },
+  difficultyModalTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  difficultyModalSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  difficultyOption: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 12,
+    padding: 20,
+    alignItems: 'center',
+    gap: 4,
+  },
+  difficultyText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  difficultyDesc: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  difficultyCancel: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  difficultyCancelText: {
     fontSize: 16,
     fontWeight: '600',
   },

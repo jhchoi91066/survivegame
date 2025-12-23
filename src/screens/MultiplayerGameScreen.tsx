@@ -22,7 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../../App';
+import { RootStackParamList } from '../types/navigation';
 import { hapticPatterns } from '../utils/haptics';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePresence } from '../hooks/usePresence';
@@ -108,6 +108,20 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
     },
     shouldDisconnectOnUnmount,
   });
+
+  // Prevent refresh during multiplayer waiting/playing
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = '멀티플레이어 대기 중입니다. 정말로 나가시겠습니까?';
+        return '멀티플레이어 대기 중입니다. 정말로 나가시겠습니까?';
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
+  }, []);
 
   // Initial setup and reconnection attempt
   useEffect(() => {
@@ -225,6 +239,21 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
       setWaitingTime(0);
     }
   }, [gameState.status, opponentReady]);
+
+  // Auto-start countdown when opponent joins
+  useEffect(() => {
+    console.log('[AUTO-START CHECK]', {
+      opponentReady,
+      gameStatus: gameState.status,
+      isRoomCreator,
+      isGameStarting: isGameStarting.current
+    });
+
+    if (opponentReady && gameState.status === 'waiting' && isRoomCreator && !isGameStarting.current) {
+      console.log('[AUTO-START] Opponent ready, automatically starting countdown');
+      setTimeout(() => startCountdown(), 500); // Small delay to ensure state is settled
+    }
+  }, [opponentReady, gameState.status, isRoomCreator, startCountdown]);
 
   // Countdown timer with animation
   useEffect(() => {
@@ -414,33 +443,21 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
           startTime: data[0].start_time,
         });
 
-        // If all ready and still waiting, room creator triggers countdown
-        // Use ref to ensure we have the latest value inside the subscription callback
-        // Also check if we are the creator by querying DB if needed
-        if (allReady && newStatus === 'waiting') {
-          // Double check creator status if not sure
-          if (isRoomCreatorRef.current) {
-            console.log('All players ready, starting countdown as creator');
-            startCountdown();
-          } else {
-            // Fallback: Check if I am the creator in the room data
-            checkIfRoomCreator().then(() => {
-              if (isRoomCreatorRef.current) {
-                console.log('All players ready, starting countdown as creator (delayed check)');
-                startCountdown();
-              }
-            });
-          }
-        }
+        // Auto-start is now handled by useEffect
+        // (removed duplicate logic to prevent conflicts)
       }
     } catch (error) {
       console.error('Failed to load game state:', error);
     }
   };
 
-  const startCountdown = async () => {
-    console.log('Attempting to start countdown. Is Creator:', isRoomCreatorRef.current);
-    if (!isRoomCreatorRef.current) return; // Only room creator can start countdown
+  async function startCountdown() {
+    console.log('Attempting to start countdown. Is Creator:', isRoomCreatorRef.current, 'Already starting:', isGameStarting.current);
+
+    // Prevent duplicate countdown starts
+    if (!isRoomCreatorRef.current || isGameStarting.current) return;
+
+    isGameStarting.current = true; // Mark as starting
 
     try {
       // Set countdown start time in database (3 seconds from now)
@@ -457,6 +474,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
 
       if (error) {
         console.error('Error updating room status:', error);
+        isGameStarting.current = false; // Reset on error
       } else {
         console.log('Room status updated to countdown successfully');
         // [Optimistic Update] Immediately handle the update locally
@@ -467,6 +485,7 @@ const MultiplayerGameScreen: React.FC<MultiplayerGameProps> = ({ navigation, rou
       }
     } catch (error) {
       console.error('Failed to start countdown:', error);
+      isGameStarting.current = false; // Reset on error
     }
   };
 
